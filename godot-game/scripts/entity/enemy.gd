@@ -146,7 +146,7 @@ func _process(delta: float) -> void:
 # ==================== 目标感知 ====================
 
 ## 获取所有存活玩家
-func _get_alive_players() -> Array[Player] -> void:
+func _get_alive_players() -> Array[Player]:
 	var result: Array[Player] = []
 	for node in get_tree().get_nodes_in_group("player"):
 		if node is Player and not node.is_dead:
