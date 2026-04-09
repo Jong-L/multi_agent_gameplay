@@ -31,7 +31,7 @@ func _on_pressed() -> void:
 	if disabled:return
 	
 	disabled=true
-	EventBus.player_cast_skill.emit(skill)
+	EventBus.player_cast_skill.emit(skill)#鼠标点击时也能释放技能。源码改动的遗产，该项目中不需要
 
 func set_skill(skill:Skill):
 	disabled=false

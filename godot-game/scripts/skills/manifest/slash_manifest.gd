@@ -22,13 +22,15 @@ func activate(context:SkillContext):
 # SlashManifest.gd
 
 func _activate(context: SkillContext):
-	var caster=context.caster as Player
+	var caster = context.caster as Entity
 	caster.set_process(false)
 	caster.get_node("AnimatedSprite2D").hide()
-	animated_sprite.flip_h=caster.animated_sprite.flip_h
+	animated_sprite.flip_h = caster.animated_sprite.flip_h
 	
-	# 根据施法者的skin_color替换攻击贴图
-	_apply_skin_to_manifest(caster)
+	# 如果施法者是 Player，根据 skin_color 替换攻击贴图
+	var player_caster = caster as Player
+	if player_caster != null:
+		_apply_skin_to_manifest(player_caster)
 	
 	animated_sprite.play("slash")
 	

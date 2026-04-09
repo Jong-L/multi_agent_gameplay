@@ -23,6 +23,8 @@ buses/default_bus_layout=""
 
 FloatText="*uid://c8lcokexvpkrg"
 EventBus="*uid://m5nveww5851n"
+NetworkManager="*res://scripts/autoload/network_manager.gd"
+CameraManager="*res://scripts/autoload/camera_manager.gd"
 
 [display]
 

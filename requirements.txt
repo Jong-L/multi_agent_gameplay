@@ -1,0 +1,2 @@
+# Python 依赖 - Godot TCP 通信客户端
+# 基础依赖（Python 标准库已包含 socket/json/random）
