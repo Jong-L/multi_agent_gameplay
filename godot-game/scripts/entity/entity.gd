@@ -1,51 +1,80 @@
 class_name Entity
 extends CharacterBody2D 
 
-@onready var animated_sprite:AnimatedSprite2D=$AnimatedSprite2D
+## 实体基类
+## 所有游戏角色（玩家、敌人）的公共父类
+## 提供：生命值管理、伤害处理、动画播放、受击反馈等通用功能
+##
+## 架构位置：Entity → Player/Enemy
+## 关联系统：
+##   - SkillController: 技能释放时通过 SkillContext 传递施法者引用
+##   - SkillGetTarget/SkillTargetPlayer: 技能目标检测的目标类型
+##   - FloatText: 受伤时显示飘字
+##   - AnimationWrapper: 动画优先级管理
 
-@export var max_health:float=100
-@export var damage_text_color=Color.AZURE
+@onready var animated_sprite: AnimatedSprite2D = $AnimatedSprite2D
 
-var current_animation_wrapper:AnimationWrapper
-var current_health:float
-var is_dead:bool=false
+@export var max_health: float = 100           ## 最大生命值（可在编辑器调整）
+@export var damage_text_color = Color.AZURE   ## 伤害飘字颜色
 
-# 外部推力（用于 pushback 等效果）
-var external_velocity:Vector2=Vector2.ZERO
-var external_velocity_decay:float=10.0  # 衰减速率
+var current_animation_wrapper: AnimationWrapper  ## 当前动画（含优先级信息，用于打断判断）
+var current_health: float                        ## 当前生命值
+var is_dead: bool = false                        ## 死亡状态标记
+
+## 外部推力系统（用于击退、击飞等效果）
+## 与 velocity 独立，每帧向零衰减，实现平滑的受击位移
+var external_velocity: Vector2 = Vector2.ZERO
+var external_velocity_decay: float = 10.0        ## 推力衰减速率（值越大衰减越快）
+## 衰减公式：external_velocity.move_toward(ZERO, length * decay * delta)
 
 func _ready() -> void:
-	animated_sprite.material=animated_sprite.material.duplicate()
-	current_health=max_health
+	## 复制材质实例，避免多个实体共享同一材质导致状态互相影响
+	## 这是 Godot 材质使用的常见模式：共享材质会同步修改
+	animated_sprite.material = animated_sprite.material.duplicate()
+	current_health = max_health
 
-func bear_damage(damage:float):
-	if current_health==0:return
-	current_health=max(0,current_health-damage)
-	_show_damage_taken_effect()
-	_show_damage_popup(damage)
-	if current_health==0:
-		is_dead=true
-		play_animation(AnimationWrapper.new("die",true))
-
-func play_animation(animation_wrapper:AnimationWrapper):
-	if(
-		current_animation_wrapper!=null and current_animation_wrapper.is_high_priority
-		and not animation_wrapper.is_high_priority
-	):return
+## 承受伤害
+## 处理流程：扣血 → 闪白特效 → 飘字 → 死亡判断
+## @param damage: 伤害数值
+func bear_damage(damage: float) -> void:
+	if current_health == 0:
+		return
 	
-	current_animation_wrapper=animation_wrapper
+	current_health = max(0, current_health - damage)
+	_show_damage_taken_effect()  # 受击闪白特效（Shader 参数控制）
+	_show_damage_popup(damage)   # 飘伤害数字（FloatText 单例）
+	
+	if current_health == 0:
+		is_dead = true
+		play_animation(AnimationWrapper.new("die", true))  # 死亡动画（高优先级，不可打断）
+
+## 播放动画（支持优先级打断机制）
+## 优先级规则：高优先级动画（如死亡、攻击）可打断低优先级（如移动、待机）
+## @param animation_wrapper: 动画包装器（含动画名和优先级）
+func play_animation(animation_wrapper: AnimationWrapper) -> void:
+	if current_animation_wrapper != null \
+		and current_animation_wrapper.is_high_priority \
+		and not animation_wrapper.is_high_priority:
+		return  # 当前高优先级动画播放中，拒绝低优先级请求
+	
+	current_animation_wrapper = animation_wrapper
 	animated_sprite.play(animation_wrapper.name)
 
-func _show_damage_taken_effect():
-	if animated_sprite.material !=null:
+## 显示受击闪白特效
+## 实现：通过 Shader 的 is_hurt 参数控制，快速闪烁两次（0.05s × 4）
+func _show_damage_taken_effect() -> void:
+	if animated_sprite.material != null:
 		for i in 2:
-			animated_sprite.material.set_shader_parameter("is_hurt",true)
+			animated_sprite.material.set_shader_parameter("is_hurt", true)
 			await get_tree().create_timer(0.05).timeout
-			animated_sprite.material.set_shader_parameter("is_hurt",false)
+			animated_sprite.material.set_shader_parameter("is_hurt", false)
 			await get_tree().create_timer(0.05).timeout
 
-func _show_damage_popup(damage:float):
-	var animation=animated_sprite.animation
-	var frame_texture=animated_sprite.sprite_frames.get_frame_texture(animation,0)
-	var height=frame_texture.get_height()
-	FloatText.show_damage_text(str(int(damage)),self.global_position,damage_text_color)
+## 显示伤害数字浮动文本
+## 位置计算：实体头顶（基于首帧贴图高度估算）
+## @param damage: 伤害值
+func _show_damage_popup(damage: float) -> void:
+	var animation = animated_sprite.animation
+	var frame_texture = animated_sprite.sprite_frames.get_frame_texture(animation, 0)
+	var height = frame_texture.get_height()
+	FloatText.show_damage_text(str(int(damage)), self.global_position, damage_text_color)
