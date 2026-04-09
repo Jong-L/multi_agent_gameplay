@@ -1,0 +1,51 @@
+[gd_scene format=3 uid="uid://bwmviof6pyd01"]
+
+[ext_resource type="Script" uid="uid://3g1wx84ppbdq" path="res://scripts/skills/manifest/slash_manifest.gd" id="1_cumij"]
+[ext_resource type="Texture2D" uid="uid://dopbup4wplbta" path="res://assets/Tiny Swords (Free Pack)/Units/Blue Units/Warrior/Warrior_Attack1.png" id="2_cumij"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_7o7b4"]
+atlas = ExtResource("2_cumij")
+region = Rect2(0, 0, 192, 192)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_3ubab"]
+atlas = ExtResource("2_cumij")
+region = Rect2(192, 0, 192, 192)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_nct0v"]
+atlas = ExtResource("2_cumij")
+region = Rect2(384, 0, 192, 192)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_gujnw"]
+atlas = ExtResource("2_cumij")
+region = Rect2(576, 0, 192, 192)
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_2brcw"]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_7o7b4")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_3ubab")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_nct0v")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_gujnw")
+}],
+"loop": false,
+"name": &"slash",
+"speed": 7.0
+}]
+
+[node name="SlashManifest" type="Node2D" unique_id=1410636362]
+rotation = -0.5235988
+script = ExtResource("1_cumij")
+
+[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="." unique_id=1096048908]
+texture_filter = 1
+rotation = 0.50963616
+sprite_frames = SubResource("SpriteFrames_2brcw")
+animation = &"slash"
+frame_progress = 0.7285187

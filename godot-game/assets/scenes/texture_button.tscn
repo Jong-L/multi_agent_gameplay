@@ -1,0 +1,80 @@
+[gd_scene format=3 uid="uid://4gi4tao1s66f"]
+
+[ext_resource type="Texture2D" uid="uid://bi8unrouuqqhu" path="res://assets/Tiny Swords (Free Pack)/UI Elements/UI Elements/Buttons/SmallBlueSquareButton_Regular.png" id="1_ib1fg"]
+[ext_resource type="Texture2D" uid="uid://dgkwpajhs1l8p" path="res://assets/Tiny Swords (Free Pack)/UI Elements/UI Elements/Icons/Icon_05.png" id="2_n8lb8"]
+[ext_resource type="Script" uid="uid://dasjtr4pgc1v2" path="res://scripts/utils/spell_button.gd" id="2_uuxqe"]
+[ext_resource type="Texture2D" uid="uid://dhpngwwbcikg1" path="res://assets/Tiny Swords (Free Pack)/UI Elements/UI Elements/Wood Table/WoodTable_Slots.png" id="4_uuxqe"]
+
+[sub_resource type="LabelSettings" id="LabelSettings_uuxqe"]
+font_size = 20
+
+[sub_resource type="LabelSettings" id="LabelSettings_gw4d2"]
+font_size = 22
+
+[node name="TextureButton" type="TextureButton" unique_id=1576344011 node_paths=PackedStringArray("icon", "progress_bar", "cooldown_label", "keybind_label")]
+custom_minimum_size = Vector2(120, 0)
+texture_normal = ExtResource("1_ib1fg")
+stretch_mode = 0
+script = ExtResource("2_uuxqe")
+icon = NodePath("TextureRect")
+progress_bar = NodePath("TextureProgressBar")
+cooldown_label = NodePath("CooldownLabel")
+keybind_label = NodePath("KeybindLabel")
+
+[node name="TextureRect" type="TextureRect" parent="." unique_id=1659891479]
+texture_filter = 1
+custom_minimum_size = Vector2(10, 20)
+layout_mode = 0
+offset_left = 32.0
+offset_top = 28.0
+offset_right = 96.0
+offset_bottom = 92.0
+texture = ExtResource("2_n8lb8")
+
+[node name="TextureProgressBar" type="TextureProgressBar" parent="." unique_id=918429799]
+self_modulate = Color(0, 0, 0, 0.57254905)
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 20.0
+offset_top = 18.0
+offset_right = -19.0
+offset_bottom = -25.0
+grow_horizontal = 2
+grow_vertical = 2
+step = 0.5
+fill_mode = 5
+nine_patch_stretch = true
+texture_progress = ExtResource("4_uuxqe")
+
+[node name="CooldownLabel" type="Label" parent="." unique_id=2002615575]
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -59.0
+offset_top = -51.0
+offset_right = -19.0
+offset_bottom = -28.0
+grow_horizontal = 0
+grow_vertical = 0
+text = "1.5"
+label_settings = SubResource("LabelSettings_uuxqe")
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="KeybindLabel" type="Label" parent="." unique_id=202754147]
+layout_mode = 0
+offset_left = 14.0
+offset_top = 22.0
+offset_right = 54.0
+offset_bottom = 53.0
+text = "1"
+label_settings = SubResource("LabelSettings_gw4d2")
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[connection signal="pressed" from="." to="." method="_on_pressed"]

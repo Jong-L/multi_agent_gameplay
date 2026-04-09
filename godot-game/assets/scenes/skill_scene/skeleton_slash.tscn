@@ -1,0 +1,22 @@
+[gd_scene format=3 uid="uid://b1tj45nrn03gn"]
+
+[ext_resource type="Script" uid="uid://b7q72xrvheq0w" path="res://scripts/skills/core/skill_animation_runner.gd" id="1_kihbn"]
+[ext_resource type="Script" uid="uid://b387vhp01lg43" path="res://scripts/skills/core/components/skill_deal_damage.gd" id="2_46ppu"]
+[ext_resource type="Script" uid="uid://wbl5lv02fsii" path="res://scripts/skills/core/components/skill_target_player.gd" id="3_27bb0"]
+
+[node name="SkeletonSlash" type="Node2D" unique_id=1548513086]
+scale = Vector2(1.5, 1.5)
+
+[node name="SkillAnimationRunner" type="Node" parent="." unique_id=289620626]
+script = ExtResource("1_kihbn")
+metadata/_custom_type_script = "uid://b7q72xrvheq0w"
+
+[node name="SkillTargetPlayer" type="Node" parent="." unique_id=955738331]
+script = ExtResource("3_27bb0")
+check_range = 35.0
+metadata/_custom_type_script = "uid://wbl5lv02fsii"
+
+[node name="SkillDealDamage" type="Node" parent="." unique_id=1709392132]
+script = ExtResource("2_46ppu")
+execution_delay_time = 0.3
+metadata/_custom_type_script = "uid://b387vhp01lg43"
