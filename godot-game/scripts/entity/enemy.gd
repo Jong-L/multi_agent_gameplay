@@ -26,6 +26,7 @@ enum State {
 @onready var skill_controller: SkillController = $SkillController
 @onready var hit_particles: CPUParticles2D = $CpuHitParticles
 @onready var pathfinding: Pathfinding = $Pathfinding
+@onready var _play_scene:PlayScene=$".."
 
 @export var speed: float = 30                    ## 追击移动速度
 @export var patrol_speed: float = 20             ## 巡逻移动速度
@@ -59,22 +60,12 @@ func _ready() -> void:
 	patrol_target = _pick_patrol_target()
 
 ## 初始化巡逻范围
-## 从 Road TileMapLayer 动态获取，转换为世界坐标矩形
+## 从 PlayScene 获取 Road 区域的世界坐标矩形
 func _init_patrol_rect() -> void:
-	var road_layer = get_tree().get_first_node_in_group("road")
-	if road_layer and road_layer is TileMapLayer:
-		var used = road_layer.get_used_rect()
-		var tile_size = road_layer.tile_set.tile_size
-		var scale_v = road_layer.scale
-		var pos = road_layer.position
-		patrol_rect = Rect2(
-			pos.x + used.position.x * tile_size.x * scale_v.x,
-			pos.y + used.position.y * tile_size.y * scale_v.y,
-			used.size.x * tile_size.x * scale_v.x,
-			used.size.y * tile_size.y * scale_v.y
-		)
+	if _play_scene != null and _play_scene.patrol_rect.has_area():
+		patrol_rect = _play_scene.patrol_rect
 	else:
-		## 后备：硬编码范围（Road tiles: -7,-7 to 6,6, scale=1.5, tile_size=16）
+		#直接硬编码设置（Road tiles: -7,-7 to 6,6, scale=1.5, tile_size=16）
 		patrol_rect = Rect2(-168, -168, 336, 336)
 
 func _process(delta: float) -> void:
