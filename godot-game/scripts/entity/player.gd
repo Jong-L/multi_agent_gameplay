@@ -20,9 +20,9 @@ enum Action {
 @onready var skill_controller: Node = $SkillController
 @onready var play_scene:PlayScene=$".."
 @onready var ai_controller:AIController2D=$AIController2D
+@onready var sync_node:Sync=$"../Sync"
 
-var is_moving: bool = false                  
-var horizontal: float = 0.0                  
+var is_moving: bool = false                                    
 var spawn_position: Vector2 = Vector2.ZERO
 var pending_action: Action = Action.IDLE # 当前待执行动作
 
@@ -70,11 +70,17 @@ func _process(delta: float) -> void:
 	_handle_movement(delta)
 	_handle_animation()
 	_execute_action()
-
-func _handle_movement(delta: float) -> void:#根据 pending_action执行动作
-	is_moving = false
+	
+#根据 pending_action执行动作
+func _handle_movement(delta: float) -> void:
+	is_moving = false#不移动时为false
 	var movement = Vector2.ZERO
 	
+	#human模式下操控当前看到的角色
+	if sync_node.control_mode==sync_node.ControlModes.HUMAN\
+	and player_id==CameraManager.current_camera_id:
+		movement=Input.get_vector("move_left", "move_right", "move_up", "move_down")
+		
 	match pending_action:
 		Action.MOVE_UP:
 			movement = Vector2.UP
@@ -82,13 +88,10 @@ func _handle_movement(delta: float) -> void:#根据 pending_action执行动作
 			movement = Vector2.DOWN
 		Action.MOVE_LEFT:
 			movement = Vector2.LEFT
-			animated_sprite.flip_h = true
 		Action.MOVE_RIGHT:
 			movement = Vector2.RIGHT
-			animated_sprite.flip_h = false
 	
-	horizontal = movement.x
-	#外部推力衰减（击退效果逐渐归零）
+	#外部推力衰减
 	if external_velocity != Vector2.ZERO:
 		external_velocity = external_velocity.move_toward(
 			Vector2.ZERO,
@@ -98,7 +101,6 @@ func _handle_movement(delta: float) -> void:#根据 pending_action执行动作
 			external_velocity = Vector2.ZERO
 	
 	if movement.length() > 0:
-		## 上下移动时保持当前水平朝向
 		if movement.x > 0:
 			animated_sprite.flip_h = false
 		elif movement.x < 0:
@@ -130,8 +132,10 @@ func get_obs() -> Dictionary:# 获取观测
 		"obs":[player_id,
 		global_position.x/(play_scene.arena_length/2),#归一化到[-1,1]
 		global_position.x/(play_scene.arena_length/2),
+		animated_sprite.flip_h,#翻转决定了攻击范围
 		current_health/max_health,
-		max_health]
+		max_health,#多智能体对抗环境需要最大生命值
+		]
 	}
 
 #override

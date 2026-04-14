@@ -1,23 +1,23 @@
 extends PanelContainer
 class_name SpellBar
 
-## 玩家技能栏 UI
-## 显示多个技能按钮（SpellButton），包含图标、冷却、按键绑定
-##
-## 可见性规则：
-##   - 主相机模式：隐藏
-##   - 玩家相机模式：只显示对应玩家的技能栏
-##
-## 使用方式：
-##   - PlayScene._setup_player_uis() 动态创建
-##   - register_skill() 绑定技能
+" 玩家技能栏 UI
+ 显示多个技能按钮（SpellButton），包含图标、冷却、按键绑定
 
-var spell_buttons: Array[SpellButton] = []    ## 技能按钮数组
-@export var button_container: Node            ## 按钮容器（HBoxContainer）
-var bound_player_id: int = -1                 ## 绑定的玩家 ID
+ 可见性规则：
+   - 主相机模式：隐藏
+   - 玩家相机模式：只显示对应玩家的技能栏
+
+ 使用方式：
+   - PlayScene._setup_player_uis() 动态创建
+   - register_skill() 绑定技能"
+
+var spell_buttons: Array[SpellButton] = []  
+@export var button_container: Node           
+var bound_player_id: int = -1                 
 
 func _enter_tree() -> void:
-	## 收集按钮并分配按键绑定（1, 2, 3...）
+	#收集按钮并分配按键绑定（1, 2, 3...）
 	var i = 1
 	for button in button_container.get_children():
 		if button is SpellButton:
@@ -29,9 +29,7 @@ func _process(delta: float) -> void:
 	## 根据相机状态控制可见性
 	visible = bound_player_id >= 0 and CameraManager.should_show_player_ui(bound_player_id)
 
-## 注册技能到按钮
-## @param skill: 技能实例
-## @param idx: 按钮索引
+#注册技能到按钮
 func register_skill(skill: Skill, idx: int) -> void:
 	if idx >= 0 and idx < spell_buttons.size():
 		spell_buttons[idx].set_skill(skill)

@@ -407,6 +407,7 @@ position = Vector2(440, -415.00003)
 collision_mask = 5
 skin_color = "Black"
 player_id = 1
+max_health = 150.0
 
 [node name="Player_Red" parent="." unique_id=895822030 instance=ExtResource("1_s7ljx")]
 z_index = 6
