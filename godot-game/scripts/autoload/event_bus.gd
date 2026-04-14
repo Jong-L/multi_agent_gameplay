@@ -20,8 +20,7 @@ signal player_cast_skill(skill: Skill)
 ## @param paused: true=暂停, false=恢复
 signal game_paused(paused: bool)
 
-## 游戏重置请求（Python 端 reset 指令触发）
-signal game_reset_requested
+## 游戏重置请求
 
 ## 玩家死亡
 ## @param player: 死亡的玩家实例
@@ -78,11 +77,7 @@ signal entity_despawned(entity: Entity)
 ## @param context: 技能上下文
 signal skill_effect_triggered(skill: Skill, context: SkillContext)
 
-## 网络连接状态变化
-## @param connected: true=已连接, false=断开
-signal network_connection_changed(connected: bool)
-
-## 收到网络消息
+## 网络消息接收（保留供未来扩展）
 ## @param message: 消息字典
 signal network_message_received(message: Dictionary)
 

@@ -4,7 +4,6 @@ class_name PlayScene
 ## 游戏主场景控制器
 ## 职责：
 ## - 初始化玩家、相机系统、UI
-## 管理 TCP 通信（与 NetworkManager 协作）
 ## - 处理游戏重置、暂停等全局状态
 
 @export var screen_transition: ColorRect  # 屏幕过渡遮罩（淡入淡出）
@@ -12,11 +11,6 @@ class_name PlayScene
 
 ## 所有玩家引用（按 player_id 排序）
 var players: Array[Player] = []
-
-## 通信帧率控制：每 N 物理帧通信一次
-## 降低通信频率，避免 Python-Godot 通信过载
-const COMM_TICK_RATE: int = 5
-var _tick_counter: int = 0
 
 ## 相机切换按钮组（动态创建）
 var camera_buttons: Array[Button] = []
@@ -29,7 +23,6 @@ var player_spell_bars: Array[SpellBar] = []
 func _ready() -> void:
 	# 连接全局事件
 	EventBus.game_paused.connect(_handle_pause)
-	EventBus.game_reset_requested.connect(_handle_reset)
 	
 	# 延迟一帧，确保所有子节点已就绪
 	await get_tree().process_frame
@@ -38,10 +31,6 @@ func _ready() -> void:
 	_setup_camera_system()      # 初始化相机系统
 	_setup_camera_switch_ui()   # 创建相机切换按钮
 	_setup_player_uis()         # 动态创建血条和技能栏
-	
-	# 连接 NetworkManager 的动作信号
-	if NetworkManager:
-		NetworkManager.actions_received.connect(_on_actions_received)
 
 ## 收集场景中所有 Player 节点（按 player_id 排序）
 func _collect_players() -> void:
@@ -50,7 +39,7 @@ func _collect_players() -> void:
 		if node is Player:
 			players.append(node)
 	
-	# 按 player_id 排序，确保 Python 端动作数组顺序一致
+	# 按 player_id 排序，确保动作数组顺序一致
 	players.sort_custom(func(a, b): return a.player_id < b.player_id)
 	
 	print("[PlayScene] 找到 %d 个玩家" % players.size())
@@ -248,36 +237,14 @@ func _update_button_highlight(camera_id: int) -> void:
 		else:
 			camera_buttons[i].modulate = Color(1.0, 1.0, 1.0)   # 默认白色
 
-## 物理帧处理：与 Python 端通信
-func _physics_process(delta: float) -> void:
-	if not NetworkManager or not NetworkManager.is_client_connected():
-		return
-	
-	_tick_counter += 1
-	if _tick_counter < COMM_TICK_RATE:
-		return
-	_tick_counter = 0
-	
-	# 1. 发送游戏状态给 Python
-	NetworkManager.send_game_state(players)
-	
-	# 2. 接收并分发 Python 返回的动作
-	var actions = NetworkManager.get_cached_actions()
-	if actions.size() > 0:
-		_apply_actions(actions)
-
-## 将 Python 返回的动作数组分发到各玩家
+## 将动作数组分发到各玩家
 ## @param actions: 动作数组（索引对应 player_id）
 func _apply_actions(actions: Array) -> void:
 	for i in range(min(actions.size(), players.size())):
 		var action_value = int(actions[i])
 		players[i].set_action(action_value)
 
-## NetworkManager 信号回调（actions_received）
-func _on_actions_received(actions: Array) -> void:
-	_apply_actions(actions)
-
-## 处理游戏重置请求（来自 Python 端的 reset 指令）
+## 处理游戏重置请求
 func _handle_reset() -> void:
 	print("[PlayScene] 执行游戏重置")
 	for p in players:

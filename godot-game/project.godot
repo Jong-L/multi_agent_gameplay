@@ -23,7 +23,6 @@ buses/default_bus_layout=""
 
 FloatText="*uid://c8lcokexvpkrg"
 EventBus="*uid://m5nveww5851n"
-NetworkManager="*res://scripts/autoload/network_manager.gd"
 CameraManager="*res://scripts/autoload/camera_manager.gd"
 
 [display]
@@ -33,6 +32,10 @@ window/size/viewport_height=720
 window/size/initial_position=Vector2i(800, 800)
 window/stretch/mode="canvas_items"
 mouse_cursor/custom_image="uid://drletjwa3f1cx"
+
+[editor_plugins]
+
+enabled=PackedStringArray("res://addons/godot_rl_agents/plugin.cfg")
 
 [input]
 

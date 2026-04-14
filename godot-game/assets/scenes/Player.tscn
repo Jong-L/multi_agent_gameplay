@@ -7,6 +7,7 @@
 [ext_resource type="Script" uid="uid://bl25sftvk03dd" path="res://scripts/skills/core/skill_controller.gd" id="3_e80uo"]
 [ext_resource type="Texture2D" uid="uid://ccishdwvfyoyy" path="res://assets/Tiny Swords (Free Pack)/Particle FX/Dust_01.png" id="3_qu62d"]
 [ext_resource type="PackedScene" uid="uid://ubsuldtsvf4p" path="res://assets/scenes/skill_scene/slash.tscn" id="4_tdg3f"]
+[ext_resource type="Script" uid="uid://dirmui5fqjtt1" path="res://assets/scenes/controller.gd" id="8_qu62d"]
 
 [sub_resource type="CapsuleShape2D" id="CapsuleShape2D_physics"]
 radius = 43.0
@@ -200,7 +201,6 @@ height = 177.33333
 scale = Vector2(0.3, 0.3)
 collision_mask = 4
 script = ExtResource("1_kpjcp")
-walk_speed = 60
 damage_text_color = Color(0.9999998, 0.23224765, 0.098263316, 1)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=655665298]
@@ -227,5 +227,9 @@ visible = false
 z_index = 6
 position = Vector2(-10, -6.666667)
 shape = SubResource("CapsuleShape2D_4wvqw")
+
+[node name="AIController2D" type="Node2D" parent="." unique_id=720197141]
+script = ExtResource("8_qu62d")
+metadata/_custom_type_script = "uid://ciecfcurp1n2n"
 
 [connection signal="animation_finished" from="AnimatedSprite2D" to="." method="_on_animated_sprite_2d_animation_finished"]
