@@ -19,6 +19,7 @@ class_name PlayScene
 
 # 所有玩家引用,按 player_id 排序
 var players: Array[Player] = []
+var enemies:Array[Enemy]=[]
 # 相机切换按钮组
 var camera_buttons: Array[Button] = []
 # 玩家专属血条数组与技能栏，与各自的player对应
@@ -31,6 +32,7 @@ var patrol_rect: Rect2 = Rect2()#Road层表示的巡逻区域
 var collision_decoration_positions: Array[Vector2] = []  ## CollisionDecoration 各 tile 的世界坐标
 var arena_length:float#正方形竞技场，只记录边长
 
+var is_resetting:bool=false #四个玩家都执行重置时只重置一次
 func _ready() -> void:
 	#加载地图数据
 	_init_map_data()
@@ -40,6 +42,7 @@ func _ready() -> void:
 	# 延迟一帧，确保所有子节点已就绪
 	await get_tree().process_frame
 	
+	_collect_enemis()
 	_collect_players()          
 	_setup_camera_system()      
 	_setup_camera_switch_ui()   
@@ -109,6 +112,11 @@ func _collect_players() -> void:
 	#for p in players:
 		#print("  Player %d (%s) at %s" % [p.player_id, p.skin_color, p.position])
 
+func _collect_enemis()->void:
+	for child in get_children():
+		if child is Enemy:
+			enemies.append(child)
+	#print(enemies)
 # 初始化相机系统，将玩家引用传给 CameraManager
 func _setup_camera_system() -> void:
 	CameraManager.players.clear()
@@ -299,7 +307,15 @@ func _apply_actions(actions: Array) -> void:# 将动作数组分发到各玩家
 		var action_value = int(actions[i])
 		players[i].set_action(action_value)
 
-# 处理游戏重置请求
+#func handle_reset()->void:
+	#print("[PlayScene] 执行游戏重置")
+	#if is_resetting:
+		#return
+	#is_resetting=true
+	#_handle_reset()
+	#
+	#is_resetting=false
+## 处理游戏重置请求
 func _handle_reset() -> void:
 	print("[PlayScene] 执行游戏重置")
 	for p in players:
@@ -312,8 +328,10 @@ func _handle_reset() -> void:
 		for skill in p.skill_controller.cooldowns.keys():
 			p.skill_controller.cooldowns[skill] = 0.0
 			skill.current_cooldown = 0.0
+	
+	for enemy in enemies:
+		enemy.full_reset()
 
-# 处理玩家死亡
 func _reset_player_state(player: Player) -> void:
 	player.current_animation_wrapper = null
 	player.is_dead = false

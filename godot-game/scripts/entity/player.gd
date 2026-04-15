@@ -64,6 +64,9 @@ func set_action(action: int) -> void:#设置待执行动作
 		pending_action = action as Action
 
 func _process(delta: float) -> void:
+	if ai_controller.needs_reset and player_id==0:#只使用一个玩家重置
+		ai_controller.reset()
+		return
 	if is_dead:
 		return
 	

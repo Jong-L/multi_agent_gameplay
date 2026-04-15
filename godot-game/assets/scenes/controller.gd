@@ -2,6 +2,15 @@ extends AIController2D
 
 var move_action:int
 
+func _physics_process(delta):
+	super._physics_process(delta)
+	if needs_reset:
+		done=true
+
+func reset():
+	super.reset()
+	_player.play_scene._handle_reset()
+
 func get_obs() -> Dictionary:
 	var obs=_player.get_obs()
 	return obs

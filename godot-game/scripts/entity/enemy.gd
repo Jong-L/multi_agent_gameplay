@@ -65,7 +65,7 @@ func _process(delta: float) -> void:
 	if is_respawning:
 		respawn_timer -= delta
 		if respawn_timer <= 0:
-			_respawn()
+			respawn()
 		return
 	
 	if is_dead:
@@ -202,20 +202,26 @@ func _start_respawn() -> void:
 	if hit_particles != null:
 		hit_particles.emitting = false
 
-#复活,重置状态、随机位置复活、清除冷却
-func _respawn() -> void:
+#完整重置：用于游戏重置时强制恢复敌人状态，覆盖死亡、重生倒计时、活着但状态不干净的任何情况
+func full_reset() -> void:
+	#清除重生状态
 	is_respawning = false
+	respawn_timer = 0.0
+	
+	#恢复基本状态
 	is_dead = false
 	current_health = max_health
 	target = null
 	
+	#重置状态机
 	state = State.PATROL
 	state_timer = 0.0
 	patrol_idle_timer = 0.0
 	out_of_bounds_timer = 0.0
-	patrol_timer=patrol_time
+	patrol_timer = patrol_time
 	current_animation_wrapper = null
 	
+	#重置位置
 	position = _pick_respawn_position()
 	patrol_target = _pick_patrol_target()
 	
@@ -224,14 +230,20 @@ func _respawn() -> void:
 		skill_controller.cooldowns[skill] = 0.0
 		skill.current_cooldown = 0.0
 	
+	#恢复可见性和碰撞
 	visible = true
 	$CollisionShape2D.set_deferred("disabled", false)
 	$Area2D/CollisionShape2D.set_deferred("disabled", false)
 	
+	#清除受击效果
 	if animated_sprite.material != null:
 		animated_sprite.material.set_shader_parameter("is_hurt", false)
 	
 	play_animation(AnimationWrapper.new("idle", false))
+
+#复活：死亡动画结束后调用
+func respawn() -> void:
+	full_reset()
 
 #巡逻状态
 func _process_patrol(delta: float) -> void:
