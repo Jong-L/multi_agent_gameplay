@@ -1,26 +1,16 @@
 class_name Enemy
 extends Entity
 
-## 敌人 AI 类
-## 继承自 Entity，实现基于状态机的 AI 行为
-##
-## 状态机流程：
-##   PATROL → CHASE → ATTACK_WINDUP → ATTACKING → ATTACK_RECOVERY → (CHASE/PATROL)
-##              ↓
-##           RETURN（追击超范围时）
-##
-## 架构位置：
-##   - 父类：Entity
-##   - 组件：SkillController（攻击）、Pathfinding（避障）
-##   - 目标检测：视野检测（距离 + 扇形 FOV）
+#敌人 AI 类
+#目前还没有引入信号导致状态转换有些繁琐
 
 enum State {
-	PATROL,           ## 巡逻：在范围内随机移动
-	CHASE,            ## 追击：发现玩家后追击
-	ATTACK_WINDUP,    ## 攻击前摇：蓄力阶段（可被打断）
-	ATTACKING,        ## 攻击中：技能释放阶段
-	ATTACK_RECOVERY,  ## 攻击后摇：恢复阶段
-	RETURN            ## 返回：追击超出范围后返回巡逻区
+	PATROL,           #巡逻
+	CHASE,            #追击
+	ATTACK_WINDUP,    #攻击前摇
+	ATTACKING,        #攻击中
+	ATTACK_RECOVERY,  #攻击后摇
+	RETURN            #返回
 }
 
 @onready var skill_controller: SkillController = $SkillController
@@ -28,39 +18,41 @@ enum State {
 @onready var pathfinding: Pathfinding = $Pathfinding
 @onready var _play_scene:PlayScene=$".."
 
-@export var speed: float = 30                    ## 追击移动速度
-@export var patrol_speed: float = 20             ## 巡逻移动速度
-@export var stop_distance: float = 8             ## 到达判定距离
-@export var attack_windup_time: float = 0.2      ## 攻击前摇时长
-@export var attack_recovery_time: float = 0.6    ## 攻击后摇时长
-@export var attack_position_offset: float = 20   ## 攻击站位偏移（目标左右侧）
-@export var attack_range: float = 35             ## 攻击距离
-@export var attack_fov: float = 100.0            ## 攻击视野角度（扇形）
-@export var sight_range: float = 120.0           ## 发现玩家的最大距离
-@export var out_of_bounds_time: float = 2.0      ## 离开巡逻范围多久触发返回
-@export var patrol_idle_time: float = 1.5        ## 巡逻点到达后等待时长
-@export var respawn_time: float = 8.0            ## 重生倒计时
+@export var speed: float = 30                    #追击移动速度
+@export var patrol_speed: float = 20             #巡逻移动速度
+@export var stop_distance: float = 8             #到达判定距离
+@export var attack_windup_time: float = 0.25      #攻击前摇时长
+@export var attack_recovery_time: float = 0.4    #攻击后摇时长
+@export var attack_position_offset: float = 20   #攻击站位偏移（目标左右侧）
+@export var attack_range: float = 25             #攻击距离
+@export var attack_fov: float = 100.0            #攻击视野角度（扇形）
+@export var sight_range: float = 120.0           #发现玩家的最大距离
+@export var out_of_bounds_time: float = 2.0      #离开巡逻范围多久触发返回
+@export var patrol_idle_time: float = 2.0        #巡逻点到达后等待时长
+@export var patrol_time:float=8				     #巡逻时间，避免被障碍物卡住一直走
+@export var respawn_time: float = 8.0            #重生倒计时
 
-var target: Player = null                        ## 当前追击目标
-var state: State = State.PATROL                  ## 当前状态
-var state_timer: float = 0.0                     ## 状态计时器（前摇/后摇）
-var patrol_target: Vector2 = Vector2.ZERO        ## 当前巡逻目标点
-var patrol_idle_timer: float = 0.0               ## 巡逻等待计时
-var chase_origin: Vector2 = Vector2.ZERO         ## 开始追击时的位置
-var out_of_bounds_timer: float = 0.0             ## 离开巡逻范围计时
-var respawn_timer: float = 0.0                   ## 重生倒计时
-var is_respawning: bool = false                  ## 重生状态标记
-var patrol_rect: Rect2 = Rect2()                 ## 巡逻范围矩形
+var target: Player = null                        #当前追击目标
+var state: State = State.PATROL                  #当前状态，初始为巡逻
+var state_timer: float = 0.0                     #状态计时器（前摇/后摇）
+var patrol_target: Vector2 = Vector2.ZERO        #当前巡逻目标点
+var patrol_idle_timer: float = 0.0               #巡逻等待计时
+var chase_origin: Vector2 = Vector2.ZERO         #开始追击时的位置
+var out_of_bounds_timer: float = 0.0             #离开巡逻范围计时
+var respawn_timer: float = 0.0                   #重生倒计时
+var patrol_timer:float=patrol_time  			#巡逻计时,初始状态为巡逻，直接赋值
+var is_respawning: bool = false                  #重生状态标记
+var patrol_rect: Rect2 = Rect2()                 #巡逻范围矩形
 
-const STICKY_FACTOR: float = 0.7                 ## 黏性目标系数（越小越不容易换目标）
+const STICKY_FACTOR: float = 0.7                 # 黏性目标系数
 
 func _ready() -> void:
 	super._ready()
 	_init_patrol_rect()
+	#
 	patrol_target = _pick_patrol_target()
 
-## 初始化巡逻范围
-## 从 PlayScene 获取 Road 区域的世界坐标矩形
+#初始化巡逻范围，从 PlayScene 获取 Road 区域的世界坐标矩形
 func _init_patrol_rect() -> void:
 	if _play_scene != null and _play_scene.patrol_rect.has_area():
 		patrol_rect = _play_scene.patrol_rect
@@ -69,7 +61,7 @@ func _init_patrol_rect() -> void:
 		patrol_rect = Rect2(-168, -168, 336, 336)
 
 func _process(delta: float) -> void:
-	## 重生倒计时（独立于状态机）
+	#重生倒计时
 	if is_respawning:
 		respawn_timer -= delta
 		if respawn_timer <= 0:
@@ -79,7 +71,7 @@ func _process(delta: float) -> void:
 	if is_dead:
 		return
 	
-	## 目标死亡处理
+	#目标死亡处理
 	if target != null and target.is_dead:
 		target = null
 		if state in [State.ATTACK_WINDUP, State.ATTACKING]:
@@ -95,9 +87,10 @@ func _process(delta: float) -> void:
 				state = State.PATROL
 				patrol_target = _pick_patrol_target()
 				patrol_idle_timer = 0.0
+				patrol_timer=patrol_time
 				return
 	
-	## 目标丢失处理
+	#目标丢失处理
 	if target == null and state in [State.CHASE, State.ATTACK_WINDUP, State.ATTACKING]:
 		var new_target = _find_nearest_player()
 		if new_target != null:
@@ -108,9 +101,10 @@ func _process(delta: float) -> void:
 			state = State.PATROL
 			patrol_target = _pick_patrol_target()
 			patrol_idle_timer = 0.0
+			patrol_timer=patrol_time
 			return
 	
-	## 外部推力衰减
+	#外部推力衰减
 	if external_velocity != Vector2.ZERO:
 		external_velocity = external_velocity.move_toward(
 			Vector2.ZERO,
@@ -119,7 +113,7 @@ func _process(delta: float) -> void:
 		if external_velocity.length() < 1.0:
 			external_velocity = Vector2.ZERO
 	
-	## 状态机分发
+	#状态机分发
 	match state:
 		State.PATROL:
 			_process_patrol(delta)
@@ -134,9 +128,7 @@ func _process(delta: float) -> void:
 		State.RETURN:
 			_process_return(delta)
 
-# ==================== 目标感知 ====================
-
-## 获取所有存活玩家
+#获取所有存活玩家
 func _get_alive_players() -> Array[Player]:
 	var result: Array[Player] = []
 	for node in get_tree().get_nodes_in_group("player"):
@@ -144,7 +136,7 @@ func _get_alive_players() -> Array[Player]:
 			result.append(node)
 	return result
 
-## 找到最近的存活玩家
+#找到最近的存活玩家
 func _find_nearest_player() -> Player:
 	var players = _get_alive_players()
 	if players.is_empty():
@@ -159,9 +151,7 @@ func _find_nearest_player() -> Player:
 			nearest = p
 	return nearest
 
-## 黏性目标切换
-## 策略：新目标距离 < 当前距离 × STICKY_FACTOR 才切换
-## 目的：防止目标频繁抖动，保持攻击专注度
+#新目标距离 < 当前距离 × STICKY_FACTOR 切换
 func _update_target() -> void:
 	var candidate = _find_nearest_player()
 	if candidate == null:
@@ -180,14 +170,14 @@ func _update_target() -> void:
 	if candidate_dist < current_dist * STICKY_FACTOR:
 		target = candidate
 
-## 检查视野内是否有玩家
+#检查视野内是否有玩家
 func _can_see_any_player() -> bool:
 	for p in _get_alive_players():
 		if position.distance_to(p.position) <= sight_range:
 			return true
 	return false
 
-## 找到视野内最近的玩家
+#找到视野内最近的玩家
 func _find_nearest_visible_player() -> Player:
 	var nearest: Player = null
 	var nearest_dist: float = INF
@@ -198,10 +188,7 @@ func _find_nearest_visible_player() -> Player:
 			nearest = p
 	return nearest
 
-# ==================== 重生 ====================
-
-## 开始重生倒计时
-## 操作：隐藏实体、禁用碰撞、清除速度
+#开始重生倒计时,隐藏实体、禁用碰撞、清除速度
 func _start_respawn() -> void:
 	is_respawning = true
 	respawn_timer = respawn_time
@@ -215,8 +202,7 @@ func _start_respawn() -> void:
 	if hit_particles != null:
 		hit_particles.emitting = false
 
-## 复活
-## 操作：重置状态、随机位置、清除冷却
+#复活,重置状态、随机位置复活、清除冷却
 func _respawn() -> void:
 	is_respawning = false
 	is_dead = false
@@ -227,12 +213,13 @@ func _respawn() -> void:
 	state_timer = 0.0
 	patrol_idle_timer = 0.0
 	out_of_bounds_timer = 0.0
+	patrol_timer=patrol_time
 	current_animation_wrapper = null
 	
 	position = _pick_respawn_position()
 	patrol_target = _pick_patrol_target()
 	
-	## 重置技能冷却
+	#重置技能冷却
 	for skill in skill_controller.cooldowns.keys():
 		skill_controller.cooldowns[skill] = 0.0
 		skill.current_cooldown = 0.0
@@ -246,25 +233,29 @@ func _respawn() -> void:
 	
 	play_animation(AnimationWrapper.new("idle", false))
 
-# ==================== 巡逻 ====================
-
-## 巡逻状态
-## 行为：扫描玩家 → 等待 → 移动 → 选新目标
+#巡逻状态
 func _process_patrol(delta: float) -> void:
 	var visible_player = _find_nearest_visible_player()
+	#检测到目标
 	if visible_player != null:
 		target = visible_player
 		_start_chase()
 		return
 	
+	#待机时间还没结束
 	if patrol_idle_timer > 0:
 		patrol_idle_timer -= delta
-		play_animation(AnimationWrapper.new("idle", false))
+		play_animation(AnimationWrapper.new("idle", false))#如果当前有在播放的动画play_animationn会直接返回，不会重复播放放
 		return
 	
+	#更新剩余巡逻时间
+	patrol_timer=max(patrol_timer-delta,0)
+	
 	var to_target = patrol_target - position
-	if to_target.length() <= stop_distance or to_target.length() <= 0.1:
+	#已到达目标点或者巡逻时间已完
+	if to_target.length() <= stop_distance or to_target.length() <= 0.1 or patrol_timer<=0:
 		patrol_idle_timer = patrol_idle_time
+		patrol_timer=patrol_time
 		patrol_target = _pick_patrol_target()
 		return
 	
@@ -279,15 +270,14 @@ func _process_patrol(delta: float) -> void:
 	play_animation(AnimationWrapper.new("run", false))
 	_face_target(to_target)
 
-## 选取巡逻目标点
+#选取巡逻目标点
 func _pick_patrol_target() -> Vector2:
 	var margin = 16.0
 	var x = randf_range(patrol_rect.position.x + margin, patrol_rect.end.x - margin)
 	var y = randf_range(patrol_rect.position.y + margin, patrol_rect.end.y - margin)
 	return Vector2(x, y)
 
-## 选取重生位置（远离玩家）
-## 尝试 10 次找安全位置
+#选取重生位置。远离玩家
 func _pick_respawn_position() -> Vector2:
 	var min_player_distance = 80.0
 	var players = _get_alive_players()
@@ -304,25 +294,16 @@ func _pick_respawn_position() -> Vector2:
 	
 	return _pick_patrol_target()
 
-## 检查是否在巡逻范围内
+#检查是否在巡逻范围内
 func _is_in_patrol_area() -> bool:
 	return patrol_rect.has_point(position)
 
-# ==================== 追击 ====================
-
-## 进入追击状态
+#进入追击状态
 func _start_chase() -> void:
 	chase_origin = position
 	out_of_bounds_timer = 0.0
 	state = State.CHASE
 
-## 追击状态
-## 逻辑：
-##   1. 黏性目标切换
-##   2. 目标丢失 → 回巡逻
-##   3. 满足攻击条件 → 进入前摇
-##   4. 到达攻击站位 → 进入前摇
-##   5. 超范围太久 → 返回
 func _process_chase(delta: float) -> void:
 	_update_target()
 	
@@ -335,14 +316,14 @@ func _process_chase(delta: float) -> void:
 	var to_player = target.position - self.position
 	_face_target(to_player)
 	
-	## 条件1：当前位置可直接攻击
+	#当前位置可直接攻击
 	if _can_hit_target():
 		state = State.ATTACK_WINDUP
 		state_timer = attack_windup_time
 		play_animation(AnimationWrapper.new("idle", false))
 		return
 	
-	## 条件2：到达攻击站位
+	#到达攻击站位
 	var attack_pos = _get_attack_position()
 	var to_attack_pos = attack_pos - self.position
 	if to_attack_pos.length() <= stop_distance:
@@ -351,7 +332,7 @@ func _process_chase(delta: float) -> void:
 		play_animation(AnimationWrapper.new("idle", false))
 		return
 	
-	## 继续移动
+	#继续移动
 	var direction
 	if pathfinding != null:
 		direction = pathfinding.find_path(attack_pos).normalized()
@@ -362,7 +343,7 @@ func _process_chase(delta: float) -> void:
 	move_and_slide()
 	play_animation(AnimationWrapper.new("run", false))
 	
-	## 超范围检测
+	#超范围检测
 	if not _is_in_patrol_area():
 		out_of_bounds_timer += delta
 		if out_of_bounds_timer >= out_of_bounds_time:
@@ -372,10 +353,7 @@ func _process_chase(delta: float) -> void:
 	else:
 		out_of_bounds_timer = 0.0
 
-# ==================== 返回 ====================
-
-## 返回状态（追击超范围后返回）
-## 逻辑：返回途中若发现玩家且仍在巡逻范围内，可重新追击
+#追击超范围后返回
 func _process_return(delta: float) -> void:
 	var visible_player = _find_nearest_visible_player()
 	if visible_player != null and _is_in_patrol_area():
@@ -401,10 +379,7 @@ func _process_return(delta: float) -> void:
 	play_animation(AnimationWrapper.new("run", false))
 	_face_target(to_origin)
 
-# ==================== 攻击 ====================
-
-## 计算攻击站位
-## 策略：站在目标左侧或右侧 attack_position_offset 距离处
+#计算攻击站位
 func _get_attack_position() -> Vector2:
 	if target == null:
 		return position
@@ -415,8 +390,7 @@ func _get_attack_position() -> Vector2:
 	else:
 		return target.position + Vector2(attack_position_offset, 0)   # 目标在左，站右边
 
-## 检查是否满足攻击条件
-## 条件：距离在 attack_range 内 + 目标在扇形视野内
+#能否攻击，检查是否在 attack_range 内 + 目标在扇形视野内
 func _can_hit_target() -> bool:
 	if target == null:
 		return false
@@ -433,9 +407,7 @@ func _can_hit_target() -> bool:
 	var fov = deg_to_rad(attack_fov)
 	return to_player.normalized().dot(face_dir) > cos(fov / 2)
 
-## 攻击前摇
-## 行为：面向目标 + 闪烁提示 + 不可移动
-## 可被打断：目标死亡时中断进入后摇
+#攻击前摇
 func _process_windup(delta: float) -> void:
 	if target == null or target.is_dead:
 		state = State.ATTACK_RECOVERY
@@ -447,11 +419,6 @@ func _process_windup(delta: float) -> void:
 	
 	var to_player = target.position - self.position
 	_face_target(to_player)
-	
-	## 前摇视觉提示：快速闪烁
-	if animated_sprite.material != null:
-		var flash = sin(state_timer * 20.0) > 0
-		animated_sprite.material.set_shader_parameter("is_hurt", flash)
 	
 	if external_velocity != Vector2.ZERO:
 		velocity = external_velocity
@@ -465,8 +432,7 @@ func _process_windup(delta: float) -> void:
 		state = State.ATTACKING
 		state_timer = 0.75  ## slash 动画时长：6帧 / 8fps = 0.75s
 
-## 攻击中
-## 行为：播放攻击动画，计时结束后进入后摇
+#攻击中
 func _process_attacking(delta: float) -> void:
 	state_timer -= delta
 	if state_timer <= 0:
@@ -474,8 +440,7 @@ func _process_attacking(delta: float) -> void:
 		state_timer = attack_recovery_time
 		play_animation(AnimationWrapper.new("idle", false))
 
-## 攻击后摇
-## 行为：站立恢复，结束后重新评估目标
+#攻击后摇
 func _process_recovery(delta: float) -> void:
 	play_animation(AnimationWrapper.new("idle", false))
 	
@@ -495,23 +460,21 @@ func _process_recovery(delta: float) -> void:
 			patrol_target = _pick_patrol_target()
 			patrol_idle_timer = 0.0
 
-# ==================== 通用 ====================
-
-## 调整朝向
+#调整朝向
 func _face_target(velocity: Vector2) -> void:
 	if velocity.x > 0:
 		animated_sprite.flip_h = false
 	elif velocity.x < 0:
 		animated_sprite.flip_h = true
 
-## 动画完成回调
+#动画完成处理
 func _on_animated_sprite_2d_animation_finished() -> void:
 	if current_animation_wrapper != null and current_animation_wrapper.name == "die":
 		_start_respawn()
 		return
 	current_animation_wrapper = null
 
-## 受击特效（添加粒子）
+#受击特效
 func _show_damage_taken_effect() -> void:
 	super._show_damage_taken_effect()
 	if hit_particles != null:

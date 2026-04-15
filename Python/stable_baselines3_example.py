@@ -14,6 +14,7 @@ from godot_rl.wrappers.stable_baselines_wrapper import StableBaselinesGodotEnv
 # To download the env source and binary:
 # 1.  gdrl.env_from_hub -r edbeeching/godot_rl_BallChase
 # 2.  chmod +x examples/godot_rl_BallChase/bin/BallChase.x86_64
+
 if can_import("ray"):
     print("WARNING, stable baselines and ray[rllib] are not compatible")
 

@@ -1,6 +1,6 @@
 extends Node
 
-" 相机管理器（Autoload 单例）
+" 相机管理器（Autoload）
  管理主相机 + 4个玩家相机的切换
  当前激活相机决定了 UI（血条/技能栏）的显示策略"
 signal camera_switched(camera_id: int)
@@ -53,8 +53,9 @@ func _find_or_create_cameras(scene_root: Node) -> void:
 
 # 每帧更新玩家相机位置，跟随对应玩家
 func _update_player_cameras(delta: float) -> void:
+	#print(player_cameras)
 	for i in range(min(player_cameras.size(), players.size())):
-		if players[i] != null and not players[i].is_dead:
+		if players[i] != null and not players[i].is_dead and player_cameras[i]!=null:
 			player_cameras[i].global_position = players[i].global_position
 
 # 切换到主相机
@@ -66,7 +67,7 @@ func switch_to_main() -> void:
 		if cam != null:
 			cam.enabled = false
 	camera_switched.emit(-1)
-	print("[CameraManager] 切换到主相机")
+	#print("[CameraManager] 切换到主相机")
 
 # 切换到指定玩家的相机
 func switch_to_player(player_id: int) -> void:
@@ -84,7 +85,7 @@ func switch_to_player(player_id: int) -> void:
 			player_cameras[i].enabled = (i == player_id)
 	
 	camera_switched.emit(player_id)
-	print("[CameraManager] 切换到玩家 %d 相机" % player_id)
+	#print("[CameraManager] 切换到玩家 %d 相机" % player_id)
 
 # 根据按钮索引切换相机（0=主相机, 1-4=玩家1-4）
 func switch_by_index(index: int) -> void:

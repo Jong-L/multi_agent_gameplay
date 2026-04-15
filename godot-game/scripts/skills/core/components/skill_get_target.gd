@@ -11,7 +11,7 @@ class_name SkillGetTarget
 ##
 ## 检测结果：填充到 context.targets，供后续组件使用
 
-@export var _radius: float = 28           ## 检测半径（像素）
+@export var _radius: float = 35           ## 检测半径（像素）
 @export var _fov_degrees: float = 100.0   ## 视野角度（度）
 
 func _activate(context: SkillContext) -> void:

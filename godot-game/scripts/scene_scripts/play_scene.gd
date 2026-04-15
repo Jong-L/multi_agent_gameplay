@@ -140,12 +140,13 @@ func _setup_camera_switch_ui() -> void:
 	panel.set_owner(self)
 	
 	# 按钮配置,默认4个玩家，硬编码，以后看情况改
+	print(players[0].skin_color)
 	var button_configs := [
 		["主相机", 0],
-		["玩家1", 1],
-		["玩家2", 2],
-		["玩家3", 3],
-		["玩家4", 4],
+		["玩家{color}".format({"color":players[0].skin_color}), 1],
+		["玩家{color}".format({"color":players[1].skin_color}), 2],
+		["玩家{color}".format({"color":players[2].skin_color}), 3],
+		["玩家{color}".format({"color":players[3].skin_color}), 4],
 	]
 	
 	camera_buttons.clear()
@@ -312,21 +313,28 @@ func _handle_reset() -> void:
 			p.skill_controller.cooldowns[skill] = 0.0
 			skill.current_cooldown = 0.0
 
-# 处理单个玩家游戏结束（暂未使用）
-func _handle_game_over(player: Player) -> void:
-	var tween = fade_in()
-	await tween.finished
+# 处理玩家死亡
+func _reset_player_state(player: Player) -> void:
 	player.current_animation_wrapper = null
 	player.is_dead = false
 	player.position = player.spawn_position
 	player.current_health = player.max_health
-	
+
+func _reset_with_transition(player:Player)->void:
+	var tween = fade_in()
+	await tween.finished
+	_reset_player_state(player)
 	tween = fade_out()
 	await tween.finished
-
-# 玩家死亡信号回调（暂未连接）
+# 处理玩家死亡信号
 func _on_player_player_died(player: Player) -> void:
-	_handle_game_over(player)
+	var tween
+	var is_main_camera=CameraManager.current_camera_id==-1
+	
+	if is_main_camera:
+		_reset_player_state(player)
+		return
+	_reset_with_transition(player)
 
 #淡出
 func fade_out() -> Tween:

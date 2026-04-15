@@ -266,10 +266,8 @@ shape = SubResource("CapsuleShape2D_o3hxu")
 texture_filter = 1
 material = SubResource("ShaderMaterial_4t03u")
 sprite_frames = SubResource("SpriteFrames_u8q7w")
-animation = &"hurt"
+animation = &"die"
 autoplay = "idle"
-frame = 2
-frame_progress = 0.38579756
 
 [node name="SkillController" type="Node" parent="." unique_id=728567295]
 script = ExtResource("3_l4rmu")
@@ -301,7 +299,6 @@ color_ramp = SubResource("Gradient_37lg7")
 
 [node name="Pathfinding" type="Node2D" parent="." unique_id=364397931]
 script = ExtResource("11_a7s2s")
-neigbour_check_radius = 70
 separation_force = 170.0
 
 [connection signal="animation_finished" from="AnimatedSprite2D" to="." method="_on_animated_sprite_2d_animation_finished"]
