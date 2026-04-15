@@ -130,11 +130,10 @@ func _handle_skill(skill: Skill) -> void:#点击技能按钮触发
 	skill_controller.trigger_skill(skill)
 
 func get_obs() -> Dictionary:# 获取观测
-	
 	return {
 		"obs":[player_id,
 		global_position.x/(play_scene.arena_length/2),#归一化到[-1,1]
-		global_position.x/(play_scene.arena_length/2),
+		global_position.y/(play_scene.arena_length/2),
 		animated_sprite.flip_h,#翻转决定了攻击范围
 		current_health/max_health,
 		max_health,#多智能体对抗环境需要最大生命值

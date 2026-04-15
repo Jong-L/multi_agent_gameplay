@@ -284,10 +284,7 @@ func _process_patrol(delta: float) -> void:
 
 #选取巡逻目标点
 func _pick_patrol_target() -> Vector2:
-	var margin = 16.0
-	var x = randf_range(patrol_rect.position.x + margin, patrol_rect.end.x - margin)
-	var y = randf_range(patrol_rect.position.y + margin, patrol_rect.end.y - margin)
-	return Vector2(x, y)
+	return MathUtils.random_pos_in_rect(patrol_rect, 16.0)
 
 #选取重生位置。远离玩家
 func _pick_respawn_position() -> Vector2:

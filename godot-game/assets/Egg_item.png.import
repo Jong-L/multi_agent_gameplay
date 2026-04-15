@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://cilvpew7evqda"
-path="res://.godot/imported/Sheep.png-719430ebf4d8f574d72a20b39c071a29.ctex"
+uid="uid://b0ry0enl7jj0c"
+path="res://.godot/imported/Egg_item.png-8d6f7abd822008d46e906eee682433e1.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/Cute_Fantasy_Free/Animals/Sheep/Sheep.png"
-dest_files=["res://.godot/imported/Sheep.png-719430ebf4d8f574d72a20b39c071a29.ctex"]
+source_file="res://assets/Egg_item.png"
+dest_files=["res://.godot/imported/Egg_item.png-8d6f7abd822008d46e906eee682433e1.ctex"]
 
 [params]
 

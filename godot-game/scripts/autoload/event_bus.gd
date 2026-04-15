@@ -22,6 +22,13 @@ signal game_paused(paused: bool)
 
 ## 游戏重置请求
 
+## 奖励球被拾取
+## @param player_id: 拾取者的玩家 ID
+## @param ball_type: RewardBall.BallType 枚举值
+## @param reward_value: 奖励数值
+## @param ball: 被拾取的奖励球实例
+signal reward_ball_collected(player_id: int, ball_type: int, reward_value: float, ball: RewardBall)
+
 ## 玩家死亡
 ## @param player: 死亡的玩家实例
 signal player_died(player: Player)

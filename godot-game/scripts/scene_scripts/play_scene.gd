@@ -20,6 +20,8 @@ class_name PlayScene
 # 所有玩家引用,按 player_id 排序
 var players: Array[Player] = []
 var enemies:Array[Enemy]=[]
+# 奖励球管理器
+var reward_ball_manager: RewardBallManager = null
 # 相机切换按钮组
 var camera_buttons: Array[Button] = []
 # 玩家专属血条数组与技能栏，与各自的player对应
@@ -47,6 +49,7 @@ func _ready() -> void:
 	_setup_camera_system()      
 	_setup_camera_switch_ui()   
 	_setup_player_uis()         
+	_setup_reward_ball_manager()         
 
 # 从 TileMapLayer 计算世界坐标矩形
 static func _tilemap_to_world_rect(layer: TileMapLayer) -> Rect2:
@@ -285,6 +288,14 @@ func _setup_player_uis() -> void:
 	if old_spell_bar != null:
 		old_spell_bar.visible = false
 
+# 初始化奖励球管理器
+func _setup_reward_ball_manager() -> void:
+	reward_ball_manager = RewardBallManager.new()
+	reward_ball_manager.name = "RewardBallManager"
+	add_child(reward_ball_manager)
+	reward_ball_manager.set_owner(self)
+	reward_ball_manager.setup(self)
+
 # 相机切换按钮回调（由按钮 pressed 信号触发）
 func _on_camera_button_pressed(index: int) -> void:
 	CameraManager.switch_by_index(index)
@@ -331,6 +342,10 @@ func _handle_reset() -> void:
 	
 	for enemy in enemies:
 		enemy.full_reset()
+	
+	# 重置奖励球
+	if reward_ball_manager:
+		reward_ball_manager.reset_all()
 
 func _reset_player_state(player: Player) -> void:
 	player.current_animation_wrapper = null

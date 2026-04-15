@@ -1,5 +1,5 @@
 63f7b34db8d8cdea90c76aacccf841ec
-::res://::1776233594
+::res://::1776241053
 export_presets.cfg::TextFile::-1::1773548542::0::1::::<><><>0<>0<><>::
 icon.svg::CompressedTexture2D::4541085455082572640::1771848123::1771848128::1::::<><><>0<>0<>224bf56117706275fd2108ed6375a969<>res://.godot/imported/icon.svg-218a8f2b3041327d8a5756f3a245f83b.ctex::
 ::res://addons/::1776081641
@@ -42,23 +42,15 @@ RaycastSensor3D.gd::GDScript::8012014927970408117::1776081641::0::1::::RayCastSe
 RaycastSensor3D.tscn::PackedScene::4755965679510419149::1776081641::0::1::::<><><>0<>0<><>::res://addons/godot_rl_agents/sensors/sensors_3d/RaycastSensor3D.gd
 RGBCameraSensor3D.gd::GDScript::3549092079093164566::1776081641::0::1::::RGBCameraSensor3D<>Node3D<><>0<>0<><>::
 RGBCameraSensor3D.tscn::PackedScene::2387917642450167534::1776081641::0::1::::<><><>0<>0<><>::res://addons/godot_rl_agents/sensors/sensors_3d/RGBCameraSensor3D.gd
-::res://assets/::1775704229
+::res://assets/::1776239964
 AnimationSheet_Character.png::CompressedTexture2D::9017033393739052960::1771917764::1771917764::1::::<><><>0<>0<>99de2df17077fd96eabdb31c2a1dbfb2<>res://.godot/imported/AnimationSheet_Character.png-d3cbcbc2c20421fcc2b8127c3d88e754.ctex::
 bg_video-1.ogv::VideoStreamTheora::3396838043689418080::1773495555::0::1::::<><><>0<>0<><>::
+Egg_item.png::CompressedTexture2D::4177738279855719776::1776239964::1776239964::1::::<><><>0<>0<>aa0a68f03e96002e9f9f909544a61964<>res://.godot/imported/Egg_item.png-8d6f7abd822008d46e906eee682433e1.ctex::
 meleeAttack_plusCharacters.png::CompressedTexture2D::8327351926135129083::1772355974::1772355975::1::::<><><>0<>0<>af971c1899cf3b0f9cdf34a4c9f38f30<>res://.godot/imported/meleeAttack_plusCharacters.png-4a59d225b4c67a9fa61062dea2d1050f.ctex::
 slash_attack_icon.png::CompressedTexture2D::5867553743072147226::1773451010::1773451010::1::::<><><>0<>0<>c11a6522076f7626832e565a71f89d00<>res://.godot/imported/slash_attack_icon.png-7867168a40d54b5982b0483f712c4449.ctex::
 VCR_OSD_MONO_1.001.ttf::FontFile::7272496608647640271::1773066273::1773066274::1::::<><><>0<>0<>c0f4793edf0c0d6eab8b0d4ca5751dfa<>res://.godot/imported/VCR_OSD_MONO_1.001.ttf-05f6e003dca6b7b65a7c4c6cb80a848f.fontdata::
-::res://assets/Cute_Fantasy_Free/::1775704228
+::res://assets/Cute_Fantasy_Free/::1776239886
 read_me.txt::TextFile::-1::1772806071::0::1::::<><><>0<>0<><>::
-::res://assets/Cute_Fantasy_Free/Animals/::1775704228
-::res://assets/Cute_Fantasy_Free/Animals/Chicken/::1775704228
-Chicken.png::CompressedTexture2D::4446354689908166192::1772099372::1772099373::1::::<><><>0<>0<>fbd6f54fb42b08ca372055d53088b1ba<>res://.godot/imported/Chicken.png-3d284aba08b33866b29f8970654fd7ec.ctex::
-::res://assets/Cute_Fantasy_Free/Animals/Cow/::1775704228
-Cow.png::CompressedTexture2D::8617247747907261301::1772099372::1772099373::1::::<><><>0<>0<>d013e853440a07e5bd1fb8b62e84a4f5<>res://.godot/imported/Cow.png-fcf0ecf5cdc22701a38b5d90f32179d9.ctex::
-::res://assets/Cute_Fantasy_Free/Animals/Pig/::1775704228
-Pig.png::CompressedTexture2D::1991024993094829348::1772099372::1772099373::1::::<><><>0<>0<>f895d2927eefc1e47faec97f191d2f2a<>res://.godot/imported/Pig.png-e320751062d34929bdbfbd91bdf6e29b.ctex::
-::res://assets/Cute_Fantasy_Free/Animals/Sheep/::1775704228
-Sheep.png::CompressedTexture2D::5358362361081008526::1772099372::1772099373::1::::<><><>0<>0<>539945b59104f9a1b5a0d07b7ccb2408<>res://.godot/imported/Sheep.png-719430ebf4d8f574d72a20b39c071a29.ctex::
 ::res://assets/Cute_Fantasy_Free/Outdoor decoration/::1775704228
 Bridge_Wood.png::CompressedTexture2D::2576929683811647427::1772099372::1772099373::1::::<><><>0<>0<>53fc74b972e3888d60fa127ca30829ca<>res://.godot/imported/Bridge_Wood.png-076c8487affb6863eeeb4233177f574a.ctex::
 Chest.png::CompressedTexture2D::7260779114108233274::1772099372::1772099373::1::::<><><>0<>0<>6197aebfa68ca9d959ee694c2ef5475d<>res://.godot/imported/Chest.png-10292a91477ee5713f5cc26672025cf7.ctex::
@@ -67,9 +59,6 @@ House_1_Wood_Base_Blue.png::CompressedTexture2D::5186836252751690205::1772099372
 Oak_Tree.png::CompressedTexture2D::749851668827776213::1772099372::1772099373::1::::<><><>0<>0<>1d0aa9af12a32bcba422a3d7a745c7bc<>res://.godot/imported/Oak_Tree.png-cfe9fd22a8dd44cde398ee333740e2c1.ctex::
 Oak_Tree_Small.png::CompressedTexture2D::5774395487961708377::1772099372::1772099373::1::::<><><>0<>0<>368d0caf9fb83a553b9fffd81fb9ced6<>res://.godot/imported/Oak_Tree_Small.png-6797a6dbbdada203544cfb1804fc47e6.ctex::
 Outdoor_Decor_Free.png::CompressedTexture2D::3763106864962950777::1772099372::1772099373::1::::<><><>0<>0<>27abe70c76a124d69ced816971af7d1f<>res://.godot/imported/Outdoor_Decor_Free.png-f3ab9729d95e20896beb9c59727d4327.ctex::
-::res://assets/Cute_Fantasy_Free/Player/::1775704228
-Player.png::CompressedTexture2D::6340576460593146250::1772099372::1772099373::1::::<><><>0<>0<>54eadc95c2de21f34db5d4abd6508955<>res://.godot/imported/Player.png-1f2fcf4e1e1ba5bfca826a182bb8f50e.ctex::
-Player_Actions.png::CompressedTexture2D::1842196163755818920::1772099372::1772099372::1::::<><><>0<>0<>6fc0d676310efbd8e320fa3888eaf61f<>res://.godot/imported/Player_Actions.png-8706ef4074bb5b4ff24eabcc0236c3b5.ctex::
 ::res://assets/Cute_Fantasy_Free/Tiles/::1775704228
 Beach_Tile.png::CompressedTexture2D::5649051544304272213::1772099372::1772099372::1::::<><><>0<>0<>25067fe191832513bfcb340200b815c7<>res://.godot/imported/Beach_Tile.png-e6298c7597f8871b4bc96c19614bdcec.ctex::
 Cliff_Tile.png::CompressedTexture2D::7355045537842566571::1772099372::1772099372::1::::<><><>0<>0<>386831c0501ae063ca5f40bd15b4dc1b<>res://.godot/imported/Cliff_Tile.png-1a148a23d0948e6749c44cbbcd78f972.ctex::
@@ -79,13 +68,13 @@ Path_Middle.png::CompressedTexture2D::409809407847814806::1772099372::1772099372
 Path_Tile.png::CompressedTexture2D::4965467884027766906::1772099372::1772099372::1::::<><><>0<>0<>d9bc0cfbf7792b5a111957c463ad8a72<>res://.godot/imported/Path_Tile.png-bb317c958d17543bce4e744cbf1e7501.ctex::
 Water_Middle.png::CompressedTexture2D::4688218169088215205::1772099372::1772099372::1::::<><><>0<>0<>e66e00c50aeed9349e40759f4a17368c<>res://.godot/imported/Water_Middle.png-b12d715a820dbdd4c4bcafd6434e740d.ctex::
 Water_Tile.png::CompressedTexture2D::7032075365160121469::1772099372::1772099372::1::::<><><>0<>0<>4c5df5cfde5c3fc0bc72515c00fa82d9<>res://.godot/imported/Water_Tile.png-d58eb9623468c6df663ba48bb9a8450a.ctex::
-::res://assets/scenes/::1776223256
-controller.gd::GDScript::7756632008573742420::1776141664::0::1::::<>AIController2D<><>0<>0<><>::
+::res://assets/scenes/::1776249680
 cpu_hit_particles.tscn::PackedScene::4030934838665518992::1773232671::0::1::::<><><>0<>0<><>::
 enemy.tscn::PackedScene::3859967108673344725::1776223256::0::1::::<><><>0<>0<><>::uid://b6t17dcry64c1::::res://scripts/entity/enemy.gd<>uid://dxe38dagqp7mt::::res://shaders/entity.gdshader<>uid://bmqs2gqdk0osp::::res://assets/Tiny RPG Character Asset Pack v1.03b -Free Soldier&Orc/Tiny RPG Character Asset Pack v1.03 -Free Soldier&Orc/Characters(100x100)/Soldier/Soldier/Soldier-Death.png<>uid://bl25sftvk03dd::::res://scripts/skills/core/skill_controller.gd<>uid://dwe6iyyofvxs4::::res://assets/Tiny RPG Character Asset Pack v1.03b -Free Soldier&Orc/Tiny RPG Character Asset Pack v1.03 -Free Soldier&Orc/Characters(100x100)/Soldier/Soldier/Soldier-Hurt.png<>uid://b1tj45nrn03gn::::res://assets/scenes/skill_scene/skeleton_slash.tscn<>uid://csbmrt4x4m06t::::res://assets/Tiny RPG Character Asset Pack v1.03b -Free Soldier&Orc/Tiny RPG Character Asset Pack v1.03 -Free Soldier&Orc/Characters(100x100)/Soldier/Soldier/Soldier-Idle.png<>uid://cag1vrje7ssyf::::res://scripts/skills/core/skill.gd<>uid://il372d6vhq1p::::res://assets/Tiny RPG Character Asset Pack v1.03b -Free Soldier&Orc/Tiny RPG Character Asset Pack v1.03 -Free Soldier&Orc/Characters(100x100)/Soldier/Soldier/Soldier-Walk.png<>uid://2ushdpd6bm1g::::res://assets/Tiny RPG Character Asset Pack v1.03b -Free Soldier&Orc/Tiny RPG Character Asset Pack v1.03 -Free Soldier&Orc/Characters(100x100)/Soldier/Soldier/Soldier-Attack01.png<>uid://bxou54q031i7a::::res://assets/scenes/cpu_hit_particles.tscn<>uid://4snhks5is2lx::::res://scripts/entity/pathfinding.gd
 home_scene.tscn::PackedScene::2584747012604007361::1773499710::0::1::::<><><>0<>0<><>::uid://dwco0isq6i3j::::res://scripts/utils/hom_scene.gd<>uid://bonpoq2d1n7qy::::res://assets/bg_video-1.ogv<>uid://dhsvksi4no5bl::::res://assets/Tiny Swords (Free Pack)/UI Elements/UI Elements/Buttons/play_regular-removebg-preview.png<>uid://ph7l5hwojyb2::::res://assets/Tiny Swords (Free Pack)/UI Elements/UI Elements/Buttons/play_pressed-removebg-preview.png<>uid://dm6xprr5xvhha::::res://assets/Tiny Swords (Free Pack)/UI Elements/UI Elements/Buttons/exit_regular-removebg-preview.png<>uid://cc257g1ts0n4r::::res://assets/Tiny Swords (Free Pack)/UI Elements/UI Elements/Buttons/exit_pressed-removebg-preview.png
-Player.tscn::PackedScene::6753617555612357581::1776157922::0::1::::<><><>0<>0<><>::uid://dxoggoyf3hh77::::res://scripts/entity/player.gd<>uid://dkxrca8ott2ix::::res://assets/Tiny Swords (Free Pack)/Units/Blue Units/Warrior/Warrior_Idle.png<>uid://dxe38dagqp7mt::::res://shaders/entity.gdshader<>uid://crewl40lp33gs::::res://assets/Tiny Swords (Free Pack)/Units/Blue Units/Warrior/Warrior_Run.png<>uid://bl25sftvk03dd::::res://scripts/skills/core/skill_controller.gd<>uid://ccishdwvfyoyy::::res://assets/Tiny Swords (Free Pack)/Particle FX/Dust_01.png<>uid://ubsuldtsvf4p::::res://assets/scenes/skill_scene/slash.tscn<>uid://dirmui5fqjtt1::::res://assets/scenes/controller.gd
-PlayScene.tscn::PackedScene::7869208505085660971::1776218238::0::1::::<><><>0<>0<><>::uid://c7dwahgdbhif1::::res://scripts/scene_scripts/play_scene.gd<>uid://c3hrdhfjuyutx::::res://assets/scenes/Player.tscn<>uid://dc13r4nhhuahn::::res://assets/Cute_Fantasy_Free/Tiles/Cliff_Tile.png<>uid://cc0ksbmff5khe::::res://assets/Cute_Fantasy_Free/Tiles/Path_Tile.png<>uid://btu425h4gph6h::::res://assets/Cute_Fantasy_Free/Outdoor decoration/Outdoor_Decor_Free.png<>uid://bu82dhbuyesfd::::res://assets/scenes/enemy.tscn<>uid://b73ijmsprk70q::::res://assets/Tiny Swords (Free Pack)/Terrain/Tileset/Water Background color.png<>uid://dmsrnmaj4yym0::::res://scripts/utils/spell_bar.gd<>uid://cjsprv40pjd4o::::res://assets/Tiny Swords (Free Pack)/Terrain/Decorations/Rocks in the Water/Water Rocks_01.png<>uid://4gi4tao1s66f::::res://assets/scenes/texture_button.tscn<>uid://3y848vwu75yt::::res://assets/Tiny Swords (Free Pack)/UI Elements/UI Elements/Bars/bigbar(已处理).png<>uid://cugcjtxlhfy1k::::res://assets/Tiny Swords (Free Pack)/UI Elements/UI Elements/Bars/调整血条长度.png<>uid://b4py31tkefxhl::::res://scripts/utils/player_health_bar.gd<>uid://dy0kgjhghnl88::::res://assets/Tiny Swords (Free Pack)/UI Elements/UI Elements/Buttons/esc_regular-removebg-preview.png<>uid://diuarn77ml1cl::::res://assets/Tiny Swords (Free Pack)/UI Elements/UI Elements/Buttons/esc_pressed-removebg-preview.png<>uid://cixywhkot8gx6::::res://scripts/utils/pause_menu.gd<>uid://bmy6w68efk7bl::::res://addons/godot_rl_agents/sync.gd
+Player.tscn::PackedScene::6753617555612357581::1776249715::0::1::::<><><>0<>0<><>::uid://dxoggoyf3hh77::::res://scripts/entity/player.gd<>uid://dkxrca8ott2ix::::res://assets/Tiny Swords (Free Pack)/Units/Blue Units/Warrior/Warrior_Idle.png<>uid://dxe38dagqp7mt::::res://shaders/entity.gdshader<>uid://crewl40lp33gs::::res://assets/Tiny Swords (Free Pack)/Units/Blue Units/Warrior/Warrior_Run.png<>uid://bl25sftvk03dd::::res://scripts/skills/core/skill_controller.gd<>uid://ccishdwvfyoyy::::res://assets/Tiny Swords (Free Pack)/Particle FX/Dust_01.png<>uid://ubsuldtsvf4p::::res://assets/scenes/skill_scene/slash.tscn<>uid://dirmui5fqjtt1::::res://assets/scenes/controller.gd
+PlayScene.tscn::PackedScene::7869208505085660971::1776242259::0::1::::<><><>0<>0<><>::uid://c7dwahgdbhif1::::res://scripts/scene_scripts/play_scene.gd<>uid://c3hrdhfjuyutx::::res://assets/scenes/Player.tscn<>uid://dc13r4nhhuahn::::res://assets/Cute_Fantasy_Free/Tiles/Cliff_Tile.png<>uid://cc0ksbmff5khe::::res://assets/Cute_Fantasy_Free/Tiles/Path_Tile.png<>uid://btu425h4gph6h::::res://assets/Cute_Fantasy_Free/Outdoor decoration/Outdoor_Decor_Free.png<>uid://bu82dhbuyesfd::::res://assets/scenes/enemy.tscn<>uid://b73ijmsprk70q::::res://assets/Tiny Swords (Free Pack)/Terrain/Tileset/Water Background color.png<>uid://dmsrnmaj4yym0::::res://scripts/utils/spell_bar.gd<>uid://cjsprv40pjd4o::::res://assets/Tiny Swords (Free Pack)/Terrain/Decorations/Rocks in the Water/Water Rocks_01.png<>uid://4gi4tao1s66f::::res://assets/scenes/texture_button.tscn<>uid://3y848vwu75yt::::res://assets/Tiny Swords (Free Pack)/UI Elements/UI Elements/Bars/bigbar(已处理).png<>uid://cugcjtxlhfy1k::::res://assets/Tiny Swords (Free Pack)/UI Elements/UI Elements/Bars/调整血条长度.png<>uid://b4py31tkefxhl::::res://scripts/utils/player_health_bar.gd<>uid://dy0kgjhghnl88::::res://assets/Tiny Swords (Free Pack)/UI Elements/UI Elements/Buttons/esc_regular-removebg-preview.png<>uid://diuarn77ml1cl::::res://assets/Tiny Swords (Free Pack)/UI Elements/UI Elements/Buttons/esc_pressed-removebg-preview.png<>uid://cixywhkot8gx6::::res://scripts/utils/pause_menu.gd<>uid://bmy6w68efk7bl::::res://addons/godot_rl_agents/sync.gd<>uid://bqaibcrfmrhil::::res://assets/scenes/BlueBall.tscn
+blue_ball.gdshader::Shader::7124868268051870420::1776242136::0::1::::<><><>0<>0<><>::
 texture_button.tscn::PackedScene::2048401254607909263::1776156613::0::1::::<><><>0<>0<><>::uid://bi8unrouuqqhu::::res://assets/Tiny Swords (Free Pack)/UI Elements/UI Elements/Buttons/SmallBlueSquareButton_Regular.png<>uid://dgkwpajhs1l8p::::res://assets/Tiny Swords (Free Pack)/UI Elements/UI Elements/Icons/Icon_05.png<>uid://dasjtr4pgc1v2::::res://scripts/utils/spell_button.gd<>uid://dhpngwwbcikg1::::res://assets/Tiny Swords (Free Pack)/UI Elements/UI Elements/Wood Table/WoodTable_Slots.png
 ::res://assets/scenes/skill_scene/::1776223512
 skeleton_slash.gd::GDScript::9180052341808106830::1772806792::0::1::::SkeletonSlash<>SkillComponent<><>0<>0<><>::
@@ -663,17 +652,18 @@ index.png::CompressedTexture2D::4142150333055362816::1773548580::1773548684::1::
 damage_font.tres::FontVariation::6277305180008484668::1773066541::0::1::::<><><>0<>0<><>::uid://dbu37r3755k7x::::res://assets/VCR_OSD_MONO_1.001.ttf
 ::res://scripts/::1775704233
 object_pool.gd::GDScript::6794687129793540240::1775718107::0::1::::ObjectPool<>Node<><>0<>0<><>::
+controller.gd::GDScript::7756632008573742420::1776234218::0::1::::<>AIController2D<><>0<>0<><>::
 ::res://scripts/autoload/::1776223512
 camera_manager.gd::GDScript::3066491203797319997::1776223512::0::1::::<>Node<><>0<>0<><>::
 event_bus.gd::GDScript::905024523976248481::1776084174::0::1::::<>Node<><>0<>0<><>::
 float_text.gd::GDScript::7111928330322528408::1775717141::0::1::::<>Node<><>0<>0<><>::
-::res://scripts/entity/::1776223429
-enemy.gd::GDScript::4603133962481511018::1776223429::0::1::::Enemy<>Entity<><>0<>0<><>::
+::res://scripts/entity/::1776239203
+enemy.gd::GDScript::4603133962481511018::1776237900::0::1::::Enemy<>Entity<><>0<>0<><>::
 entity.gd::GDScript::5036182182024248930::1776143343::0::1::::Entity<>CharacterBody2D<><>0<>0<><>::
 pathfinding.gd::GDScript::2073437640953786825::1775717198::0::1::::Pathfinding<>Node2D<><>0<>0<><>::
-player.gd::GDScript::8802882532697999892::1776158228::0::1::::Player<>Entity<><>0<>0<><>::
-::res://scripts/scene_scripts/::1776223101
-play_scene.gd::GDScript::7026413647976484620::1776223101::0::1::::PlayScene<>Node<><>0<>0<><>::
+player.gd::GDScript::8802882532697999892::1776236691::0::1::::Player<>Entity<><>0<>0<><>::
+::res://scripts/scene_scripts/::1776239191
+play_scene.gd::GDScript::7026413647976484620::1776239191::0::1::::PlayScene<>Node<><>0<>0<><>::
 ::res://scripts/skills/::1775704233
 ::res://scripts/skills/core/::1776223340
 skill.gd::GDScript::4786844684419917389::1776223339::0::1::::Skill<>Node<><>0<>0<><>::
@@ -702,5 +692,5 @@ spell_button.gd::GDScript::7197002172057409629::1776155836::0::1::::SpellButton<
 ::res://script_templates/::1776081642
 ::res://script_templates/AIController/::1776081642
 controller_template.gd::GDScript::6376258404449950501::1776081642::0::1::::<>_BASE_<><>0<>0<><>::
-::res://shaders/::1776217362
-entity.gdshader::Shader::8783622130631280995::1776217362::0::1::::<><><>0<>0<><>::
+::res://shaders/::1776233907
+entity.gdshader::Shader::8783622130631280995::1776233907::0::1::::<><><>0<>0<><>::

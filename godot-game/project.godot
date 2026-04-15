@@ -24,6 +24,7 @@ buses/default_bus_layout=""
 FloatText="*uid://c8lcokexvpkrg"
 EventBus="*uid://m5nveww5851n"
 CameraManager="*res://scripts/autoload/camera_manager.gd"
+MathUtils="*res://scripts/autoload/math_utils.gd"
 
 [display]
 
@@ -84,6 +85,7 @@ skill_3={
 2d_physics/layer_1="player"
 2d_physics/layer_2="enemy"
 2d_physics/layer_3="wall"
+2d_physics/layer_4="score_ball"
 
 [physics]
 

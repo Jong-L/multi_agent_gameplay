@@ -1,0 +1,24 @@
+[gd_scene format=3 uid="uid://crwd5b1lxqfpt"]
+
+[ext_resource type="Script" uid="uid://cjmbrmyg1gtvu" path="res://scripts/entity/reward_ball.gd" id="1_script"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_pickup"]
+radius = 20.0
+
+[node name="RewardBall" type="Area2D" unique_id=438270695]
+scale = Vector2(0.3, 0.3)
+collision_layer = 8
+script = ExtResource("1_script")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=933982319]
+shape = SubResource("CircleShape2D_pickup")
+
+[node name="Visual" type="Node2D" parent="." unique_id=166367426]
+
+[node name="OuterGlow" type="Sprite2D" parent="Visual" unique_id=149461441]
+z_index = 4
+scale = Vector2(1.2, 1.2)
+
+[node name="InnerCore" type="Sprite2D" parent="Visual" unique_id=678155581]
+z_index = 5
+scale = Vector2(0.6, 0.6)
