@@ -17,6 +17,7 @@ enum State {
 @onready var hit_particles: CPUParticles2D = $CpuHitParticles
 @onready var pathfinding: Pathfinding = $Pathfinding
 @onready var _play_scene:PlayScene=$".."
+#@onready var _road_layer:TileMapLayer=$"../Map/Road"
 
 @export var speed: float = 30                    #追击移动速度
 @export var patrol_speed: float = 20             #巡逻移动速度

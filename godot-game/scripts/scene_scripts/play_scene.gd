@@ -16,7 +16,8 @@ class_name PlayScene
 @onready var _grass_layer:TileMapLayer=$Map/Grass
 @onready var _road_layer:TileMapLayer=$Map/Road
 @onready var _collision_deco_layer:TileMapLayer=$Map/CollisonDecoration
-
+# 视野传感器（环境级工具，统一管理所有玩家的观测计算）
+@onready var vision_sensor: VisionSensor = $VisionSensor
 # 所有玩家引用,按 player_id 排序
 var players: Array[Player] = []
 var enemies:Array[Enemy]=[]
@@ -312,6 +313,32 @@ func _update_button_highlight(camera_id: int) -> void:
 			camera_buttons[i].modulate = Color(0.5, 1.0, 0.5)  # 绿色高亮
 		else:
 			camera_buttons[i].modulate = Color(1.0, 1.0, 1.0)   # 默认白色
+
+## 为指定玩家生成观测数据（环境主动分发，玩家无需持有 PlayScene 引用）
+## controller.gd 调用此方法获取当前帧观测
+## @param player 需要观测的玩家
+## @return Dictionary 格式观测数据
+func get_obs_for_player(player: Player) -> Dictionary:
+	if vision_sensor == null or not is_instance_valid(vision_sensor):
+		# 降级：无传感器时返回最小观测
+		return {
+			"self_state": [float(player.player_id), 0.0, 0.0, 0.0, 0.0, 0.0],
+			"nearby_players": [],
+			"nearby_balls": [],
+			"nearby_enemies": [],
+		}
+	# 收集当前活跃的奖励球
+	var all_balls: Array[RewardBall] = []
+	if reward_ball_manager != null:
+		all_balls = reward_ball_manager.reward_balls
+	return VisionSensor.scan(
+		player,
+		players,
+		enemies,
+		all_balls,
+		arena_length,
+		vision_sensor.vision_radius
+	)
 
 func _apply_actions(actions: Array) -> void:# 将动作数组分发到各玩家
 	for i in range(min(actions.size(), players.size())):

@@ -17,10 +17,8 @@ enum Action {
 @export var player_id: int = 0#玩家唯一标识（0-3）
 
 @onready var skill_controller: Node = $SkillController
-@onready var play_scene:PlayScene=$".."
 @onready var ai_controller:AIController2D=$AIController2D
 @onready var sync_node:Sync=$"../Sync"
-@onready var vision_sensor:VisionSensor=$VisionSensor
 
 var is_moving: bool = false                                    
 var spawn_position: Vector2 = Vector2.ZERO
@@ -129,18 +127,9 @@ func _handle_animation() -> void:# 动画状态更新
 func _handle_skill(skill: Skill) -> void:#点击技能按钮触发
 	skill_controller.trigger_skill(skill)
 
-func get_obs() -> Dictionary:# 获取观测（字典格式，配合 MultiInputPolicy）
-	if vision_sensor != null:
-		var obs=vision_sensor.scan(self, play_scene)
-		#print(obs)
-		return obs
-	# 降级：无 VisionSensor 时返回最小观测
-	return {
-		"self_state": [player_id, 0.0, 0.0, 0.0, 0.0, 0.0],
-		"nearby_players": [],
-		"nearby_balls": [],
-		"nearby_enemies": [],
-	}
+func get_obs() -> Dictionary:# 空实现：观测数据由 PlayScene 通过 get_obs_for_player() 提供
+	# controller.gd 不调用此方法，而是直接调用 _player.play_scene.get_obs_for_player()
+	return {}
 
 #override
 func bear_damage(damage: float) -> void:

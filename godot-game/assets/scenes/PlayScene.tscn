@@ -17,6 +17,7 @@
 [ext_resource type="Texture2D" uid="uid://diuarn77ml1cl" path="res://assets/Tiny Swords (Free Pack)/UI Elements/UI Elements/Buttons/esc_pressed-removebg-preview.png" id="13_xxlmq"]
 [ext_resource type="Script" uid="uid://cixywhkot8gx6" path="res://scripts/utils/pause_menu.gd" id="14_xxlmq"]
 [ext_resource type="Script" uid="uid://bmy6w68efk7bl" path="res://addons/godot_rl_agents/sync.gd" id="16_r6opt"]
+[ext_resource type="Script" uid="uid://dqebgd3akinse" path="res://scripts/entity/vision_sensor.gd" id="17_vsens"]
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_q2on3"]
 texture = ExtResource("2_lakq1")
@@ -395,6 +396,9 @@ script = ExtResource("1_716h6")
 screen_transition = NodePath("CanvasLayer/ColorRect")
 pause_menu = NodePath("CanvasLayer/PauseMenu")
 
+[node name="VisionSensor" type="Node" parent="." unique_id=-1293732729]
+script = ExtResource("17_vsens")
+
 [node name="Player_Blue" parent="." unique_id=490246979 instance=ExtResource("1_s7ljx")]
 z_index = 6
 position = Vector2(-416, -415.00003)
@@ -592,7 +596,6 @@ drag_horizontal_enabled = true
 
 [node name="Sync" type="Node" parent="." unique_id=1321988269]
 script = ExtResource("16_r6opt")
-control_mode = 0
 metadata/_custom_type_script = "uid://bmy6w68efk7bl"
 
 [connection signal="player_died" from="Player_Blue" to="." method="_on_player_player_died"]

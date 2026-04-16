@@ -9,10 +9,16 @@ func _physics_process(delta):
 
 func reset():
 	super.reset()
-	_player.play_scene._handle_reset()
+	# PlayScene 持有 VisionSensor，通过 _player 上行到父节点访问 reset
+	(_player.get_parent() as PlayScene)._handle_reset()
 
 func get_obs() -> Dictionary:
-	var obs=_player.get_obs()
+	# PlayScene分发
+	var play_scene := _player.get_parent() as PlayScene
+	if play_scene == null:
+		return {}
+	var obs=play_scene.get_obs_for_player(_player)
+	print(obs)
 	return obs
 
 func get_reward() -> float:	
