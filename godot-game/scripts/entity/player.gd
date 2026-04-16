@@ -10,8 +10,7 @@ enum Action {
 	IDLE,#4
 	ATTACK,#5:SkillController 的第 0 个技能
 }
-
-@export var walk_speed: float = 65          
+		
 @export var run_speed: float = 100#当前实际使用
 @export var player_spell_bar: SpellBar = null  #PlayScene 动态绑定技能栏
 @export var skin_color: String
@@ -21,6 +20,7 @@ enum Action {
 @onready var play_scene:PlayScene=$".."
 @onready var ai_controller:AIController2D=$AIController2D
 @onready var sync_node:Sync=$"../Sync"
+@onready var vision_sensor:VisionSensor=$VisionSensor
 
 var is_moving: bool = false                                    
 var spawn_position: Vector2 = Vector2.ZERO
@@ -129,15 +129,17 @@ func _handle_animation() -> void:# 动画状态更新
 func _handle_skill(skill: Skill) -> void:#点击技能按钮触发
 	skill_controller.trigger_skill(skill)
 
-func get_obs() -> Dictionary:# 获取观测
+func get_obs() -> Dictionary:# 获取观测（字典格式，配合 MultiInputPolicy）
+	if vision_sensor != null:
+		var obs=vision_sensor.scan(self, play_scene)
+		#print(obs)
+		return obs
+	# 降级：无 VisionSensor 时返回最小观测
 	return {
-		"obs":[player_id,
-		global_position.x/(play_scene.arena_length/2),#归一化到[-1,1]
-		global_position.y/(play_scene.arena_length/2),
-		animated_sprite.flip_h,#翻转决定了攻击范围
-		current_health/max_health,
-		max_health,#多智能体对抗环境需要最大生命值
-		]
+		"self_state": [player_id, 0.0, 0.0, 0.0, 0.0, 0.0],
+		"nearby_players": [],
+		"nearby_balls": [],
+		"nearby_enemies": [],
 	}
 
 #override

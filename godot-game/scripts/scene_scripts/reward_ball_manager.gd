@@ -204,6 +204,7 @@ func reset_all() -> void:
 			ball.reset_ball()
 
 
+## @deprecated 奖励球观测已迁移到 VisionSensor，此方法保留备用
 ## 获取指定玩家的奖励球观测数据
 ## 返回字典：
 ##   nearest_a: Vector2 — 到最近活跃A类球的相对位置（归一化）

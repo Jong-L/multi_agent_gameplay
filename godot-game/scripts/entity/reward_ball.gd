@@ -26,8 +26,8 @@ const TEXTURE_SIZE := 35
 const COLOR_A := Color(0.2, 0.85, 1.0, 1.0)
 const GLOW_A := Color(0.1, 0.6, 1.0, 1)
 ## B类球颜色（金黄）
-const COLOR_B := Color(1.0, 0.85, 0.15, 1.0)
-const GLOW_B := Color(1.0, 0.7, 0.1, 1)
+const COLOR_B := Color(0.153, 0.851, 0.149, 1.0)
+const GLOW_B := Color(0.0, 0.698, 0.102, 1.0)
 
 
 func _ready() -> void:

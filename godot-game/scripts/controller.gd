@@ -14,9 +14,10 @@ func reset():
 func get_obs() -> Dictionary:
 	var obs=_player.get_obs()
 	return obs
+
 func get_reward() -> float:	
 	return reward
-	
+
 func get_action_space() -> Dictionary:
 	return {
 		"move_action": {          
@@ -24,7 +25,17 @@ func get_action_space() -> Dictionary:
 			"action_type": "discrete",  
 		},
 	}
-	
+
+## 覆写 get_obs_space() 以支持多 key 字典观测空间
+## 与 VisionSensor 的观测维度保持同步
+func get_obs_space() -> Dictionary:
+	return {
+		"self_state": {"size": [VisionSensor.SELF_STATE_DIM], "space": "box"},
+		"nearby_players": {"size": [VisionSensor.MAX_NEARBY_PLAYERS * VisionSensor.PLAYER_SLOT_DIM], "space": "box"},
+		"nearby_balls": {"size": [VisionSensor.MAX_NEARBY_BALLS * VisionSensor.BALL_SLOT_DIM], "space": "box"},
+		"nearby_enemies": {"size": [VisionSensor.MAX_NEARBY_ENEMIES * VisionSensor.ENEMY_SLOT_DIM], "space": "box"},
+	}
+
 func set_action(action) -> void:
 	move_action = action["move_action"]
 	# 0=上, 1=下, 2=左, 3=右, 4=攻击，5=待机
