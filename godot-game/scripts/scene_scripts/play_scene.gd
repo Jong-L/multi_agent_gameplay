@@ -28,6 +28,9 @@ var camera_buttons: Array[Button] = []
 # 玩家专属血条数组与技能栏，与各自的player对应
 var player_health_bars: Array[TextureProgressBar] = []
 var player_spell_bars: Array[SpellBar] = []
+# 视野圆可视化
+var vision_circles: Array[VisionCircle] = []
+var vision_circles_visible: bool = false  # 视野圆是否可见（默认隐藏）
 
 # 地图数据
 var arena_bounds: Rect2 = Rect2()#Grass层表示的的竞技场区域
@@ -50,7 +53,8 @@ func _ready() -> void:
 	_setup_camera_system()      
 	_setup_camera_switch_ui()   
 	_setup_player_uis()         
-	_setup_reward_ball_manager()         
+	_setup_reward_ball_manager()
+	_setup_vision_circles()         
 
 # 从 TileMapLayer 计算世界坐标矩形
 static func _tilemap_to_world_rect(layer: TileMapLayer) -> Rect2:
@@ -177,6 +181,17 @@ func _setup_camera_switch_ui() -> void:
 	# 连接相机切换信号，同步按钮高亮状态
 	CameraManager.camera_switched.connect(_on_camera_switched)
 	_update_button_highlight(-1)  # 初始高亮主相机
+	
+	# 在面板底部添加"视野提示"切换按钮
+	var vision_btn := Button.new()
+	vision_btn.name = "VisionToggleButton"
+	vision_btn.text = "视野提示"
+	vision_btn.custom_minimum_size = Vector2(150, 40)
+	vision_btn.tooltip_text = "显示/隐藏玩家视野范围"
+	vision_btn.modulate = Color(1.0, 1.0, 1.0)  # 默认白色=已关闭
+	vision_btn.pressed.connect(_on_vision_toggle_pressed)
+	panel.add_child(vision_btn)
+	vision_btn.set_owner(self)
 
 # 动态创建玩家的血条和技能栏
 func _setup_player_uis() -> void:
@@ -296,6 +311,45 @@ func _setup_reward_ball_manager() -> void:
 	add_child(reward_ball_manager)
 	reward_ball_manager.set_owner(self)
 	reward_ball_manager.setup(self)
+
+# 为每个玩家创建视野范围虚线圆
+func _setup_vision_circles() -> void:
+	vision_circles.clear()
+	# 各玩家对应的视野圆颜色
+	var vision_colors := {
+		"Blue": Color(0.3, 0.6, 1.0, 0.5),
+		"Black": Color(0.7, 0.7, 0.7, 0.5),
+		"Red": Color(1.0, 0.3, 0.3, 0.5),
+		"Yellow": Color(1.0, 1.0, 0.3, 0.5),
+	}
+	var radius := vision_sensor.vision_radius if vision_sensor else 250.0
+	for p in players:
+		var circle := VisionCircle.new()
+		circle.name = "VisionCircle_%s" % p.skin_color
+		var color: Color = vision_colors.get(p.skin_color, Color(1, 1, 1, 0.5))
+		circle.setup(p, radius, color)
+		circle.visible = vision_circles_visible  # 默认隐藏
+		p.add_child(circle)
+		circle.set_owner(self)
+		vision_circles.append(circle)
+
+# 视野提示按钮回调
+func _on_vision_toggle_pressed() -> void:
+	vision_circles_visible = not vision_circles_visible
+	for circle in vision_circles:
+		if is_instance_valid(circle):
+			circle.visible = vision_circles_visible
+	_update_vision_toggle_highlight()
+
+# 更新视野提示按钮的视觉状态
+func _update_vision_toggle_highlight() -> void:
+	var btn: Button = canvas_layer.get_node_or_null("CameraSwitchPanel/VisionToggleButton") as Button
+	if btn == null:
+		return
+	if vision_circles_visible:
+		btn.modulate = Color(0.5, 1.0, 0.5)  # 绿色高亮 = 已开启
+	else:
+		btn.modulate = Color(1.0, 1.0, 1.0)   # 白色 = 已关闭
 
 # 相机切换按钮回调（由按钮 pressed 信号触发）
 func _on_camera_button_pressed(index: int) -> void:

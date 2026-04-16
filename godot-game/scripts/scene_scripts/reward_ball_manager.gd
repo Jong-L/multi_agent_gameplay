@@ -34,8 +34,12 @@ var _play_scene: PlayScene = null
 var _ball_scene: PackedScene = preload("res://assets/scenes/RewardBall.tscn")
 ## B类球重生队列：[{"ball": RewardBall, "timer": float}]
 var _respawn_queue: Array[Dictionary] = []
+## 独立随机数生成器（不受全局 seed() 影响，避免 RL 框架固定种子导致位置重复）
+var _rng: RandomNumberGenerator = RandomNumberGenerator.new()
+
 
 func _ready() -> void:
+	_rng.randomize()  # 用时间戳初始化，确保每次运行位置不同
 	EventBus.reward_ball_collected.connect(_on_reward_ball_collected)
 
 func _exit_tree() -> void:
@@ -146,10 +150,10 @@ func _process(delta: float) -> void:
 func _safe_pos_in_patrol() -> Vector2:
 	var patrol := _play_scene.patrol_rect
 	var deco_positions := _play_scene.collision_decoration_positions
-	var last_pos := MathUtils.random_pos_in_rect(patrol, BALL_B_SPAWN_MARGIN)
+	var last_pos := _rng_pos_in_rect(patrol, BALL_B_SPAWN_MARGIN)
 	
 	for attempt in range(_SAFE_POS_MAX_ATTEMPTS):
-		var pos := MathUtils.random_pos_in_rect(patrol, BALL_B_SPAWN_MARGIN) if attempt > 0 else last_pos
+		var pos := _rng_pos_in_rect(patrol, BALL_B_SPAWN_MARGIN) if attempt > 0 else last_pos
 		var safe := true
 		
 		# 检查与所有玩家的距离
@@ -159,7 +163,7 @@ func _safe_pos_in_patrol() -> Vector2:
 				break
 		
 		if not safe:
-			last_pos = MathUtils.random_pos_in_rect(patrol, BALL_B_SPAWN_MARGIN)
+			last_pos = _rng_pos_in_rect(patrol, BALL_B_SPAWN_MARGIN)
 			continue
 		
 		# 检查与障碍物的距离
@@ -184,7 +188,7 @@ func _safe_pos_in_patrol() -> Vector2:
 ## @return 符合条件的随机位置（最多重试 _SAFE_POS_MAX_ATTEMPTS 次）
 func _random_pos_avoiding_spawn(rect: Rect2, margin: float, spawn_positions: Array[Vector2], min_dist: float) -> Vector2:
 	for attempt in range(_SAFE_POS_MAX_ATTEMPTS):
-		var pos := MathUtils.random_pos_in_rect(rect, margin)
+		var pos := _rng_pos_in_rect(rect, margin)
 		var too_close := false
 		for sp in spawn_positions:
 			if pos.distance_to(sp) < min_dist:
@@ -193,15 +197,49 @@ func _random_pos_avoiding_spawn(rect: Rect2, margin: float, spawn_positions: Arr
 		if not too_close:
 			return pos
 	# 退避策略：返回最后一次随机位置
-	return MathUtils.random_pos_in_rect(rect, margin)
+	return _rng_pos_in_rect(rect, margin)
 
 
-## 游戏重置时调用
+## ── 内部随机位置生成（使用独立 RNG，不受全局 seed() 影响）──##
+
+## 在矩形内生成随机位置（使用 _rng 实例）
+func _rng_pos_in_rect(rect: Rect2, margin: float) -> Vector2:
+	var x := _rng.randf_range(rect.position.x + margin, rect.end.x - margin)
+	var y := _rng.randf_range(rect.position.y + margin, rect.end.y - margin)
+	return Vector2(x, y)
+
+
+## 游戏重置时调用：重新随机化所有球的位置
 func reset_all() -> void:
 	_respawn_queue.clear()
-	for ball in reward_balls:
+	
+	# 重新随机化 A 类球位置
+	var arena := _play_scene.arena_bounds
+	var extent := arena.size * BALL_A_EXTENT_RATIO
+	var spawn_positions: Array[Vector2] = []
+	for player in _play_scene.players:
+		spawn_positions.append(player.spawn_position)
+	
+	var a_idx := 0
+	for player in _play_scene.players:
+		var spawn_pos := player.spawn_position
+		var center := arena.get_center()
+		var dir_x := 1 if spawn_pos.x >= center.x else -1
+		var dir_y := 1 if spawn_pos.y >= center.y else -1
+		var quadrant := MathUtils.quadrant_rect(arena, extent, dir_x, dir_y)
+		
+		for i in range(BALL_A_PER_PLAYER):
+			if a_idx < type_a_balls.size() and is_instance_valid(type_a_balls[a_idx]):
+				var ball := type_a_balls[a_idx]
+				ball.reset_ball()
+				ball.position = _random_pos_avoiding_spawn(quadrant, BALL_A_SPAWN_MARGIN, spawn_positions, BALL_A_MIN_SPAWN_DIST)
+			a_idx += 1
+	
+	# 重新随机化 B 类球位置
+	for ball in type_b_balls:
 		if is_instance_valid(ball):
 			ball.reset_ball()
+			ball.position = _safe_pos_in_patrol()
 
 
 ## @deprecated 奖励球观测已迁移到 VisionSensor，此方法保留备用

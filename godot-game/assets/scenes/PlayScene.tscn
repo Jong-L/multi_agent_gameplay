@@ -398,6 +398,7 @@ pause_menu = NodePath("CanvasLayer/PauseMenu")
 
 [node name="VisionSensor" type="Node" parent="." unique_id=-1293732729]
 script = ExtResource("17_vsens")
+vision_radius = 200.0
 
 [node name="Player_Blue" parent="." unique_id=490246979 instance=ExtResource("1_s7ljx")]
 z_index = 6
