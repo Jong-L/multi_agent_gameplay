@@ -158,9 +158,9 @@ func apply_damage_to_target(idx: int, damage: float) -> bool:
 	
 	var target = targets[idx]
 	if target is Entity:
-		target.bear_damage(damage)
+		target.bear_damage(damage, caster)
 		return true
-	return false  ## 对指定索引的目标应用伤害，如果目标是 Entity 类型则调用 bear_damage 方法，返回是否成功应用
+	return false  ## 对指定索引的目标应用伤害，如果目标是 Entity 类型则调用 bear_damage 方法（传入施法者），返回是否成功应用
 
 ## 应用伤害到所有目标
 ## @param damage: 伤害值
@@ -169,9 +169,9 @@ func apply_damage_to_all(damage: float) -> int:
 	var count = 0
 	for target in targets:
 		if target is Entity:
-			target.bear_damage(damage)
+			target.bear_damage(damage, caster)
 			count += 1
-	return count  ## 遍历所有目标并对 Entity 类型的目标应用伤害，返回实际受到伤害的目标数量，用于范围攻击技能
+	return count  ## 遍历所有目标并对 Entity 类型的目标应用伤害（传入施法者），返回实际受到伤害的目标数量，用于范围攻击技能
 
 ## 添加外部推力到施法者（击退效果）
 ## @param direction: 方向向量

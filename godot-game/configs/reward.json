@@ -1,0 +1,15 @@
+{
+	"collect_ball_A": 1.0,
+	"collect_ball_B": 1.5,
+	"bear_damage": -1.0,
+	"cause_damage_to_enemy": 1.0,
+	"cause_damage_to_player": 1.5,
+	"kill_enemy": 3.0,
+	"kill_player": 4.5,
+	"run": 0,
+	"attack": 0,
+	"died": -2.0,
+	"starve_time": 3000000.0,
+	"starve_reward_decrease": 0.01,
+	"starve_more_func": "linear"
+}

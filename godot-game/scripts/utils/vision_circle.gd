@@ -7,9 +7,9 @@ extends Node2D
 ## 注意：Player 的 scale 为 0.3，需通过 _unhandled_key_input 或补偿缩放
 
 ## 虚线圆颜色（各玩家可在 PlayScene 中单独设置）
-@export var circle_color: Color = Color(1, 1, 1, 0.5)
+@export var circle_color: Color = Color(1, 1, 1, 1)
 ## 虚线宽度
-@export var dash_width: float = 2.0
+@export var dash_width: float = 4.0
 ## 虚线段长度
 @export var dash_length: float = 10.0
 ## 虚线间隔长度

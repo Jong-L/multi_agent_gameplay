@@ -110,16 +110,8 @@ func _create_ball(type: RewardBall.BallType, reward: float, pos: Vector2) -> Rew
 	return ball
 
 
-# 拾取信号处理：给对应玩家的 AIController 加奖励，B类球启动重生计时
+# 拾取信号处理：B类球启动重生计时（奖励由 RewardManager 统一发放）
 func _on_reward_ball_collected(player_id: int, ball_type: int, reward_value: float, ball: RewardBall) -> void:
-	if _play_scene == null:
-		return
-	
-	# 找到对应玩家，增加奖励
-	if player_id >= 0 and player_id < _play_scene.players.size():
-		var player := _play_scene.players[player_id]
-		player.ai_controller.reward += reward_value
-	
 	# B类球加入重生队列
 	if ball_type == RewardBall.BallType.TYPE_B:
 		_respawn_queue.append({"ball": ball, "timer": BALL_B_RESPAWN_DELAY})

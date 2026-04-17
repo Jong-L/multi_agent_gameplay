@@ -213,6 +213,7 @@ func full_reset() -> void:
 	is_dead = false
 	current_health = max_health
 	target = null
+	last_damage_source = null  # 清除伤害来源记录
 	
 	#重置状态机
 	state = State.PATROL
@@ -483,6 +484,12 @@ func _on_animated_sprite_2d_animation_finished() -> void:
 		_start_respawn()
 		return
 	current_animation_wrapper = null
+
+
+## 死亡回调：在 bear_damage 检测到 current_health==0 时立即调用
+## 即时发射全局死亡信号，确保击杀奖励无延迟
+func _on_death() -> void:
+	EventBus.enemy_died.emit(self)
 
 #受击特效
 func _show_damage_taken_effect() -> void:

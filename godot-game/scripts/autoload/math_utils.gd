@@ -37,3 +37,24 @@ static func quadrant_rect(bounds: Rect2, extent: Vector2, direction_x: int, dire
 		bounds.position.y if direction_y < 0 else bounds.end.y - extent.y
 	)
 	return Rect2(origin, extent)
+
+
+## 计算饥饿惩罚的衰减倍率
+## 随着饥饿持续时间增加，惩罚速率逐步增大
+## @param starve_duration 已饥饿的持续时间（秒）
+## @param func_type 增长函数类型："linear"(线性), "quadratic"(二次), "sqrt"(平方根)
+## @return 衰减倍率（>= 1.0）
+static func starve_rate_multiplier(starve_duration: float, func_type: String = "linear") -> float:
+	match func_type:
+		"linear":
+			# 线性增长：每秒增加 1 倍率
+			return 1.0 + starve_duration
+		"quadratic":
+			# 二次增长：惩罚加速变重
+			return 1.0 + starve_duration * starve_duration * 0.1
+		"sqrt":
+			# 平方根增长：初期快，后期慢
+			return 1.0 + sqrt(starve_duration)
+		_:
+			# 未知类型默认线性
+			return 1.0 + starve_duration

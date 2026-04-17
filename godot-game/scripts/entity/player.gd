@@ -72,6 +72,9 @@ func _process(delta: float) -> void:
 	_handle_animation()
 	_execute_action()
 	
+	# 持续奖励：移动和攻击惩罚
+	_notify_action_rewards()
+	
 #根据 pending_action执行动作
 func _handle_movement(delta: float) -> void:
 	is_moving = false#不移动时为false
@@ -131,21 +134,22 @@ func get_obs() -> Dictionary:# 空实现：观测数据由 PlayScene 通过 get_
 	# controller.gd 不调用此方法，而是直接调用 _player.play_scene.get_obs_for_player()
 	return {}
 
-#override
-func bear_damage(damage: float) -> void:
-	if current_health == 0:
-		return
-	
-	current_health = max(0, current_health - damage)
-	_show_damage_taken_effect()
-	_show_damage_popup(damage)
-	
-	ai_controller.reward-=1
-	
-	if current_health == 0:
-		is_dead = true
-		play_animation(AnimationWrapper.new("die", true))  # 死亡动画,高优先级
+## 死亡回调：在 bear_damage 检测到 current_health==0 时立即调用
+## 即时发射全局死亡信号，确保奖励无延迟
+func _on_death() -> void:
+	EventBus.player_died.emit(self)
 
 func _on_animated_sprite_2d_animation_finished() -> void:
 	if current_animation_wrapper != null and current_animation_wrapper.name == "die":
 		player_died.emit(self)
+
+
+## 通知 RewardManager 当前帧的动作（移动），用于持续奖励惩罚
+func _notify_action_rewards() -> void:
+	var play_scene := get_parent() as PlayScene
+	if play_scene == null or play_scene.reward_manager == null:
+		return
+	
+	# 移动惩罚（每帧扣减，帧率无关由 RewardManager 的常量值控制）
+	if is_moving:
+		play_scene.reward_manager.on_player_moved(self)

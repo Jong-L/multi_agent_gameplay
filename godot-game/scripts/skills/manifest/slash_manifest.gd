@@ -1,13 +1,13 @@
 class_name SlashManifest
 extends SkillManifest
+"
+ 斩击 Manifest（近战攻击特效）
+ 表现：暂停施法者，播放全屏斩击动画，结束后恢复
 
-## 斩击 Manifest（近战攻击特效）
-## 表现：暂停施法者，播放全屏斩击动画，结束后恢复
-##
-## 视觉效果：
-##   - 施法者隐身，由斩击动画代替
-##   - 支持皮肤颜色切换（Blue/Red/Yellow/Purple/Black）
-##   - 动画结束后自动销毁
+ 视觉效果：
+   - 施法者隐身，由斩击动画代替
+   - 支持皮肤颜色切换（Blue/Red/Yellow/Purple/Black）
+   - 动画结束后自动销毁"
 
 @onready var animated_sprite: AnimatedSprite2D = $AnimatedSprite2D
 

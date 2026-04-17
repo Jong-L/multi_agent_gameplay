@@ -8,11 +8,13 @@
 
 Tiny Swords 是一款基于 Godot 引擎的 2D 俯视角四人混战竞技场游戏，旨在作为多智能体强化学习的博弈环境。四名角色（Agent）在一个封闭的竞技场中进行自由对抗，通过移动与近战攻击争夺分数。游戏在核心对抗之上叠加了少量环境交互元素（野生怪物、分数球），以丰富策略空间并产生更具层次的博弈行为。
 
+在goodt游戏代码中，野生野怪指敌人Enemy。
+
 ### 竞技场与比赛规则
 
 #### 竞技场
 
-竞技场为一个固定大小的矩形封闭地图，四周由不可通行的墙壁围成。四名角色分别在地图的四个角落出生。
+竞技场为一个固定大小的矩形封闭地图，四周由不可通行的墙壁围成。四名角色分别在地图的四个角落出生。竞技场内有不可通行的障碍物，增加对抗复杂性。
 
 #### 比赛流程
 
@@ -32,11 +34,7 @@ Tiny Swords 是一款基于 Godot 引擎的 2D 俯视角四人混战竞技场游
 
 地图上随机位置刷新分数球，角色走到奖励球位置即自动拾取获得分数。
 
-##### 击杀奖励衰减
-
-对同一目标的连续击杀会触发分数衰减。防止强势智能体反复欺负同一个弱势智能体。
-
-### 角色与能力差异化设计
+### 角色与能力差异化设计（暂不考虑）
 
 为了在博弈中产生**非对称均衡**，四名角色拥有不同的属性侧重。这种差异化是体现清晰博弈的关键——如果四个角色完全相同，策略空间会退化为对称博弈，行为趋同。通过差异化，智能体需要学习"扬长避短"以及"针对性对抗"，从而涌现出更丰富的策略组合。
 
@@ -63,8 +61,8 @@ Tiny Swords 是一款基于 Godot 引擎的 2D 俯视角四人混战竞技场游
 | 1 | 下移 (Move Down) | 向下移动一个单位距离 |
 | 2 | 左移 (Move Left) | 向左移动一个单位距离 |
 | 3 | 右移 (Move Right) | 向右移动一个单位距离 |
-| 4 | 攻击 (Attack) | 向当前朝向发出近战挥砍，对范围内敌人造成伤害 |
-| 5 | 无操作 (Idle) | 原地不动，不执行任何动作 |
+| 4 | 无操作 (Idle) | 原地不动，不执行任何动作               |
+| 5 | 攻击 (Attack) | 向前方攻击 |
 
 关于动作设计的说明：朝向由最近一次移动方向决定，攻击沿当前朝向的扇形区域判定。加入"无操作"动作是因为在某些博弈态势下（如等待攻击冷却、观望局势），"不动"本身就是一种有意义的策略选择，能让智能体学到"等待"和"时机把握"的概念。攻击处于冷却中时选择攻击动作等效于无操作，但智能体需要自行学习这一点。
 
@@ -88,190 +86,28 @@ Tiny Swords 是一款基于 Godot 引擎的 2D 俯视角四人混战竞技场游
 
 设计理念：
 
-1. 时间是**极其**宝贵的，不能有多余的动作，无效攻击与绕路应该受到惩罚
-2. 存活占有一定权重，如果死亡后回到重生点，那么走到中央资源富集区也浪费时间
-3. 造成伤害加分，体现对抗
-4. 受击减分，鼓励存活
+1. 时间，或者说“机体能量”是**极其**宝贵的，以避免多余的动作，走路和攻击会减少奖励，但又不能不动摆烂，因此如果长时间没有奖励增加，将会开始持续减少奖励的“挨饿机制”，且减少速率逐渐加快
+2. 存活占有一定权重，如果死亡后回到重生点，那么走到中央资源富集区也浪费时间，因此死亡会扣分，攻击导致其他智能体死亡会加分
+3. 造成伤害加分，稀疏对抗奖励
+4. 受击减分，稀疏存活奖励
 5. 
 
 设计如下：
 
-| 事件 | 奖励值 | 说明 |
-|------|--------|------|
-| 攻击其他玩家 | 待定 | 核心对抗激励 |
-| 攻击野生怪物 | 待定 | 资源争夺激励 |
-| 拾取奖励球 | 待定 | 探索激励 |
-| 被攻击 | 待定 | 生存惩罚 |
-| 随时间流逝 | -0.01 | 根据情况调整 |
-
-### 系统用例图
-
-```mermaid
-graph TB
-    subgraph Actors["参与者"]
-        Agent["🤖 智能体 (Agent)"]
-        Env["🌍 游戏环境 (Environment)"]
-        Trainer["🧠 训练系统 (Trainer)"]
-        Evaluator["📊 评估系统 (Evaluator)"]
-    end
-
-    subgraph UseCases["核心用例"]
-        UC1["移动 (上/下/左/右)"]
-        UC2["攻击 (近战挥砍)"]
-        UC3["拾取宝箱"]
-        UC4["击杀怪物"]
-        UC5["击杀玩家"]
-        UC6["被击杀与复活"]
-        UC7["获取观测向量"]
-        UC8["执行动作"]
-        UC9["计算奖励"]
-        UC10["更新游戏状态"]
-        UC11["刷新怪物/宝箱"]
-        UC12["收集经验轨迹"]
-        UC13["更新策略网络"]
-        UC14["对局胜负评估"]
-        UC15["策略多样性分析"]
-    end
-
-    Agent --> UC1
-    Agent --> UC2
-    Agent --> UC3
-    Agent --> UC4
-    Agent --> UC5
-    Agent --> UC6
-    Agent --> UC7
-    Agent --> UC8
-
-    Env --> UC9
-    Env --> UC10
-    Env --> UC11
-
-    Trainer --> UC12
-    Trainer --> UC13
-
-    Evaluator --> UC14
-    Evaluator --> UC15
-```
-
-### 游戏主循环流程图
-
-```mermaid
-flowchart TD
-    A["🎮 游戏开始"] --> B["初始化竞技场\n四角色出生于四角\n刷新怪物与宝箱"]
-    B --> C["时间步 t = 0"]
-    C --> D["每个 Agent 获取观测 obs_t"]
-    D --> E["每个 Agent 选择动作 a_t\n(策略网络推理)"]
-    E --> F["环境执行所有动作"]
-    F --> G{"是否发生碰撞/攻击?"}
-    
-    G -- "有攻击命中" --> H["计算伤害\n更新生命值"]
-    G -- "无攻击" --> I["更新位置"]
-    
-    H --> J{"有角色死亡?"}
-    J -- "是" --> K["记录击杀得分\n(含衰减计算)\n死亡角色进入复活队列"]
-    J -- "否" --> L["继续"]
-    
-    I --> L
-    K --> L
-    
-    L --> M{"角色踩到宝箱?"}
-    M -- "是" --> N["拾取宝箱 +1分\n移除宝箱"]
-    M -- "否" --> O["继续"]
-    N --> O
-    
-    O --> P["处理怪物逻辑\n(随机游走/被击杀判定)"]
-    P --> Q["计算每个 Agent 的奖励 r_t"]
-    Q --> R["检查刷新计时器\n补充怪物/宝箱"]
-    R --> S["t = t + 1"]
-    S --> T{"t ≥ 最大时间步?"}
-    T -- "否" --> D
-    T -- "是" --> U["📊 统计最终得分\n输出排名"]
-    U --> V["🏁 游戏结束"]
-```
-
-### 十一、角色博弈关系图
-
-```mermaid
-graph LR
-    W["⚔️ 战士\nWarrior\nHP:5 SPD:1.0\nATK:2 RNG:1.0"]
-    R["🗡️ 刺客\nRogue\nHP:3 SPD:1.5\nATK:3 RNG:0.8"]
-    K["🛡️ 骑士\nKnight\nHP:7 SPD:0.7\nATK:1 RNG:1.2"]
-    G["🏹 游侠\nRanger\nHP:4 SPD:1.2\nATK:2 RNG:1.5"]
-
-    R -- "克制 (高速接近秒杀)" --> G
-    G -- "克制 (远距离风筝)" --> K
-    K -- "克制 (高血量硬扛)" --> R
-    W -- "均势" --> R
-    W -- "均势" --> K
-    W -- "均势" --> G
-```
-
-### 十二、训练与环境交互时序图
-
-```mermaid
-sequenceDiagram
-    participant T as 训练系统
-    participant E as 游戏环境 (Godot)
-    participant A1 as Agent 1 (战士)
-    participant A2 as Agent 2 (刺客)
-    participant A3 as Agent 3 (骑士)
-    participant A4 as Agent 4 (游侠)
-
-    T->>E: reset() 初始化新一局
-    E-->>T: 返回初始观测 [obs1, obs2, obs3, obs4]
-    
-    loop 每个时间步 t = 0, 1, ..., T_max
-        T->>A1: obs1 → 策略网络推理
-        T->>A2: obs2 → 策略网络推理
-        T->>A3: obs3 → 策略网络推理
-        T->>A4: obs4 → 策略网络推理
-        A1-->>T: action1
-        A2-->>T: action2
-        A3-->>T: action3
-        A4-->>T: action4
-        T->>E: step([a1, a2, a3, a4])
-        E-->>T: [obs', rewards, dones, infos]
-        T->>T: 存储经验 (obs, a, r, obs')
-    end
-
-    T->>T: 使用经验缓冲区更新策略网络
-    T->>E: reset() 开始下一局
-```
-
-### 十三、状态机 —— 角色生命周期
-
-```mermaid
-stateDiagram-v2
-    [*] --> Alive: 游戏开始/复活
-    
-    Alive --> Attacking: 选择攻击动作
-    Attacking --> Cooldown: 攻击判定完成
-    Cooldown --> Alive: 冷却结束
-    
-    Alive --> Moving: 选择移动动作
-    Moving --> Alive: 移动完成
-    
-    Alive --> Dead: 生命值归零
-    Dead --> Invincible: 复活计时结束
-    Invincible --> Alive: 无敌时间结束(约15步)
-    
-    Alive --> PickingUp: 踩到宝箱
-    PickingUp --> Alive: 拾取完成(+1分)
-```
-
-### 十四、开发优先级与里程碑
-
-**第一阶段（核心闭环）**：实现竞技场地图、四个角色、移动与攻击、基础得分、与强化学习框架的通信接口。目标是跑通"Godot 环境 ↔ Python 训练脚本"的完整闭环。
-
-**第二阶段（差异化与博弈）**：引入四角色属性差异化、击杀衰减机制、调整奖励函数。目标是观察到智能体因角色差异而产生不同的行为模式。
-
-**第三阶段（环境丰富）**：加入野生怪物和宝箱。目标是观察到智能体在"对抗"与"刷资源"之间的策略权衡。
-
-**第四阶段（评估与调优）**：进行大规模训练、策略分析、撰写实验报告。
+| 事件 | 奖励值 |
+|------|--------|
+| 攻击其他玩家 | 待定 |
+| 攻击野生怪物（敌人） | 待定 |
+| 拾取奖励球 | 待定 |
+| 被攻击 | 待定 |
+| 造成攻击 | 待定 |
+| 击杀野怪 | 待定 |
+| 击杀玩家 | 待定 |
+| 挨饿机制 | 触发计时时长，<br />基础减少数值，<br />减少率增加函数均待定 |
 
 
 
-## 系统架构
+## 系统设计
 
 ### 一、技术选型总览
 
@@ -475,67 +311,21 @@ sequenceDiagram
 
 ### 二、数据格式规范
 
-#### 2.1 观测数据 (Godot → Python)
+#### 观测数据 (Godot → Python)
 
-每个时间步，Godot 向 Python 发送一个包含四个智能体信息的数据包。数据以扁平化的浮点数组形式传输，Python 侧按约定的维度切分。
 
-```
-观测向量结构 (每个智能体, 共 38 维):
-┌─────────────────────────────────────────────────────────┐
-│ 自身状态 (8维)                                           │
-│  [x, y, hp_ratio, cd_ratio, dir_up, dir_down,           │
-│   dir_left, dir_right]                                   │
-├─────────────────────────────────────────────────────────┤
-│ 对手1状态 (5维)  [rel_x, rel_y, hp_ratio, alive, invuln]│
-│ 对手2状态 (5维)  [rel_x, rel_y, hp_ratio, alive, invuln]│
-│ 对手3状态 (5维)  [rel_x, rel_y, hp_ratio, alive, invuln]│
-├─────────────────────────────────────────────────────────┤
-│ 最近怪物1 (3维)  [rel_x, rel_y, hp_ratio]               │
-│ 最近怪物2 (3维)  [rel_x, rel_y, hp_ratio]               │
-│ 最近怪物3 (3维)  [rel_x, rel_y, hp_ratio]               │
-├─────────────────────────────────────────────────────────┤
-│ 最近宝箱1 (2维)  [rel_x, rel_y]                         │
-│ 最近宝箱2 (2维)  [rel_x, rel_y]                         │
-│ 最近宝箱3 (2维)  [rel_x, rel_y]                         │
-└─────────────────────────────────────────────────────────┘
-```
 
-#### 2.2 动作数据 (Python → Godot)
+#### 动作数据 (Python → Godot)
 
-Python 向 Godot 发送一个长度为 4 的整数数组，每个元素取值 0-5，对应六个离散动作。
 
-#### 2.3 环境控制信号
+
+#### 环境控制信号
 
 除了常规的 obs/action 交换，还需要以下控制信号：`reset`（重置环境开始新一局）、`close`（关闭环境释放资源）、`seed`（设置随机种子以确保可复现性）。这些信号通过 Godot RL Agents 的标准接口传递。
 
 ### 三、PettingZoo Adapter 接口定义
 
-Python 侧的 PettingZoo 适配器将 Godot RL Agents 的原始接口封装为标准的 PettingZoo Parallel API。核心接口如下：
 
-```python
-class TinySwordsEnv(ParallelEnv):
-    metadata = {"name": "tiny_swords_v0"}
-    
-    def __init__(self, godot_port=11008, render_mode=None):
-        self.possible_agents = ["warrior", "rogue", "knight", "ranger"]
-        self.agents = self.possible_agents[:]
-        # 初始化 Godot RL Agents 连接
-        
-    def observation_space(self, agent: str) -> spaces.Box:
-        return spaces.Box(low=-1.0, high=1.0, shape=(38,), dtype=np.float32)
-    
-    def action_space(self, agent: str) -> spaces.Discrete:
-        return spaces.Discrete(6)
-    
-    def reset(self, seed=None, options=None) -> tuple[dict, dict]:
-        # 返回 {agent_name: obs} 和 {agent_name: info}
-        ...
-    
-    def step(self, actions: dict) -> tuple[dict, dict, dict, dict, dict]:
-        # actions: {agent_name: int}
-        # 返回 (observations, rewards, terminations, truncations, infos)
-        ...
-```
 
 ### 四、Godot 侧 AIController 接口
 
@@ -572,89 +362,13 @@ func set_action(action: int) -> void:
 
 使用 Hydra + OmegaConf 管理所有超参数，配置文件采用 YAML 格式，支持层级覆盖和命令行动态修改。
 
-#### 1.1 默认配置文件 (`configs/default.yaml`)
+#### 默认配置文件 (`configs/reward.yaml`)
 
 ```yaml
-# ===== 环境参数 =====
-env:
-  godot_port: 11008
-  max_timesteps: 1000          # 每局最大时间步
-  num_envs: 4                  # 并行环境数量 (多个 Godot 实例)
-  respawn_invuln_steps: 15     # 复活无敌时间步数
 
-# ===== 角色属性 =====
-characters:
-  warrior:  { hp: 5, speed: 1.0, atk: 2, range: 1.0, cooldown: 3 }
-  rogue:    { hp: 3, speed: 1.5, atk: 3, range: 0.8, cooldown: 4 }
-  knight:   { hp: 7, speed: 0.7, atk: 1, range: 1.2, cooldown: 2 }
-  ranger:   { hp: 4, speed: 1.2, atk: 2, range: 1.5, cooldown: 5 }
-
-# ===== 奖励函数 =====
-reward:
-  kill_player: 5.0
-  kill_monster: 2.0
-  pickup_chest: 1.0
-  death_penalty: -1.0
-  deal_damage: 0.5
-  take_damage: -0.3
-  survival_per_step: 0.01
-  kill_decay: [5, 3, 1, 0]    # 击杀衰减序列
-
-# ===== PPO 超参数 =====
-ppo:
-  learning_rate: 3.0e-4
-  gamma: 0.99                  # 折扣因子
-  gae_lambda: 0.95             # GAE 参数
-  clip_epsilon: 0.2            # PPO 裁剪范围
-  entropy_coef: 0.01           # 熵正则化系数
-  value_loss_coef: 0.5         # 价值函数损失权重
-  max_grad_norm: 0.5           # 梯度裁剪
-  num_epochs: 4                # 每次更新的 epoch 数
-  batch_size: 256
-  rollout_length: 512          # 每次收集的经验步数
-
-# ===== 网络结构 =====
-network:
-  hidden_sizes: [128, 128]     # MLP 隐藏层大小
-  activation: "relu"
-  shared_backbone: false       # 策略网络和价值网络是否共享特征层
-
-# ===== Self-Play =====
-self_play:
-  pool_size: 20                # 对手池最大容量
-  save_interval: 50000         # 每隔多少步存一次检查点
-  sampling: "uniform"          # 对手采样策略: uniform / prioritized
-
-# ===== 实验管理 =====
-experiment:
-  name: "tiny_swords"
-  seed: 42
-  total_timesteps: 5_000_000   # 总训练步数
-  eval_interval: 50000         # 每隔多少步评估一次
-  eval_episodes: 20            # 每次评估的对局数
-  save_model_interval: 100000  # 模型保存间隔
-  log_interval: 1000           # 日志记录间隔
-
-# ===== W&B 配置 =====
-wandb:
-  enabled: true
-  project: "tiny-swords"
-  entity: null                 # W&B 团队名, null 表示个人账户
-  tags: ["ppo", "self-play", "4-agent"]
 ```
 
-#### 1.2 命令行覆盖示例
 
-```bash
-# 修改学习率和训练总步数
-python train.py ppo.learning_rate=1e-4 experiment.total_timesteps=10_000_000
-
-# 使用不同的实验配置
-python train.py +experiment=ablation_no_decay reward.kill_decay=[5,5,5,5]
-
-# 关闭 W&B (离线调试)
-python train.py wandb.enabled=false
-```
 
 ### 二、W&B 实验追踪方案
 

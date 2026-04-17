@@ -18,4 +18,4 @@ func _activate(context: SkillContext) -> void:
 	var targets = context.targets
 	for target in targets:
 		if target is Entity:
-			target.bear_damage(damage)  ## 调用 Entity.bear_damage() 处理伤害、特效、死亡
+			target.bear_damage(damage, context.caster)  ## 传入施法者作为伤害来源

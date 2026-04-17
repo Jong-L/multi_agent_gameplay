@@ -14,6 +14,11 @@ extends Node
 ##   - Enemy：AI 状态机中调用 trigger_skill_by_idx()
 ##   - UI：SpellButton 点击触发特定技能
 
+## 技能成功激活信号（冷却检查通过后发射）
+## @param entity: 激活技能的实体
+## @param skill: 被激活的技能
+signal skill_activated(entity: Entity, skill: Skill)
+
 var skills: Array[Skill] = []           ## 技能数组（自动收集）
 var cooldowns: Dictionary = {}          ## 冷却字典：Skill → 剩余时间
 var entity: Entity                      ## 所属实体
@@ -51,6 +56,7 @@ func trigger_skill(skill: Skill) -> void:
 	
 	skill.activate(entity)
 	cooldowns[skill] = skill.cooldown  ## 进入冷却
+	skill_activated.emit(entity, skill)  ## 通知技能成功激活
 
 ## 重置所有技能冷却（用于游戏重置）
 func reset_all_cooldowns() -> void:

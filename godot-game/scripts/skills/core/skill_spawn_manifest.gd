@@ -12,7 +12,6 @@ extends SkillComponent
  典型使用：SlashManifest（斩击特效）、AreaEffectManifest（范围持续效果）"
 
 @export var manifest_scene: PackedScene    # Manifest 场景资源
-@export var set_as_child: bool = false     #true=作为施法者子节点，false=添加到场景根节点
 
 func _activate(context: SkillContext) -> void:
 	super._activate(context)
@@ -22,10 +21,6 @@ func _activate(context: SkillContext) -> void:
 	var skill_manifest: Node = manifest_scene.instantiate()
 	var caster = context.caster
 	
-	if set_as_child == true:
-		caster.add_child(skill_manifest)
-	else:
-		var root = get_tree().get_root()
-		root.add_child(skill_manifest)
+	caster.add_child(skill_manifest)
 	
 	skill_manifest.activate(context)

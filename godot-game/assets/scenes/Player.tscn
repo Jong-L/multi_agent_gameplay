@@ -9,7 +9,6 @@
 [ext_resource type="PackedScene" uid="uid://ubsuldtsvf4p" path="res://assets/scenes/skill_scene/slash.tscn" id="4_tdg3f"]
 [ext_resource type="Script" uid="uid://dirmui5fqjtt1" path="res://scripts/controller.gd" id="8_qu62d"]
 
-
 [sub_resource type="CapsuleShape2D" id="CapsuleShape2D_physics"]
 radius = 43.0
 height = 86.0
@@ -231,6 +230,7 @@ shape = SubResource("CapsuleShape2D_4wvqw")
 
 [node name="AIController2D" type="Node2D" parent="." unique_id=720197141]
 script = ExtResource("8_qu62d")
+reset_after = 3000
 metadata/_custom_type_script = "uid://ciecfcurp1n2n"
 
 [connection signal="animation_finished" from="AnimatedSprite2D" to="." method="_on_animated_sprite_2d_animation_finished"]

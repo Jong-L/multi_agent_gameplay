@@ -21,6 +21,9 @@ var current_animation_wrapper: AnimationWrapper
 var current_health: float                       
 var is_dead: bool = false                        
 
+# 最后一次伤害来源（用于追踪击杀者）
+var last_damage_source: Entity = null
+
 # 外部推力系统,用于击退、击飞等
 # 与 velocity 独立，每帧向零衰减，实现平滑的受击位移
 var external_velocity: Vector2 = Vector2.ZERO
@@ -32,17 +35,31 @@ func _ready() -> void:
 	animated_sprite.material = animated_sprite.material.duplicate()
 	current_health = max_health
 
-func bear_damage(damage: float) -> void:#承受伤害
+func bear_damage(damage: float, source: Entity = null) -> void:#承受伤害
 	if current_health == 0:
 		return
+	
+	# 记录伤害来源（用于击杀判定）
+	if source != null:
+		last_damage_source = source
 	
 	current_health = max(0, current_health - damage)
 	_show_damage_taken_effect()
 	_show_damage_popup(damage)
 	
+	# 发射全局受伤信号（供 RewardManager 等监听）
+	EventBus.entity_damaged.emit(self, damage, source)
+	
 	if current_health == 0:
 		is_dead = true
+		_on_death()  # 死亡时立即触发（子类覆写此方法发射特定信号）
 		play_animation(AnimationWrapper.new("die", true))  # 死亡动画,高优先级
+
+## 死亡回调（虚方法，子类覆写以发射特定信号）
+## 在 is_dead = true 之后、死亡动画播放之前调用
+## 用于即时发放奖励，避免动画延迟导致信用分配问题
+func _on_death() -> void:
+	pass
 
 func play_animation(animation_wrapper: AnimationWrapper) -> void:# 用动画包装器播放动画
 	if current_animation_wrapper != null \

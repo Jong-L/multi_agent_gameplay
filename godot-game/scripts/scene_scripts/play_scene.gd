@@ -23,6 +23,8 @@ var players: Array[Player] = []
 var enemies:Array[Enemy]=[]
 # 奖励球管理器
 var reward_ball_manager: RewardBallManager = null
+# 奖励管理器
+var reward_manager: RewardManager = null
 # 相机切换按钮组
 var camera_buttons: Array[Button] = []
 # 玩家专属血条数组与技能栏，与各自的player对应
@@ -54,6 +56,7 @@ func _ready() -> void:
 	_setup_camera_switch_ui()   
 	_setup_player_uis()         
 	_setup_reward_ball_manager()
+	_setup_reward_manager()
 	_setup_vision_circles()         
 
 # 从 TileMapLayer 计算世界坐标矩形
@@ -312,21 +315,29 @@ func _setup_reward_ball_manager() -> void:
 	reward_ball_manager.set_owner(self)
 	reward_ball_manager.setup(self)
 
+# 初始化奖励管理器
+func _setup_reward_manager() -> void:
+	reward_manager = RewardManager.new()
+	reward_manager.name = "RewardManager"
+	add_child(reward_manager)
+	reward_manager.set_owner(self)
+	reward_manager.setup(self)
+
 # 为每个玩家创建视野范围虚线圆
 func _setup_vision_circles() -> void:
 	vision_circles.clear()
 	# 各玩家对应的视野圆颜色
 	var vision_colors := {
-		"Blue": Color(0.3, 0.6, 1.0, 0.5),
-		"Black": Color(0.7, 0.7, 0.7, 0.5),
-		"Red": Color(1.0, 0.3, 0.3, 0.5),
-		"Yellow": Color(1.0, 1.0, 0.3, 0.5),
+		"Blue": Color(0.3, 0.6, 1.0, 1.0),
+		"Black": Color(0.7, 0.7, 0.7, 1.0),
+		"Red": Color(1.0, 0.3, 0.3, 1.0),
+		"Yellow": Color(1.0, 1.0, 0.3, 1.0),
 	}
 	var radius := vision_sensor.vision_radius if vision_sensor else 250.0
 	for p in players:
 		var circle := VisionCircle.new()
 		circle.name = "VisionCircle_%s" % p.skin_color
-		var color: Color = vision_colors.get(p.skin_color, Color(1, 1, 1, 0.5))
+		var color: Color = vision_colors.get(p.skin_color, Color(1, 1, 1, 1))
 		circle.setup(p, radius, color)
 		circle.visible = vision_circles_visible  # 默认隐藏
 		p.add_child(circle)
@@ -347,7 +358,7 @@ func _update_vision_toggle_highlight() -> void:
 	if btn == null:
 		return
 	if vision_circles_visible:
-		btn.modulate = Color(0.5, 1.0, 0.5)  # 绿色高亮 = 已开启
+		btn.modulate = Color(0.5, 1.0, 0.7)  # 绿色高亮 = 已开启
 	else:
 		btn.modulate = Color(1.0, 1.0, 1.0)   # 白色 = 已关闭
 
@@ -364,58 +375,53 @@ func _update_button_highlight(camera_id: int) -> void:
 	var active_index := 0 if camera_id == -1 else camera_id + 1
 	for i in range(camera_buttons.size()):
 		if i == active_index:
-			camera_buttons[i].modulate = Color(0.5, 1.0, 0.5)  # 绿色高亮
+			camera_buttons[i].modulate = Color(0.5, 1.0, 0.7)  # 绿色高亮
 		else:
 			camera_buttons[i].modulate = Color(1.0, 1.0, 1.0)   # 默认白色
 
-## 为指定玩家生成观测数据（环境主动分发，玩家无需持有 PlayScene 引用）
-## controller.gd 调用此方法获取当前帧观测
-## @param player 需要观测的玩家
-## @return Dictionary 格式观测数据
+#为指定玩家生成观测数据
 func get_obs_for_player(player: Player) -> Dictionary:
 	if vision_sensor == null or not is_instance_valid(vision_sensor):
-		# 降级：无传感器时返回最小观测
+		# 无传感器时返回最小观测
 		return {
 			"self_state": [float(player.player_id), 0.0, 0.0, 0.0, 0.0, 0.0],
 			"nearby_players": [],
 			"nearby_balls": [],
 			"nearby_enemies": [],
+			"map_state":[],
 		}
 	# 收集当前活跃的奖励球
 	var all_balls: Array[RewardBall] = []
 	if reward_ball_manager != null:
 		all_balls = reward_ball_manager.reward_balls
-	return VisionSensor.scan(
+	var obs_dict=vision_sensor.scan(
 		player,
 		players,
 		enemies,
 		all_balls,
 		arena_length,
-		vision_sensor.vision_radius
 	)
+	obs_dict["map_state"]=[]
+	
+	return obs_dict
+	
 
 func _apply_actions(actions: Array) -> void:# 将动作数组分发到各玩家
 	for i in range(min(actions.size(), players.size())):
 		var action_value = int(actions[i])
 		players[i].set_action(action_value)
 
-#func handle_reset()->void:
-	#print("[PlayScene] 执行游戏重置")
-	#if is_resetting:
-		#return
-	#is_resetting=true
-	#_handle_reset()
-	#
-	#is_resetting=false
-## 处理游戏重置请求
+# 处理游戏重置请求
 func _handle_reset() -> void:
-	print("[PlayScene] 执行游戏重置")
+	var time=Time.get_time_string_from_system()
+	print("[PlayScene] 执行游戏重置 at ",time)
 	for p in players:
 		p.current_animation_wrapper = null
 		p.is_dead = false
 		p.position = p.spawn_position
 		p.current_health = p.max_health
 		p.pending_action = Player.Action.IDLE
+		p.last_damage_source = null  # 清除伤害来源记录
 		# 重置所有技能冷却
 		for skill in p.skill_controller.cooldowns.keys():
 			p.skill_controller.cooldowns[skill] = 0.0
@@ -427,12 +433,17 @@ func _handle_reset() -> void:
 	# 重置奖励球
 	if reward_ball_manager:
 		reward_ball_manager.reset_all()
+	
+	# 重置奖励管理器
+	if reward_manager:
+		reward_manager.reset()
 
 func _reset_player_state(player: Player) -> void:
 	player.current_animation_wrapper = null
 	player.is_dead = false
 	player.position = player.spawn_position
 	player.current_health = player.max_health
+	player.last_damage_source = null  # 清除伤害来源记录
 
 func _reset_with_transition(player:Player)->void:
 	var tween = fade_in()
