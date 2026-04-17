@@ -384,11 +384,10 @@ func get_obs_for_player(player: Player) -> Dictionary:
 	if vision_sensor == null or not is_instance_valid(vision_sensor):
 		# 无传感器时返回最小观测
 		return {
-			"self_state": [float(player.player_id), 0.0, 0.0, 0.0, 0.0, 0.0],
+			"self_state": [0.0, 0.0, 0.0, 0.0],
 			"nearby_players": [],
 			"nearby_balls": [],
 			"nearby_enemies": [],
-			"map_state":[],
 		}
 	# 收集当前活跃的奖励球
 	var all_balls: Array[RewardBall] = []
@@ -401,7 +400,6 @@ func get_obs_for_player(player: Player) -> Dictionary:
 		all_balls,
 		arena_length,
 	)
-	obs_dict["map_state"]=[]
 	
 	return obs_dict
 	

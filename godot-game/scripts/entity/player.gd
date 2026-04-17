@@ -20,7 +20,7 @@ enum Action {
 @onready var ai_controller:AIController2D=$AIController2D
 @onready var sync_node:Sync=$"../Sync"
 
-var is_moving: bool = false                                    
+var is_moving: bool = false                #期望速度大于零就为true，而非实际速度                  
 var spawn_position: Vector2 = Vector2.ZERO
 var pending_action: Action = Action.IDLE # 当前待执行动作
 
@@ -37,6 +37,26 @@ func _ready() -> void:
 	ai_controller.init(self)#初始化绑定该玩家到控制器
 	EventBus.player_cast_skill.connect(_handle_skill)  # 点击按钮也可以释放技能
 
+func _physics_process(delta: float) -> void:
+	if is_dead:
+		return
+		
+	_handle_movement(delta)
+
+func _process(delta: float) -> void:
+	if ai_controller.needs_reset and player_id==0:#只使用一个玩家重置
+		ai_controller.reset()
+		return
+	if is_dead:
+		return
+	
+	#_handle_movement(delta)
+	_handle_animation()
+	_execute_action()
+	
+	# 持续奖励：移动和攻击惩罚
+	_notify_action_rewards()
+	
 func _apply_skin_color() -> void:#根据skin_color设置使用的材质
 	if skin_color == "Blue":
 		return
@@ -61,20 +81,6 @@ func set_action(action: int) -> void:#设置待执行动作
 	if action >= 0 and action <= 5:
 		pending_action = action as Action
 
-func _process(delta: float) -> void:
-	if ai_controller.needs_reset and player_id==0:#只使用一个玩家重置
-		ai_controller.reset()
-		return
-	if is_dead:
-		return
-	
-	_handle_movement(delta)
-	_handle_animation()
-	_execute_action()
-	
-	# 持续奖励：移动和攻击惩罚
-	_notify_action_rewards()
-	
 #根据 pending_action执行动作
 func _handle_movement(delta: float) -> void:
 	is_moving = false#不移动时为false
@@ -95,26 +101,23 @@ func _handle_movement(delta: float) -> void:
 		Action.MOVE_RIGHT:
 			movement = Vector2.RIGHT
 	
-	#外部推力衰减
-	if external_velocity != Vector2.ZERO:
-		external_velocity = external_velocity.move_toward(
-			Vector2.ZERO,
-			external_velocity.length() * external_velocity_decay * delta
-		)
-		if external_velocity.length() < 1.0:
-			external_velocity = Vector2.ZERO
+	##外部推力衰减
+	#if external_velocity != Vector2.ZERO:
+		#external_velocity = external_velocity.move_toward(
+			#Vector2.ZERO,
+			#external_velocity.length() * external_velocity_decay * delta
+		#)
+		#if external_velocity.length() < 1.0:
+			#external_velocity = Vector2.ZERO
 	
 	if movement.length() > 0:
-		if movement.x > 0:
-			animated_sprite.flip_h = false
-		elif movement.x < 0:
-			animated_sprite.flip_h = true
-		
-		is_moving = true
 		velocity = movement.normalized() * run_speed + external_velocity
 	else:
 		velocity = external_velocity
 	
+	if velocity.length()>0:
+		is_moving=true
+
 	move_and_slide()
 
 func _execute_action() -> void:# 执行非移动动作（攻击/待机）
@@ -122,6 +125,11 @@ func _execute_action() -> void:# 执行非移动动作（攻击/待机）
 		skill_controller.trigger_skill_by_idx(0)  # 触发第 0 个技能
 
 func _handle_animation() -> void:# 动画状态更新
+	if velocity.length() > 0:
+		if velocity.x > 0:
+			animated_sprite.flip_h = false
+		elif velocity.x < 0:
+			animated_sprite.flip_h = true
 	if is_moving:
 		play_animation(AnimationWrapper.new("run", false))
 	else:
@@ -129,10 +137,6 @@ func _handle_animation() -> void:# 动画状态更新
 
 func _handle_skill(skill: Skill) -> void:#点击技能按钮触发
 	skill_controller.trigger_skill(skill)
-
-func get_obs() -> Dictionary:# 空实现：观测数据由 PlayScene 通过 get_obs_for_player() 提供
-	# controller.gd 不调用此方法，而是直接调用 _player.play_scene.get_obs_for_player()
-	return {}
 
 ## 死亡回调：在 bear_damage 检测到 current_health==0 时立即调用
 ## 即时发射全局死亡信号，确保奖励无延迟
@@ -143,7 +147,6 @@ func _on_animated_sprite_2d_animation_finished() -> void:
 	if current_animation_wrapper != null and current_animation_wrapper.name == "die":
 		player_died.emit(self)
 
-
 ## 通知 RewardManager 当前帧的动作（移动），用于持续奖励惩罚
 func _notify_action_rewards() -> void:
 	var play_scene := get_parent() as PlayScene
@@ -151,5 +154,5 @@ func _notify_action_rewards() -> void:
 		return
 	
 	# 移动惩罚（每帧扣减，帧率无关由 RewardManager 的常量值控制）
-	if is_moving:
+	if is_moving:#有期望速度就惩罚
 		play_scene.reward_manager.on_player_moved(self)

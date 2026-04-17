@@ -1,0 +1,60 @@
+[2026-04-17 13:36:13,649 I 27760 27728] core_worker_process.cc:795: Constructing CoreWorkerProcess. pid: 27760
+[2026-04-17 13:36:13,670 I 27760 27728] event.cc:499: Ray Event initialized for CORE_WORKER
+[2026-04-17 13:36:13,671 I 27760 27728] event.cc:499: Ray Event initialized for EXPORT_TASK
+[2026-04-17 13:36:13,671 I 27760 27728] event.cc:332: Set ray event level to warning
+[2026-04-17 13:36:13,676 I 27760 27728] grpc_server.cc:143: worker server started, listening on port 11129.
+[2026-04-17 13:36:13,693 I 27760 27728] core_worker_process.cc:267: Initializing worker at address: 127.0.0.1:11129 worker_id=9c33bf2637f115cf2b093977e4232a4152fba9d24942f156f2fe4e2d node_id=283c4cb32ff8cc9e096134e252390985ca94f3141afaad194cb9719f
+[2026-04-17 13:36:13,697 I 27760 27728] task_event_buffer.cc:564: Reporting task events to GCS every 1000ms.
+[2026-04-17 13:36:13,700 I 27760 27728] core_worker_process.cc:860: Metrics agent not available. To enable metrics, install Ray with dashboard support: `pip install 'ray[default]'`.
+[2026-04-17 13:36:13,700 I 27760 28588] core_worker.cc:457: Event stats:
+
+
+Global stats: 10 total (8 active)
+Queueing time: mean = 0.05ms, max = 0.27ms, min = 0.23ms, total = 0.50ms
+Execution time:  mean = 0.01ms, total = 0.08ms
+Event stats:
+	PeriodicalRunner.RunFnPeriodically - 7 total (5 active, 1 running), Execution time: mean = 0.01ms, total = 0.08ms, Queueing time: mean = 0.07ms, max = 0.27ms, min = 0.23ms, total = 0.50ms
+	ray::rpc::WorkerInfoGcsService.grpc_client.AddWorkerInfo - 1 total (1 active), Execution time: mean = 0.00ms, total = 0.00ms, Queueing time: mean = 0.00ms, max = -0.00ms, min = 9223372036854.78ms, total = 0.00ms
+	Publisher.CheckDeadSubscribers - 1 total (1 active), Execution time: mean = 0.00ms, total = 0.00ms, Queueing time: mean = 0.00ms, max = -0.00ms, min = 9223372036854.78ms, total = 0.00ms
+	CoreWorker.ExitIfParentRayletDies - 1 total (1 active), Execution time: mean = 0.00ms, total = 0.00ms, Queueing time: mean = 0.00ms, max = -0.00ms, min = 9223372036854.78ms, total = 0.00ms
+
+-----------------
+Task execution event stats:
+
+Global stats: 0 total (0 active)
+Queueing time: mean = -nan(ind)ms, max = -0.00ms, min = 9223372036854.78ms, total = 0.00ms
+Execution time:  mean = -nan(ind)ms, total = 0.00ms
+Event stats:
+
+-----------------
+Task Event stats:
+
+IO Service Stats:
+
+Global stats: 1 total (1 active)
+Queueing time: mean = 0.00ms, max = -0.00ms, min = 9223372036854.78ms, total = 0.00ms
+Execution time:  mean = 0.00ms, total = 0.00ms
+Event stats:
+	PeriodicalRunner.RunFnPeriodically - 1 total (1 active), Execution time: mean = 0.00ms, total = 0.00ms, Queueing time: mean = 0.00ms, max = -0.00ms, min = 9223372036854.78ms, total = 0.00ms
+Other Stats:
+	gcs_grpc_in_progress:0
+	event_aggregator_grpc_in_progress:0
+	current number of task status events in buffer: 0
+	current number of profile events in buffer: 0
+	current number of dropped task attempts tracked: 0
+	total task events sent: 0 MiB
+	total number of task attempts sent: 0
+	total number of task attempts dropped reported: 0
+	total number of sent failure: 0
+	num status task events dropped: 0
+	num profile task events dropped: 0
+	num ray task events reported to aggregator: 0
+	num ray task events failed to report to aggregator: 0
+	num of task attempts dropped reported to aggregator: 0
+	num of failed requests to aggregator: 0
+
+[2026-04-17 13:36:14,539 I 27760 27728] core_worker_shutdown_executor.cc:124: Executing worker exit: SYSTEM_ERROR - Worker exits unexpectedly by a signal. SystemExit is raised (sys.exit is called). Exit code: 1. The process receives a SIGTERM. (timeout: -1ms)
+[2026-04-17 13:36:14,539 I 27760 27728] core_worker_shutdown_executor.cc:200: Wait for currently executing tasks in the underlying thread pools to finish.
+[2026-04-17 13:36:14,539 I 27760 27728] core_worker_shutdown_executor.cc:230: Releasing local references, then draining reference counter.
+[2026-04-17 13:36:14,542 I 27760 27728] core_worker_shutdown_executor.cc:344: Sending disconnect message to the local raylet.
+[2026-04-17 13:36:14,543 I 27760 27728] raylet_ipc_client.cc:133: RayletIpcClient::Disconnect, exit_type=SYSTEM_ERROR, exit_detail=Worker exits unexpectedly by a signal. SystemExit is raised (sys.exit is called). Exit code: 1. The process receives a SIGTERM., has creation_task_exception_pb_bytes=0

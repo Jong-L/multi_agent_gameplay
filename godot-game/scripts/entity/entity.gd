@@ -47,7 +47,7 @@ func bear_damage(damage: float, source: Entity = null) -> void:#承受伤害
 	_show_damage_taken_effect()
 	_show_damage_popup(damage)
 	
-	# 发射全局受伤信号（供 RewardManager 等监听）
+	# 发射全局受伤信号（供 RewardManager 监听）
 	EventBus.entity_damaged.emit(self, damage, source)
 	
 	if current_health == 0:

@@ -21,12 +21,13 @@ func activate(context: SkillContext) -> void:
 func _activate(context: SkillContext) -> void:
 	var caster = context.caster as Entity
 	
-	## 暂停施法者，显示斩击动画
+	# 暂停施法者，显示斩击动画
 	caster.set_process(false)
+	caster.set_physics_process(false)
 	caster.get_node("AnimatedSprite2D").hide()
 	animated_sprite.flip_h = caster.animated_sprite.flip_h
 	
-	## 皮肤颜色适配
+	# 皮肤颜色适配
 	var player_caster = caster as Player
 	if player_caster != null:
 		_apply_skin_to_manifest(player_caster)
@@ -37,8 +38,7 @@ func _activate(context: SkillContext) -> void:
 	var callable = Callable(self, "_on_animated_sprite2D_animation_finished").bind(caster)
 	animated_sprite.animation_finished.connect(callable)
 
-## 皮肤颜色替换
-## 原理：遍历所有帧，替换 "Blue Units" 为对应颜色目录
+# 皮肤颜色替换
 func _apply_skin_to_manifest(caster: Player) -> void:
 	if caster.skin_color == "Blue":
 		return
@@ -60,7 +60,8 @@ func _apply_skin_to_manifest(caster: Player) -> void:
 						new_atlas_tex.atlas = new_texture
 						frames.set_frame(anim_name, i, new_atlas_tex)
 
-## 动画完成回调：恢复施法者
+# 动画完成回调
 func _on_animated_sprite2D_animation_finished(caster: Entity) -> void:
 	caster.set_process(true)
+	caster.set_physics_process(true)
 	caster.get_node("AnimatedSprite2D").show()

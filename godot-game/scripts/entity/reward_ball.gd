@@ -3,11 +3,8 @@ extends Area2D
 
 ## 奖励球实体
 ## 被玩家拾取后通过 EventBus 发出信号，由 RewardBallManager 处理奖励和重生逻辑
-##
 ## 碰撞层：层4（奖励球专属层）
 ## 碰撞掩码：层1（检测 Player 的 CharacterBody2D）
-##
-## 视觉：程序化生成圆形纹理，A类球为青蓝色，B类球为金黄色
 
 enum BallType { TYPE_A, TYPE_B }
 

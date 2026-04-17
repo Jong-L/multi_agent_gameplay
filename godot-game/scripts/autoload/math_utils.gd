@@ -47,14 +47,14 @@ static func quadrant_rect(bounds: Rect2, extent: Vector2, direction_x: int, dire
 static func starve_rate_multiplier(starve_duration: float, func_type: String = "linear") -> float:
 	match func_type:
 		"linear":
-			# 线性增长：每秒增加 1 倍率
-			return 1.0 + starve_duration
+			# 线性增长
+			return 0.1 + starve_duration
 		"quadratic":
 			# 二次增长：惩罚加速变重
-			return 1.0 + starve_duration * starve_duration * 0.1
+			return 0.1 + starve_duration * starve_duration * 0.1
 		"sqrt":
 			# 平方根增长：初期快，后期慢
 			return 1.0 + sqrt(starve_duration)
 		_:
 			# 未知类型默认线性
-			return 1.0 + starve_duration
+			return 0.1 + starve_duration

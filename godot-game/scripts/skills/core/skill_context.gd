@@ -10,9 +10,9 @@ extends RefCounted
 ##   2. SkillDealDamage 读取 targets → 造成伤害
 ##   3. SkillAnimationRunner 读取 caster → 播放动画
 
-var caster: Entity                      ## 施法者实体
-var skill: Skill                        ## 当前执行的技能
-var targets: Array[Variant] = []        ## 目标列表（由组件填充）
+var caster: Entity                      #施法者实体
+var skill: Skill                        #当前执行的技能
+var targets: Array[Variant] = []        #目标列表
 
 func _init(caster: Entity, skill: Skill) -> void:
 	self.caster = caster
@@ -126,7 +126,6 @@ func get_cooldown_progress() -> float:
 	return skill.current_cooldown / skill.cooldown  ## 返回当前冷却时间与总冷却时间的比值，用于 UI 显示冷却进度
 
 ## 检查技能是否处于冷却中
-## @return: true 表示冷却中
 func is_on_cooldown() -> bool:
 	if skill == null:
 		return false
