@@ -1,0 +1,76 @@
+[2026-04-17 13:43:51,221 I 27536 26476] core_worker_process.cc:795: Constructing CoreWorkerProcess. pid: 27536
+[2026-04-17 13:43:51,228 I 27536 26476] event.cc:499: Ray Event initialized for CORE_WORKER
+[2026-04-17 13:43:51,228 I 27536 26476] event.cc:499: Ray Event initialized for EXPORT_TASK
+[2026-04-17 13:43:51,228 I 27536 26476] event.cc:332: Set ray event level to warning
+[2026-04-17 13:43:53,195 I 27536 26476] grpc_server.cc:143: driver server started, listening on port 6707.
+[2026-04-17 13:43:53,203 I 27536 26476] core_worker_process.cc:267: Initializing worker at address: 127.0.0.1:6707 worker_id=01000000ffffffffffffffffffffffffffffffffffffffffffffffff node_id=e97eba32488e9743f10c0f42f544bb3a0d0e1ae67fe6ecd30c5ce3e5
+[2026-04-17 13:43:53,205 I 27536 26476] task_event_buffer.cc:564: Reporting task events to GCS every 1000ms.
+[2026-04-17 13:43:53,207 I 27536 25636] core_worker.cc:457: Event stats:
+
+
+Global stats: 11 total (9 active)
+Queueing time: mean = 0.00ms, max = 0.04ms, min = 0.04ms, total = 0.04ms
+Execution time:  mean = 0.07ms, total = 0.74ms
+Event stats:
+	PeriodicalRunner.RunFnPeriodically - 6 total (5 active, 1 running), Execution time: mean = 0.00ms, total = 0.01ms, Queueing time: mean = 0.01ms, max = 0.04ms, min = 0.04ms, total = 0.04ms
+	ray::rpc::InternalPubSubGcsService.grpc_client.GcsSubscriberCommandBatch - 1 total (1 active), Execution time: mean = 0.00ms, total = 0.00ms, Queueing time: mean = 0.00ms, max = -0.00ms, min = 9223372036854.78ms, total = 0.00ms
+	ray::rpc::WorkerInfoGcsService.grpc_client.AddWorkerInfo - 1 total (0 active), Execution time: mean = 0.74ms, total = 0.74ms, Queueing time: mean = 0.00ms, max = -0.00ms, min = 9223372036854.78ms, total = 0.00ms
+	ray::rpc::InternalPubSubGcsService.grpc_client.GcsSubscriberPoll - 1 total (1 active), Execution time: mean = 0.00ms, total = 0.00ms, Queueing time: mean = 0.00ms, max = -0.00ms, min = 9223372036854.78ms, total = 0.00ms
+	Publisher.CheckDeadSubscribers - 1 total (1 active), Execution time: mean = 0.00ms, total = 0.00ms, Queueing time: mean = 0.00ms, max = -0.00ms, min = 9223372036854.78ms, total = 0.00ms
+	ray::rpc::WorkerInfoGcsService.grpc_client.AddWorkerInfo.OnReplyReceived - 1 total (1 active), Execution time: mean = 0.00ms, total = 0.00ms, Queueing time: mean = 0.00ms, max = -0.00ms, min = 9223372036854.78ms, total = 0.00ms
+
+-----------------
+Task execution event stats:
+
+Global stats: 0 total (0 active)
+Queueing time: mean = -nan(ind)ms, max = -0.00ms, min = 9223372036854.78ms, total = 0.00ms
+Execution time:  mean = -nan(ind)ms, total = 0.00ms
+Event stats:
+
+-----------------
+Task Event stats:
+
+IO Service Stats:
+
+Global stats: 2 total (1 active)
+Queueing time: mean = 0.01ms, max = 0.02ms, min = 0.02ms, total = 0.02ms
+Execution time:  mean = 0.02ms, total = 0.04ms
+Event stats:
+	CoreWorker.deadline_timer.flush_task_events - 1 total (1 active), Execution time: mean = 0.00ms, total = 0.00ms, Queueing time: mean = 0.00ms, max = -0.00ms, min = 9223372036854.78ms, total = 0.00ms
+	PeriodicalRunner.RunFnPeriodically - 1 total (0 active), Execution time: mean = 0.04ms, total = 0.04ms, Queueing time: mean = 0.02ms, max = 0.02ms, min = 0.02ms, total = 0.02ms
+Other Stats:
+	gcs_grpc_in_progress:0
+	event_aggregator_grpc_in_progress:0
+	current number of task status events in buffer: 1
+	current number of profile events in buffer: 0
+	current number of dropped task attempts tracked: 0
+	total task events sent: 0 MiB
+	total number of task attempts sent: 0
+	total number of task attempts dropped reported: 0
+	total number of sent failure: 0
+	num status task events dropped: 0
+	num profile task events dropped: 0
+	num ray task events reported to aggregator: 0
+	num ray task events failed to report to aggregator: 0
+	num of task attempts dropped reported to aggregator: 0
+	num of failed requests to aggregator: 0
+
+[2026-04-17 13:43:53,208 I 27536 26476] core_worker_process.cc:860: Metrics agent not available. To enable metrics, install Ray with dashboard support: `pip install 'ray[default]'`.
+[2026-04-17 13:43:53,209 I 27536 25636] accessor.cc:453: Received address and liveness notification for node, IsAlive = 1 node_id=e97eba32488e9743f10c0f42f544bb3a0d0e1ae67fe6ecd30c5ce3e5
+[2026-04-17 13:43:53,209 I 27536 25636] normal_task_submitter.cc:857: Number of alive nodes:1
+[2026-04-17 13:43:54,055 I 27536 26476] core_worker.cc:597: Sending disconnect message to the local raylet.
+[2026-04-17 13:43:54,056 I 27536 26476] raylet_ipc_client.cc:133: RayletIpcClient::Disconnect, exit_type=INTENDED_USER_EXIT, exit_detail=Shutdown by ray.shutdown()., has creation_task_exception_pb_bytes=0
+[2026-04-17 13:43:54,056 I 27536 26476] core_worker.cc:601: Disconnected from the local raylet.
+[2026-04-17 13:43:54,057 I 27536 26476] task_event_buffer.cc:577: Shutting down TaskEventBuffer.
+[2026-04-17 13:43:54,057 I 27536 28276] task_event_buffer.cc:543: Task event buffer io service stopped.
+[2026-04-17 13:43:54,057 I 27536 26476] core_worker_shutdown_executor.cc:85: Waiting for joining a core worker io thread. If it hangs here, there might be deadlock or a high load in the core worker io service.
+[2026-04-17 13:43:54,057 I 27536 25636] core_worker_process.cc:188: Core worker main io service stopped.
+[2026-04-17 13:43:54,059 I 27536 26476] core_worker_shutdown_executor.cc:101: Disconnecting a GCS client.
+[2026-04-17 13:43:54,059 I 27536 26476] core_worker_shutdown_executor.cc:108: Core worker ready to be deallocated.
+[2026-04-17 13:43:54,059 I 27536 26476] core_worker_process.cc:988: Waiting for driver shutdown to complete...
+[2026-04-17 13:43:54,059 I 27536 26476] core_worker_shutdown_executor.cc:42: Shutdown completed successfully
+[2026-04-17 13:43:54,059 I 27536 26476] core_worker_process.cc:990: Driver shutdown complete. Removing the global worker.
+[2026-04-17 13:43:54,060 I 27536 26476] core_worker_shutdown_executor.cc:42: Shutdown completed successfully
+[2026-04-17 13:43:54,060 I 27536 26476] core_worker.cc:533: Core worker is destructed
+[2026-04-17 13:43:54,060 I 27536 26476] core_worker_process.cc:867: Destructing CoreWorkerProcessImpl. pid: 27536
+[2026-04-17 13:43:54,060 I 27536 26476] stats.h:164: Stats module has shutdown.

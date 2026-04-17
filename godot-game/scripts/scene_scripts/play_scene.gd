@@ -59,50 +59,22 @@ func _ready() -> void:
 	_setup_reward_manager()
 	_setup_vision_circles()         
 
-# 从 TileMapLayer 计算世界坐标矩形
-static func _tilemap_to_world_rect(layer: TileMapLayer) -> Rect2:
-	var used := layer.get_used_rect()
-	var cell_size := layer.tile_set.tile_size
-	var s := layer.scale
-	var p := layer.position#图块偏移位置
-	return Rect2(
-		p.x + used.position.x * cell_size.x * s.x,
-		p.y + used.position.y * cell_size.y * s.y,
-		used.size.x * cell_size.x * s.x,
-		used.size.y * cell_size.y * s.y
-	)
-
-# 从 TileMapLayer 提取所有已使用 tile 的世界坐标
-static func _tilemap_to_world_positions(layer: TileMapLayer) -> Array[Vector2]:
-	var result: Array[Vector2] = []
-	var used_cells := layer.get_used_cells()
-	var cell_size := layer.tile_set.tile_size
-	var s := layer.scale
-	var p := layer.position
-	for cell in used_cells:
-		var world_pos := Vector2(
-			p.x + cell.x * cell_size.x * s.x + cell_size.x * s.x * 0.5,
-			p.y + cell.y * cell_size.y * s.y + cell_size.y * s.y * 0.5
-		)
-		result.append(world_pos)
-	return result
-
 # 初始化地图数据：竞技场边界、巡逻区域、碰撞装饰物坐标
 func _init_map_data() -> void:
 	# Grass 层（竞技场）
 	if _grass_layer:
-		arena_bounds = _tilemap_to_world_rect(_grass_layer)
+		arena_bounds = MathUtils._tilemap_to_world_rect(_grass_layer)
 		arena_length=arena_bounds.size[0]
 	else:
 		print("get tile_layer error")
 	
 	# Road 层（巡逻区域）
 	if _road_layer != null:
-		patrol_rect = _tilemap_to_world_rect(_road_layer)
+		patrol_rect =MathUtils._tilemap_to_world_rect(_road_layer)
 	
 	# CollisionDecoration
 	if _collision_deco_layer != null:
-		collision_decoration_positions = _tilemap_to_world_positions(_collision_deco_layer)
+		collision_decoration_positions =MathUtils._tilemap_to_world_positions(_collision_deco_layer)
 	
 	#print("[PlayScene] 地图数据初始化完成")
 	#print("  竞技场边界: %s" % arena_bounds)
@@ -379,6 +351,24 @@ func _update_button_highlight(camera_id: int) -> void:
 		else:
 			camera_buttons[i].modulate = Color(1.0, 1.0, 1.0)   # 默认白色
 
+# 构建 map_state（边界距离 + 障碍物相对向量）
+func _build_map_state(player: Player) -> Array[float]:
+	var map_state: Array[float] = []
+	var player_pos = player.global_position
+	
+	# 4个边界距离[0, 1]
+	map_state.append((player_pos.x - arena_bounds.position.x) / arena_length)
+	map_state.append((arena_bounds.end.x - player_pos.x) / arena_length)
+	map_state.append((player_pos.y - arena_bounds.position.y) / arena_length)
+	map_state.append((arena_bounds.end.y - player_pos.y) / arena_length)
+	
+	#障碍物的相对向量 [-1, 1]
+	for deco_pos in collision_decoration_positions:
+		map_state.append((deco_pos.x - player_pos.x) / arena_length)
+		map_state.append((deco_pos.y - player_pos.y) / arena_length)
+	
+	return map_state
+
 #为指定玩家生成观测数据
 func get_obs_for_player(player: Player) -> Dictionary:
 	if vision_sensor == null or not is_instance_valid(vision_sensor):
@@ -388,18 +378,22 @@ func get_obs_for_player(player: Player) -> Dictionary:
 			"nearby_players": [],
 			"nearby_balls": [],
 			"nearby_enemies": [],
+			"map_state":[]
 		}
 	# 收集当前活跃的奖励球
 	var all_balls: Array[RewardBall] = []
 	if reward_ball_manager != null:
 		all_balls = reward_ball_manager.reward_balls
-	var obs_dict=vision_sensor.scan(
+	var obs_dict = vision_sensor.scan(
 		player,
 		players,
 		enemies,
 		all_balls,
 		arena_length,
 	)
+	
+	# 添加地图状态到观测字典
+	obs_dict["map_state"] = _build_map_state(player)
 	
 	return obs_dict
 	

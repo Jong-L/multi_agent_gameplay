@@ -40,7 +40,6 @@ static func quadrant_rect(bounds: Rect2, extent: Vector2, direction_x: int, dire
 
 
 ## 计算饥饿惩罚的衰减倍率
-## 随着饥饿持续时间增加，惩罚速率逐步增大
 ## @param starve_duration 已饥饿的持续时间（秒）
 ## @param func_type 增长函数类型："linear"(线性), "quadratic"(二次), "sqrt"(平方根)
 ## @return 衰减倍率（>= 1.0）
@@ -58,3 +57,31 @@ static func starve_rate_multiplier(starve_duration: float, func_type: String = "
 		_:
 			# 未知类型默认线性
 			return 0.1 + starve_duration
+
+# 从 TileMapLayer 计算世界坐标矩形
+static func _tilemap_to_world_rect(layer: TileMapLayer) -> Rect2:
+	var used := layer.get_used_rect()
+	var cell_size := layer.tile_set.tile_size
+	var s := layer.scale
+	var p := layer.position#图块偏移位置
+	return Rect2(
+		p.x + used.position.x * cell_size.x * s.x,
+		p.y + used.position.y * cell_size.y * s.y,
+		used.size.x * cell_size.x * s.x,
+		used.size.y * cell_size.y * s.y
+	)
+
+# 从 TileMapLayer 提取所有已使用 tile 的世界坐标
+static func _tilemap_to_world_positions(layer: TileMapLayer) -> Array[Vector2]:
+	var result: Array[Vector2] = []
+	var used_cells := layer.get_used_cells()
+	var cell_size := layer.tile_set.tile_size
+	var s := layer.scale
+	var p := layer.position
+	for cell in used_cells:
+		var world_pos := Vector2(
+			p.x + cell.x * cell_size.x * s.x + cell_size.x * s.x * 0.5,
+			p.y + cell.y * cell_size.y * s.y + cell_size.y * s.y * 0.5
+		)
+		result.append(world_pos)
+	return result

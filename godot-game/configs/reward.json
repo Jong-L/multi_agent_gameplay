@@ -7,7 +7,7 @@
 	"kill_enemy": 30.0,
 	"kill_player": 45.0,
 	"run": 0.001,
-	"attack": -0.1,
+	"attack": -0.05,
 	"died": -20.0,
 	"starve_time": 60.0,
 	"starve_reward_decrease": 0.01,

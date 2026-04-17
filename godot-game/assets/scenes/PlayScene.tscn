@@ -597,7 +597,6 @@ drag_horizontal_enabled = true
 
 [node name="Sync" type="Node" parent="." unique_id=1321988269]
 script = ExtResource("16_r6opt")
-speed_up = 8.0
 metadata/_custom_type_script = "uid://bmy6w68efk7bl"
 
 [connection signal="player_died" from="Player_Blue" to="." method="_on_player_player_died"]
