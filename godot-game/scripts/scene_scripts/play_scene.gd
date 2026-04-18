@@ -238,14 +238,14 @@ func _setup_player_uis() -> void:
 		margin.name = "MarginContainer"
 		margin.layout_mode = 2
 		spell_bar.add_child(margin)
-		margin.set_owner(self)
+		#margin.set_owner(self)
 		
 		var hbox = HBoxContainer.new()
 		hbox.name = "HBoxContainer"
 		hbox.layout_mode = 2
 		hbox.alignment = BoxContainer.ALIGNMENT_CENTER
 		margin.add_child(hbox)
-		hbox.set_owner(self)
+		#hbox.set_owner(self)
 		
 		# 加载 SpellButton 场景
 		var spell_button_scene = load("res://assets/scenes/texture_button.tscn")
@@ -253,11 +253,11 @@ func _setup_player_uis() -> void:
 			var spell_btn = spell_button_scene.instantiate()
 			spell_btn.layout_mode = 2
 			hbox.add_child(spell_btn)
-			spell_btn.set_owner(self)
+			#spell_btn.set_owner(self)
 		
 		spell_bar.button_container = hbox
 		control_node.add_child(spell_bar)
-		spell_bar.set_owner(self)
+		#spell_bar.set_owner(self)
 		
 		# 注册玩家技能到技能栏
 		for skill_idx in range(p.skill_controller.skills.size()):

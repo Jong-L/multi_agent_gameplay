@@ -8,6 +8,9 @@
 [ext_resource type="Texture2D" uid="uid://ccishdwvfyoyy" path="res://assets/Tiny Swords (Free Pack)/Particle FX/Dust_01.png" id="3_qu62d"]
 [ext_resource type="PackedScene" uid="uid://ubsuldtsvf4p" path="res://assets/scenes/skill_scene/slash.tscn" id="4_tdg3f"]
 [ext_resource type="Script" uid="uid://dirmui5fqjtt1" path="res://scripts/controller.gd" id="8_qu62d"]
+[ext_resource type="Texture2D" uid="uid://c4tdbx4y0l32e" path="res://assets/healthbarUnder.png" id="9_jc3ay"]
+[ext_resource type="Script" uid="uid://b4a1530uw0150" path="res://scripts/entity/health_bar_on_player.gd" id="10_jc3ay"]
+[ext_resource type="Texture2D" uid="uid://ccfcowrmeakqg" path="res://assets/healthbarProgress.png" id="10_mc6or"]
 
 [sub_resource type="CapsuleShape2D" id="CapsuleShape2D_physics"]
 radius = 43.0
@@ -233,5 +236,17 @@ shape = SubResource("CapsuleShape2D_4wvqw")
 script = ExtResource("8_qu62d")
 reset_after = 3000
 metadata/_custom_type_script = "uid://ciecfcurp1n2n"
+
+[node name="HealthBarOnPlayer" type="TextureProgressBar" parent="." unique_id=363006926]
+z_index = 1
+offset_left = -96.666664
+offset_top = -93.33333
+offset_right = 93.33332
+offset_bottom = -59.999977
+value = 50.0
+nine_patch_stretch = true
+texture_under = ExtResource("9_jc3ay")
+texture_progress = ExtResource("10_mc6or")
+script = ExtResource("10_jc3ay")
 
 [connection signal="animation_finished" from="AnimatedSprite2D" to="." method="_on_animated_sprite_2d_animation_finished"]

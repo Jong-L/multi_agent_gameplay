@@ -24,6 +24,7 @@ execution_delay_time = 0.2
 
 [node name="SkillGetTarget" type="Node" parent="DealDamageGroup" unique_id=848467817]
 script = ExtResource("5_g16i3")
+_radius = 20.0
 metadata/_custom_type_script = "uid://c4b4qlomtssql"
 
 [node name="SkillDealDamage" type="Node" parent="DealDamageGroup" unique_id=1723231354]

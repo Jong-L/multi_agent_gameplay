@@ -14,8 +14,8 @@
 [ext_resource type="Script" uid="uid://4snhks5is2lx" path="res://scripts/entity/pathfinding.gd" id="11_a7s2s"]
 
 [sub_resource type="CapsuleShape2D" id="CapsuleShape2D_o3hxu"]
-radius = 4.666667
-height = 9.333334
+radius = 8.0
+height = 16.0
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_4t03u"]
 shader = ExtResource("2_yyvcd")

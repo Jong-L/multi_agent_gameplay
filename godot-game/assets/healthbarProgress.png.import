@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://b0ry0enl7jj0c"
-path="res://.godot/imported/Egg_item.png-8d6f7abd822008d46e906eee682433e1.ctex"
+uid="uid://ccfcowrmeakqg"
+path="res://.godot/imported/healthbarProgress.png-d5c83ac6e069b837ee7269ac1313db37.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/Egg_item.png"
-dest_files=["res://.godot/imported/Egg_item.png-8d6f7abd822008d46e906eee682433e1.ctex"]
+source_file="res://assets/healthbarProgress.png"
+dest_files=["res://.godot/imported/healthbarProgress.png-d5c83ac6e069b837ee7269ac1313db37.ctex"]
 
 [params]
 

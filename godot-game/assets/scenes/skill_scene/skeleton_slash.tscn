@@ -13,7 +13,8 @@ metadata/_custom_type_script = "uid://b7q72xrvheq0w"
 
 [node name="SkillTargetPlayer" type="Node" parent="." unique_id=955738331]
 script = ExtResource("3_27bb0")
-check_range = 35.0
+check_range = 23.0
+attack_fov = 100.0
 metadata/_custom_type_script = "uid://wbl5lv02fsii"
 
 [node name="SkillDealDamage" type="Node" parent="." unique_id=1709392132]

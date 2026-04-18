@@ -14,7 +14,7 @@ extends SkillComponent
 @export var manifest_scene: PackedScene    # Manifest 场景资源
 
 func _activate(context: SkillContext) -> void:
-	super._activate(context)
+	#super._activate(context)
 	if manifest_scene == null:
 		return
 	

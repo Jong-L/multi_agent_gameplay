@@ -12,7 +12,7 @@
 	"starve_time": 60.0,
 	"starve_reward_decrease": 0.01,
 	"starve_more_func": "quadratic",
-	"proximity_to_ball_scale": 0.001,
+	"proximity_to_ball_scale": 0.0,
 	"velocity_toward_ball_scale": 0.03,
 	"center_reward_scale": 0.003
 }

@@ -29,7 +29,7 @@ MathUtils="*res://scripts/autoload/math_utils.gd"
 [display]
 
 window/size/viewport_width=1080
-window/size/viewport_height=720
+window/size/viewport_height=730
 window/size/initial_position=Vector2i(800, 800)
 window/stretch/mode="canvas_items"
 mouse_cursor/custom_image="uid://drletjwa3f1cx"

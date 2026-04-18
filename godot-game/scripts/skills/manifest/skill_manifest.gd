@@ -19,7 +19,6 @@ extends Node2D
 func activate(context: SkillContext) -> void:
 	_activate(context)
 
-## 实际执行逻辑（子类必须重写）
-## @param context: 技能上下文
-func _activate(context: SkillContext) -> void:
+## 实际执行逻辑
+func _activate(_context: SkillContext) -> void:
 	push_warning("SkillManifest._activate() not implemented: %s" % name)

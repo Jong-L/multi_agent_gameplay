@@ -1,11 +1,27 @@
 extends AIController2D
 
 var move_action:int
+var n_time_step:int=0
 
 func _physics_process(delta):
 	super._physics_process(delta)
 	if needs_reset:
 		done=true
+	
+	n_time_step=(n_time_step+1)%60
+	if n_time_step==0:
+		var obs=get_obs()
+		if _player.player_id == 0:  
+			print("=== Player %d Observations ===" % _player.player_id)
+			print("  self_state: ", obs.self_state)
+			print("  nearby_players: ", obs.nearby_players)
+			print("  nearby_balls: ", obs.nearby_balls)
+			print("  nearby_enemies: ", obs.nearby_enemies)
+			print("  map_state: ", obs.map_state,)
+	
+	if _player.player_id==0:
+		var temp_reward=get_reward()
+		print("{0} get reward {1}".format([_player.player_id,temp_reward]))
 
 func reset():
 	super.reset()
@@ -18,12 +34,10 @@ func get_obs() -> Dictionary:
 	if play_scene == null:
 		return {}
 	var obs=play_scene.get_obs_for_player(_player)
-	#print(obs)
+	
 	return obs
 
 func get_reward() -> float:
-	#if _player.player_id==0:
-		#print("{0} get reward {1}".format([_player.player_id,reward]))
 	return reward
 
 func get_action_space() -> Dictionary:

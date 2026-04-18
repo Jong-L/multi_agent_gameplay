@@ -48,7 +48,7 @@ func _on_body_entered(body: Node2D) -> void:
 	
 	# 拾取：发信号，由 RewardBallManager 处理奖励
 	is_active = false
-	EventBus.reward_ball_collected.emit(body.player_id, ball_type, reward_value, self)
+	EventBus.reward_ball_collected.emit(body.player_id, ball_type, self)
 	
 	# 视觉和碰撞隐藏
 	_set_visual_active(false)

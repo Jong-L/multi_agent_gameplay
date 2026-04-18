@@ -11,7 +11,7 @@ extends SkillManifest
 
 @onready var animated_sprite: AnimatedSprite2D = $AnimatedSprite2D
 
-func _process(delta: float) -> void:
+func _process(_delta: float) -> void:
 	if animated_sprite.frame_progress >= 1.0:
 		queue_free()
 

@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://cpuj0ulrot4rm"
-path="res://.godot/imported/slash_attack_icon.png-7867168a40d54b5982b0483f712c4449.ctex"
+uid="uid://c4tdbx4y0l32e"
+path="res://.godot/imported/healthbarUnder.png-de77012d815106fbf67a8cd4bcf6bfa9.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/slash_attack_icon.png"
-dest_files=["res://.godot/imported/slash_attack_icon.png-7867168a40d54b5982b0483f712c4449.ctex"]
+source_file="res://assets/healthbarUnder.png"
+dest_files=["res://.godot/imported/healthbarUnder.png-de77012d815106fbf67a8cd4bcf6bfa9.ctex"]
 
 [params]
 

@@ -313,9 +313,9 @@ func _process_proximity_shaping(delta: float) -> void:
 			if dot > 0.0:  # 朝向球移动
 				var velocity_reward: float = VELOCITY_TOWARD_BALL_SCALE * dot
 				total_shaping += velocity_reward
-			elif dot<0.0:#离开球时等量惩罚，防止反复靠近刷分
-				var velocity_reward: float = VELOCITY_TOWARD_BALL_SCALE * dot
-				total_shaping += velocity_reward
+			#elif dot<0.0:#离开球时等量惩罚，防止反复靠近刷分
+				#var velocity_reward: float = VELOCITY_TOWARD_BALL_SCALE * dot
+				#total_shaping += velocity_reward
 
 		# 直接修改 AIController 的 reward,不走 add_reward 以避免刷新饥饿计时器,靠近目标但未能达成不能“解渴”
 		player.ai_controller.reward += total_shaping * delta

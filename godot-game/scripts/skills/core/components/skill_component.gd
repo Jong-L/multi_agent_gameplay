@@ -17,5 +17,5 @@ func activate(context: SkillContext) -> void:
 #实际执行逻辑
 func _activate(_context: SkillContext) -> void:
 	push_warning("SkillComponent._activate() not implemented: %s" % name)
-	
+		
 	
