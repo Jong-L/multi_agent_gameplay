@@ -7,30 +7,31 @@ class_name RewardManager
  提供奖励变更接口（如 add_reward），各模块调用即可进行奖励更改
 
  监听的信号：
-   - EventBus.entity_damaged  → 受伤/造成伤害奖励
-   - EventBus.enemy_died      → 击杀敌人奖励
-   - EventBus.player_died     → 击杀玩家/死亡惩罚
+   - EventBus.entity_damaged  受伤/造成伤害奖励
+   - EventBus.enemy_died      击杀敌人奖励
+   - EventBus.player_died     击杀玩家/死亡惩罚
    - EventBus.reward_ball_collected → 拾取奖励球奖励"
 
 #奖励常量
-var COLLECT_BALL_A: float = 1.0
-var COLLECT_BALL_B: float = 1.5
-var BEAR_DAMAGE: float = -1.0
-var CAUSE_DAMAGE_TO_ENEMY: float = 1.0
-var CAUSE_DAMAGE_TO_PLAYER: float = 1.5
-var KILL_ENEMY: float = 3.0
-var KILL_PLAYER: float = 4.5
-var RUN: float = -0.01
-var ATTACK: float = -0.5
-var DIED: float = -2.0
-var STARVE_TIME: float = 10.0
-var STARVE_REWARD_DECREASE: float = 0.01
-var STARVE_MORE_FUNC: String = "linear"
+var COLLECT_BALL_A: float 
+var COLLECT_BALL_B: float
+var BEAR_DAMAGE: float 
+var CAUSE_DAMAGE_TO_ENEMY: float 
+var CAUSE_DAMAGE_TO_PLAYER: float 
+var KILL_ENEMY: float 
+var KILL_PLAYER: float
+var RUN: float 
+var ATTACK: float
+var DIED: float
+var STARVE_TIME: float 
+var MAX_STARVE_DURATION:float
+var STARVE_REWARD_DECREASE: float 
+var STARVE_MORE_FUNC: String
 
 #塑形奖励常量
-var PROXIMITY_TO_BALL_SCALE: float = 0.005    #距离奖励：离球越近奖励越大（每帧）
-var VELOCITY_TOWARD_BALL_SCALE: float = 0.01  #朝向球移动时额外奖励（每帧）
-var CENTER_REWARD_SCALE: float = 0.003        #离竞技场中心越近奖励越大（每帧）
+var PROXIMITY_TO_BALL_SCALE: float   #距离奖励：离球越近奖励越大（每帧）
+var VELOCITY_TOWARD_BALL_SCALE: float   #朝向球移动时额外奖励（每帧）
+var CENTER_REWARD_SCALE: float        #离竞技场中心越近奖励越大（每帧）
 
 var _play_scene: PlayScene = null
 
@@ -99,6 +100,8 @@ func _load_reward_config() -> void:
 		DIED = float(data["died"])
 	if data.has("starve_time"):
 		STARVE_TIME = float(data["starve_time"])
+	if data.has("max_starve_duration"):
+		MAX_STARVE_DURATION=float(data["max_starve_duration"])
 	if data.has("starve_reward_decrease"):
 		STARVE_REWARD_DECREASE = float(data["starve_reward_decrease"])
 	if data.has("starve_more_func"):
@@ -244,26 +247,29 @@ func _process_starvation(delta: float) -> void:
 	if _play_scene == null:
 		return
 
-	var current_time := Time.get_ticks_msec() / 1000.0
-
 	for player in _play_scene.players:
 		if player.is_dead:
 			continue
-
-		var pid: int = player.player_id
-		if not _last_reward_time.has(pid):
-			_last_reward_time[pid] = current_time
-			continue
-
-		var time_since_reward: float = current_time - _last_reward_time[pid]
-		if time_since_reward >= STARVE_TIME:
-			# 饥饿时间 = time_since_reward - STARVE_TIME
-			var starve_duration: float = time_since_reward - STARVE_TIME
+		var starve_duration=compute_starve_duration(player)
+		if starve_duration>0.0:
 			# 根据增长函数计算衰减倍率
 			var multiplier: float = MathUtils.starve_rate_multiplier(starve_duration, STARVE_MORE_FUNC)
 			var decrease: float = STARVE_REWARD_DECREASE * multiplier * delta
-			add_reward(pid, -decrease)
+			add_reward(player.player_id, -decrease)
 
+#计算饥饿时间
+func compute_starve_duration(player:Player)->float:
+	var current_time := Time.get_ticks_msec() / 1000.0
+	var pid: int = player.player_id
+	if not _last_reward_time.has(pid):
+			_last_reward_time[pid] = current_time
+			return 0.0
+	var time_since_reward: float = current_time - _last_reward_time[pid]
+	if time_since_reward >= STARVE_TIME:
+			# 饥饿时间 = time_since_reward - STARVE_TIME
+			var starve_duration:float= min(time_since_reward - STARVE_TIME,MAX_STARVE_DURATION)
+			return starve_duration
+	return 0.0
 
 ## ── 塑形奖励（持续引导） ──
 

@@ -1,12 +1,9 @@
 class_name VisionSensor
 extends Node
 
-## 视野传感器（独立工具类）
+## 视野传感器
 ## 负责计算以指定玩家为圆心的视野范围内所有实体信息
-## 将视野内实体信息编码为固定维度的字典观测数据，配合 SB3 MultiInputPolicy 使用
-##
-## 使用方式：
-## - 作为 PlayScene 的子节点添加一个实例
+## 将视野内实体信息编码为固定维度的字典观测数据
 
 @export var vision_radius: float = 250.0  ## 视野半径（像素）
 
@@ -22,7 +19,7 @@ const BALL_SLOT_DIM: int = 4    ## [rel_x, rel_y, ball_type, dist_norm]
 const ENEMY_SLOT_DIM: int = 5   ## [rel_x, rel_y, hp_ratio, flip_h, dist_norm]
 
 ## ---- 自身状态维度 ----
-const SELF_STATE_DIM: int = 4   ## [pos_x, pos_y, hp_ratio, flip_h]
+const SELF_STATE_DIM: int = 5   ## [pos_x, pos_y, hp_ratio, flip_h]
 
 
 ## 扫描指定玩家视野内所有实体

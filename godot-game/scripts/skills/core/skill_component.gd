@@ -17,5 +17,5 @@ func activate(context: SkillContext) -> void:
 	_activate(context)
 
 ## 实际执行逻辑（子类重写此函数）
-func _activate(context: SkillContext) -> void:
+func _activate(_context: SkillContext) -> void:
 	print("activate component:", self.name)

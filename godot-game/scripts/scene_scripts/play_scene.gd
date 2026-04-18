@@ -161,7 +161,7 @@ func _setup_camera_switch_ui() -> void:
 	vision_btn.name = "VisionToggleButton"
 	vision_btn.text = "视野提示"
 	vision_btn.custom_minimum_size = Vector2(150, 40)
-	vision_btn.tooltip_text = "显示/隐藏玩家视野范围"
+	vision_btn.tooltip_text = "显示/隐藏智能体视野范围"
 	vision_btn.modulate = Color(1.0, 1.0, 1.0)  # 默认白色=已关闭
 	vision_btn.pressed.connect(_on_vision_toggle_pressed)
 	panel.add_child(vision_btn)
@@ -373,7 +373,7 @@ func get_obs_for_player(player: Player) -> Dictionary:
 	if vision_sensor == null or not is_instance_valid(vision_sensor):
 		# 无传感器时返回最小观测
 		return {
-			"self_state": [0.0, 0.0, 0.0, 0.0],
+			"self_state": [0.0, 0.0, 0.0, 0.0,0.0],
 			"nearby_players": [],
 			"nearby_balls": [],
 			"nearby_enemies": [],
@@ -390,12 +390,13 @@ func get_obs_for_player(player: Player) -> Dictionary:
 		all_balls,
 		arena_length,
 	)
-	
+	#添加饥饿时间
+	var starve_duration:float=reward_manager.compute_starve_duration(player)
+	obs_dict["self_state"].append(starve_duration/reward_manager.MAX_STARVE_DURATION)
 	# 添加地图状态到观测字典
 	obs_dict["map_state"] = _build_map_state(player)
 	
 	return obs_dict
-	
 
 func _apply_actions(actions: Array) -> void:# 将动作数组分发到各玩家
 	for i in range(min(actions.size(), players.size())):

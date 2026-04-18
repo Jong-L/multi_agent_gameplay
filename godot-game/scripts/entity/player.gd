@@ -19,6 +19,7 @@ enum Action {
 @onready var skill_controller: Node = $SkillController
 @onready var ai_controller:AIController2D=$AIController2D
 @onready var sync_node:Sync=$"../Sync"
+@onready var reward_label:Label=$RewardLabel
 
 var is_moving: bool = false                #期望速度大于零就为true，而非实际速度
 var movement:Vector2=Vector2.ZERO     #键盘输入或智能体动作的期望移动方向                  
@@ -41,7 +42,7 @@ func _ready() -> void:
 func _physics_process(_delta: float) -> void:
 	if is_dead:
 		return
-		
+	
 	_handle_movement()
 
 func _process(_delta: float) -> void:
@@ -56,6 +57,9 @@ func _process(_delta: float) -> void:
 	
 	# 持续奖励：移动和攻击惩罚
 	_notify_action_rewards()
+	
+	#奖励标签
+	reward_label.text=String.num(ai_controller.reward,6)
 
 func _apply_skin_color() -> void:#根据skin_color设置使用的材质
 	if skin_color == "Blue":
@@ -138,7 +142,7 @@ func _on_animated_sprite_2d_animation_finished() -> void:
 	if current_animation_wrapper != null and current_animation_wrapper.name == "die":
 		player_died.emit(self)
 
-## 通知 RewardManager 当前帧的动作（移动），用于持续奖励惩罚
+# 通知 RewardManager 当前帧的动作（移动），用于持续奖励惩罚
 func _notify_action_rewards() -> void:
 	var play_scene := get_parent() as PlayScene
 	if play_scene == null or play_scene.reward_manager == null:
@@ -147,3 +151,6 @@ func _notify_action_rewards() -> void:
 	# 移动惩罚（每帧扣减，帧率无关由 RewardManager 的常量值控制）
 	if is_moving:#有期望速度就惩罚
 		play_scene.reward_manager.on_player_moved(self)
+
+func _on_reward_perform_button_pressed() -> void:
+	reward_label.visible=!reward_label.visible

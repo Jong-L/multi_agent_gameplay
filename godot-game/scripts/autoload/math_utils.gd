@@ -50,7 +50,7 @@ func starve_rate_multiplier(starve_duration: float, func_type: String = "linear"
 			return 0.1 + starve_duration
 		"quadratic":
 			# 二次增长：惩罚加速变重
-			return 0.1 + starve_duration * starve_duration * 0.1
+			return starve_duration * starve_duration * 0.3
 		"sqrt":
 			# 平方根增长：初期快，后期慢
 			return 1.0 + sqrt(starve_duration)

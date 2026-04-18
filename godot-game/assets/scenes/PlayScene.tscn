@@ -18,6 +18,7 @@
 [ext_resource type="Script" uid="uid://cixywhkot8gx6" path="res://scripts/utils/pause_menu.gd" id="14_xxlmq"]
 [ext_resource type="Script" uid="uid://bmy6w68efk7bl" path="res://addons/godot_rl_agents/sync.gd" id="16_r6opt"]
 [ext_resource type="Script" uid="uid://dqebgd3akinse" path="res://scripts/scene_scripts/vision_sensor.gd" id="17_vsens"]
+[ext_resource type="Script" uid="uid://cylw6obqfylrl" path="res://scripts/scene_scripts/reward_perform_button.gd" id="18_cvqji"]
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_q2on3"]
 texture = ExtResource("2_lakq1")
@@ -590,6 +591,18 @@ layout_mode = 2
 theme_override_font_sizes/font_size = 50
 text = "Title"
 
+[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer" unique_id=1208010691]
+offset_right = 114.0
+offset_bottom = 112.0
+alignment = 1
+
+[node name="RewardPerformButton" type="Button" parent="CanvasLayer/VBoxContainer" unique_id=65790991]
+layout_mode = 2
+tooltip_text = "显示/隐藏智能体当前奖励"
+keep_pressed_outside = true
+text = "显示奖励"
+script = ExtResource("18_cvqji")
+
 [node name="CameraMain" type="Camera2D" parent="." unique_id=910393514]
 position = Vector2(78, 16)
 zoom = Vector2(0.79, 0.79)
@@ -607,3 +620,8 @@ metadata/_custom_type_script = "uid://bmy6w68efk7bl"
 [connection signal="pressed" from="CanvasLayer/PauseButton" to="." method="_on_pause_button_pressed"]
 [connection signal="pressed" from="CanvasLayer/PauseMenu/ResumeButton" to="CanvasLayer/PauseMenu" method="_on_resume_button_pressed"]
 [connection signal="pressed" from="CanvasLayer/PauseMenu/TitleButton" to="CanvasLayer/PauseMenu" method="_on_title_button_pressed"]
+[connection signal="pressed" from="CanvasLayer/VBoxContainer/RewardPerformButton" to="Player_Blue" method="_on_reward_perform_button_pressed"]
+[connection signal="pressed" from="CanvasLayer/VBoxContainer/RewardPerformButton" to="Player_Black" method="_on_reward_perform_button_pressed"]
+[connection signal="pressed" from="CanvasLayer/VBoxContainer/RewardPerformButton" to="Player_Red" method="_on_reward_perform_button_pressed"]
+[connection signal="pressed" from="CanvasLayer/VBoxContainer/RewardPerformButton" to="Player_Yellow" method="_on_reward_perform_button_pressed"]
+[connection signal="pressed" from="CanvasLayer/VBoxContainer/RewardPerformButton" to="CanvasLayer/VBoxContainer/RewardPerformButton" method="_on_pressed"]

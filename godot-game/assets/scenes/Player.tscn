@@ -200,6 +200,11 @@ animations = [{
 radius = 49.666664
 height = 177.33333
 
+[sub_resource type="LabelSettings" id="LabelSettings_jc3ay"]
+font_size = 25
+outline_size = 8
+outline_color = Color(0.011764706, 0.011764706, 0.011764706, 1)
+
 [node name="Player" type="CharacterBody2D" unique_id=844634870]
 scale = Vector2(0.3, 0.3)
 collision_mask = 4
@@ -239,14 +244,24 @@ metadata/_custom_type_script = "uid://ciecfcurp1n2n"
 
 [node name="HealthBarOnPlayer" type="TextureProgressBar" parent="." unique_id=363006926]
 z_index = 1
-offset_left = -96.666664
-offset_top = -93.33333
-offset_right = 93.33332
-offset_bottom = -59.999977
+offset_left = -100.0
+offset_top = -63.333332
+offset_right = 89.999985
+offset_bottom = -29.99998
 value = 50.0
 nine_patch_stretch = true
 texture_under = ExtResource("9_jc3ay")
 texture_progress = ExtResource("10_mc6or")
 script = ExtResource("10_jc3ay")
+
+[node name="RewardLabel" type="Label" parent="." unique_id=478642662]
+visible = false
+z_index = 1
+offset_left = -29.999998
+offset_top = -96.666664
+offset_right = 20.000002
+offset_bottom = -61.666664
+text = "10.0"
+label_settings = SubResource("LabelSettings_jc3ay")
 
 [connection signal="animation_finished" from="AnimatedSprite2D" to="." method="_on_animated_sprite_2d_animation_finished"]
