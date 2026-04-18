@@ -174,8 +174,8 @@ func add_reward(player_id: int, value: float) -> void:
 
 ## ── 事件处理 ──
 
-## 实体受伤处理
-func _on_entity_damaged(entity: Entity, damage: float, source: Entity) -> void:
+#实体受伤处理
+func _on_entity_damaged(entity: Entity, source: Entity) -> void:
 	if _play_scene == null:
 		return
 
@@ -220,19 +220,15 @@ func _on_player_died(player: Player) -> void:
 		var killer := player.last_damage_source as Player
 		add_reward(killer.player_id, KILL_PLAYER)
 
-## 奖励球拾取处理
-## @param player_id 拾取者玩家 ID
-## @param ball_type RewardBall.BallType 枚举值
-## @param reward_value 奖励数值
-## @param ball 被拾取的奖励球实例
-func _on_reward_ball_collected(player_id: int, ball_type: int, reward_value: float, ball: RewardBall) -> void:
+#奖励球拾取处理,ball实例由奖励球管理器处理，此处不需要
+func _on_reward_ball_collected(player_id: int, ball_type: int, _ball: RewardBall) -> void:
 	if ball_type == RewardBall.BallType.TYPE_A:
 		add_reward(player_id, COLLECT_BALL_A)
 	elif ball_type == RewardBall.BallType.TYPE_B:
 		add_reward(player_id, COLLECT_BALL_B)
 
-#玩家攻击惩罚
-func _on_player_skill_activated(entity: Entity, skill: Skill) -> void:
+#玩家攻击惩罚,不同skill的惩罚力度不一样，但目前只有一个技能
+func _on_player_skill_activated(entity: Entity, _skill: Skill) -> void:
 	if entity is Player:
 		var player := entity as Player
 		add_reward(player.player_id, ATTACK)
@@ -289,7 +285,8 @@ func _process_proximity_shaping(delta: float) -> void:
 			continue
 
 		var player_pos: Vector2 = player.global_position
-		var player_vel: Vector2 = player.get_real_velocity()#采用“实际速度”，避免撞墙时还得到奖励
+		#var player_vel: Vector2 = player.get_real_velocity()#采用“实际速度”，避免撞墙时还得到奖励
+		var player_vel: Vector2=player.velocity #在逻辑帧中如果被挡住velocity会是0,因此用这个也行，被挡住了不会获得奖励
 
 		# 找到最近活跃球 
 		var nearest_ball: RewardBall = null

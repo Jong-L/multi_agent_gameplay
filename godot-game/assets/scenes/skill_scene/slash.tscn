@@ -4,7 +4,6 @@
 [ext_resource type="Texture2D" uid="uid://dgkwpajhs1l8p" path="res://assets/Tiny Swords (Free Pack)/UI Elements/UI Elements/Icons/Icon_05.png" id="2_7ksp7"]
 [ext_resource type="Script" uid="uid://jeyuxgs0kmcp" path="res://scripts/skills/core/skill_spawn_manifest.gd" id="2_u3jkp"]
 [ext_resource type="PackedScene" uid="uid://bwmviof6pyd01" path="res://assets/scenes/skill_scene/slash_skill_manifest.tscn" id="3_jo5t5"]
-[ext_resource type="Script" uid="uid://cleaivpnw4aql" path="res://scripts/skills/core/components/skill_pushback.gd" id="4_l6g45"]
 [ext_resource type="Script" uid="uid://c4b4qlomtssql" path="res://scripts/skills/core/components/skill_get_target.gd" id="5_g16i3"]
 [ext_resource type="Script" uid="uid://sug8b6tfe4tf" path="res://scripts/skills/core/components/deal_damage_group.gd" id="5_kkdmo"]
 [ext_resource type="Script" uid="uid://b387vhp01lg43" path="res://scripts/skills/core/components/skill_deal_damage.gd" id="6_u8380"]
@@ -16,11 +15,6 @@ icon_texture = ExtResource("2_7ksp7")
 [node name="SpawnManifest" type="Node" parent="." unique_id=1746625957]
 script = ExtResource("2_u3jkp")
 manifest_scene = ExtResource("3_jo5t5")
-set_as_child = true
-
-[node name="Pushback" type="Node" parent="." unique_id=833816992]
-script = ExtResource("4_l6g45")
-pushback_distance = 0.0
 
 [node name="SlashManifest" parent="." unique_id=1410636362 instance=ExtResource("3_jo5t5")]
 

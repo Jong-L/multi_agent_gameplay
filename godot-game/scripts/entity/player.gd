@@ -20,7 +20,8 @@ enum Action {
 @onready var ai_controller:AIController2D=$AIController2D
 @onready var sync_node:Sync=$"../Sync"
 
-var is_moving: bool = false                #期望速度大于零就为true，而非实际速度                  
+var is_moving: bool = false                #期望速度大于零就为true，而非实际速度
+var movement:Vector2=Vector2.ZERO     #键盘输入或智能体动作的期望移动方向                  
 var spawn_position: Vector2 = Vector2.ZERO
 var pending_action: Action = Action.IDLE # 当前待执行动作
 
@@ -37,26 +38,25 @@ func _ready() -> void:
 	ai_controller.init(self)#初始化绑定该玩家到控制器
 	EventBus.player_cast_skill.connect(_handle_skill)  # 点击按钮也可以释放技能
 
-func _physics_process(delta: float) -> void:
+func _physics_process(_delta: float) -> void:
 	if is_dead:
 		return
 		
-	_handle_movement(delta)
+	_handle_movement()
 
-func _process(delta: float) -> void:
+func _process(_delta: float) -> void:
 	if ai_controller.needs_reset and player_id==0:#只使用一个玩家重置
 		ai_controller.reset()
 		return
 	if is_dead:
 		return
 	
-	#_handle_movement(delta)
 	_handle_animation()
 	_execute_action()
 	
 	# 持续奖励：移动和攻击惩罚
 	_notify_action_rewards()
-	
+
 func _apply_skin_color() -> void:#根据skin_color设置使用的材质
 	if skin_color == "Blue":
 		return
@@ -82,9 +82,8 @@ func set_action(action: int) -> void:#设置待执行动作
 		pending_action = action as Action
 
 #根据 pending_action执行动作
-func _handle_movement(delta: float) -> void:
+func _handle_movement() -> void:
 	is_moving = false#不移动时为false
-	var movement = Vector2.ZERO
 	
 	#human模式下操控当前看到的角色
 	if sync_node.control_mode==sync_node.ControlModes.HUMAN\
@@ -101,23 +100,13 @@ func _handle_movement(delta: float) -> void:
 		Action.MOVE_RIGHT:
 			movement = Vector2.RIGHT
 	
-	##外部推力衰减
-	#if external_velocity != Vector2.ZERO:
-		#external_velocity = external_velocity.move_toward(
-			#Vector2.ZERO,
-			#external_velocity.length() * external_velocity_decay * delta
-		#)
-		#if external_velocity.length() < 1.0:
-			#external_velocity = Vector2.ZERO
-	
 	if movement.length() > 0:
-		velocity = movement.normalized() * run_speed + external_velocity
+		velocity = movement.normalized() * run_speed
 	else:
-		velocity = external_velocity
+		velocity = Vector2.ZERO
 	
 	if velocity.length()>0:
 		is_moving=true
-
 	move_and_slide()
 
 func _execute_action() -> void:# 执行非移动动作（攻击/待机）
@@ -125,10 +114,12 @@ func _execute_action() -> void:# 执行非移动动作（攻击/待机）
 		skill_controller.trigger_skill_by_idx(0)  # 触发第 0 个技能
 
 func _handle_animation() -> void:# 动画状态更新
-	if velocity.length() > 0:
-		if velocity.x > 0:
+	#if player_id==0:
+		#print(self.get_real_velocity())
+	if movement.length() > 0:
+		if movement.x > 0:
 			animated_sprite.flip_h = false
-		elif velocity.x < 0:
+		elif movement.x < 0:
 			animated_sprite.flip_h = true
 	if is_moving:
 		play_animation(AnimationWrapper.new("run", false))

@@ -8,7 +8,7 @@ extends Node
 ## @param rect 目标矩形区域
 ## @param margin 距矩形边缘的最小距离
 ## @return 矩形内的随机 Vector2 坐标
-static func random_pos_in_rect(rect: Rect2, margin: float = 0.0) -> Vector2:
+func random_pos_in_rect(rect: Rect2, margin: float = 0.0) -> Vector2:
 	var x := randf_range(rect.position.x + margin, rect.end.x - margin)
 	var y := randf_range(rect.position.y + margin, rect.end.y - margin)
 	return Vector2(x, y)
@@ -18,7 +18,7 @@ static func random_pos_in_rect(rect: Rect2, margin: float = 0.0) -> Vector2:
 ## @param radius 最大偏移半径
 ## @param min_ratio 最小距离比例（0~1），避免生成在正中心
 ## @return 以原点为中心的随机偏移向量
-static func random_offset(radius: float, min_ratio: float = 0.3) -> Vector2:
+func random_offset(radius: float, min_ratio: float = 0.3) -> Vector2:
 	var angle := randf() * TAU
 	var r := randf_range(radius * min_ratio, radius)
 	return Vector2(cos(angle), sin(angle)) * r
@@ -31,7 +31,7 @@ static func random_offset(radius: float, min_ratio: float = 0.3) -> Vector2:
 ## @param direction_x 方向：-1=左半区（左上/左下角）, 1=右半区（右上/右下角）
 ## @param direction_y 方向：-1=上半区（左上/右上角）, 1=下半区（左下/右下角）
 ## @return 从对应角向内延伸的 Rect2
-static func quadrant_rect(bounds: Rect2, extent: Vector2, direction_x: int, direction_y: int) -> Rect2:
+func quadrant_rect(bounds: Rect2, extent: Vector2, direction_x: int, direction_y: int) -> Rect2:
 	var origin := Vector2(
 		bounds.position.x if direction_x < 0 else bounds.end.x - extent.x,
 		bounds.position.y if direction_y < 0 else bounds.end.y - extent.y
@@ -43,7 +43,7 @@ static func quadrant_rect(bounds: Rect2, extent: Vector2, direction_x: int, dire
 ## @param starve_duration 已饥饿的持续时间（秒）
 ## @param func_type 增长函数类型："linear"(线性), "quadratic"(二次), "sqrt"(平方根)
 ## @return 衰减倍率（>= 1.0）
-static func starve_rate_multiplier(starve_duration: float, func_type: String = "linear") -> float:
+func starve_rate_multiplier(starve_duration: float, func_type: String = "linear") -> float:
 	match func_type:
 		"linear":
 			# 线性增长
@@ -59,7 +59,7 @@ static func starve_rate_multiplier(starve_duration: float, func_type: String = "
 			return 0.1 + starve_duration
 
 # 从 TileMapLayer 计算世界坐标矩形
-static func _tilemap_to_world_rect(layer: TileMapLayer) -> Rect2:
+func _tilemap_to_world_rect(layer: TileMapLayer) -> Rect2:
 	var used := layer.get_used_rect()
 	var cell_size := layer.tile_set.tile_size
 	var s := layer.scale
@@ -72,7 +72,7 @@ static func _tilemap_to_world_rect(layer: TileMapLayer) -> Rect2:
 	)
 
 # 从 TileMapLayer 提取所有已使用 tile 的世界坐标
-static func _tilemap_to_world_positions(layer: TileMapLayer) -> Array[Vector2]:
+func _tilemap_to_world_positions(layer: TileMapLayer) -> Array[Vector2]:
 	var result: Array[Vector2] = []
 	var used_cells := layer.get_used_cells()
 	var cell_size := layer.tile_set.tile_size

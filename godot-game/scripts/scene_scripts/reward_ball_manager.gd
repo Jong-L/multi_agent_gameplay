@@ -110,12 +110,11 @@ func _create_ball(type: RewardBall.BallType, reward: float, pos: Vector2) -> Rew
 	return ball
 
 
-# 拾取信号处理：B类球启动重生计时（奖励由 RewardManager 统一发放）
-func _on_reward_ball_collected(player_id: int, ball_type: int, reward_value: float, ball: RewardBall) -> void:
+# 拾取信号处理：B类球启动重生计时,player_id由奖励管理器获取，此处不需要
+func _on_reward_ball_collected(_player_id: int, ball_type: int, ball: RewardBall) -> void:
 	# B类球加入重生队列
 	if ball_type == RewardBall.BallType.TYPE_B:
 		_respawn_queue.append({"ball": ball, "timer": BALL_B_RESPAWN_DELAY})
-
 
 # 每帧检查B类球重生队列
 func _process(delta: float) -> void:

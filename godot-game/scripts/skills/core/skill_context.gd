@@ -14,9 +14,9 @@ var caster: Entity                      #施法者实体
 var skill: Skill                        #当前执行的技能
 var targets: Array[Variant] = []        #目标列表
 
-func _init(caster: Entity, skill: Skill) -> void:
-	self.caster = caster
-	self.skill = skill
+func _init(_caster: Entity, _skill: Skill) -> void:
+	self.caster = _caster
+	self.skill = _skill
 
 ## 获取目标位置
 ## 支持类型：Entity（返回 global_position）或 Vector2
@@ -342,39 +342,12 @@ func calculate_damage(base_damage: float) -> float:
 func show_damage_number(position: Vector2, damage: float, color: Color = Color.AZURE) -> void:
 	FloatText.show_damage_text(str(int(damage)), position, color)  ## 在指定位置显示伤害数字浮动文本，使用 FloatText 单例实现
 
-## 创建冲击波效果
-## @param position: 中心位置
-## @param radius: 冲击波半径
-## @param duration: 持续时间
-func create_shockwave(position: Vector2, radius: float, duration: float = 0.3) -> void:
-	# 可扩展：实例化冲击波特效场景
-	pass  ## 创建冲击波效果的占位方法，可扩展为实例化冲击波特效场景并播放动画
-
-## 播放音效
-## @param sound_path: 音效资源路径
-func play_sound(sound_path: String) -> void:
-	# 可扩展：使用 AudioStreamPlayer 播放
-	pass  ## 播放音效的占位方法，可扩展为使用 AudioStreamPlayer 或 AudioManager 播放指定音效
-
-## 发送事件
-## @param event_name: 事件名
-## @param data: 事件数据
-func emit_event(event_name: String, data: Dictionary = {}) -> void:
-	# 可扩展：通过 EventBus 发送自定义事件
-	pass  ## 发送自定义事件的占位方法，可扩展为通过 EventBus 或其他事件系统发送技能相关事件
-
-## 记录日志
-## @param message: 日志消息
-func log(message: String) -> void:
-	print("[SkillContext] %s: %s" % [skill.name if skill else "Unknown", message])  ## 打印带技能名称前缀的日志消息，用于调试和追踪技能执行流程
-
-## 获取调试信息
-## @return: 调试信息字典
+#获取调试信息
 func get_debug_info() -> Dictionary:
 	return {
-		"caster": caster.name if caster else "null",
-		"skill": skill.name if skill else "null",
+		"caster": str(caster.name) if caster else "null",
+		"skill": str(skill.name) if skill else "null",
 		"target_count": targets.size(),
 		"cooldown_progress": get_cooldown_progress(),
 		"is_on_cooldown": is_on_cooldown()
-	}  ## 返回包含施法者、技能、目标数量、冷却进度等信息的字典，用于调试面板显示或日志记录
+	} 

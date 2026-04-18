@@ -9,7 +9,7 @@ signal camera_switched(camera_id: int)
 var current_camera_id: int = -1
 
 # 主相机引用
-@onready var main_camera: Camera2D = $CameraMain
+@onready var main_camera: Camera2D 
 # 玩家相机引用数组
 var player_cameras: Array[Camera2D] = []
 # 玩家引用数组（由 PlayScene 设置）
@@ -52,7 +52,7 @@ func _find_or_create_cameras(scene_root: Node) -> void:
 		player_cameras.append(cam)
 
 # 每帧更新玩家相机位置，跟随对应玩家
-func _update_player_cameras(delta: float) -> void:
+func _update_player_cameras(_delta: float) -> void:
 	#print(player_cameras)
 	for i in range(min(player_cameras.size(), players.size())):
 		if players[i] != null and not players[i].is_dead and player_cameras[i]!=null:

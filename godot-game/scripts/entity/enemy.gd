@@ -17,8 +17,8 @@ enum State {
 @onready var hit_particles: CPUParticles2D = $CpuHitParticles
 @onready var pathfinding: Pathfinding = $Pathfinding
 @onready var _play_scene:PlayScene=$".."
-#@onready var _road_layer:TileMapLayer=$"../Map/Road"
 
+#@export var atk:float=10.0     					
 @export var speed: float = 30                    #追击移动速度
 @export var patrol_speed: float = 20             #巡逻移动速度
 @export var stop_distance: float = 8             #到达判定距离
@@ -105,15 +105,6 @@ func _process(delta: float) -> void:
 			patrol_timer=patrol_time
 			return
 	
-	#外部推力衰减
-	if external_velocity != Vector2.ZERO:
-		external_velocity = external_velocity.move_toward(
-			Vector2.ZERO,
-			external_velocity.length() * external_velocity_decay * delta
-		)
-		if external_velocity.length() < 1.0:
-			external_velocity = Vector2.ZERO
-	
 	#状态机分发
 	match state:
 		State.PATROL:
@@ -198,7 +189,6 @@ func _start_respawn() -> void:
 	$CollisionShape2D.set_deferred("disabled", true)
 	$Area2D/CollisionShape2D.set_deferred("disabled", true)
 	velocity = Vector2.ZERO
-	external_velocity = Vector2.ZERO
 	
 	if hit_particles != null:
 		hit_particles.emitting = false
@@ -279,7 +269,7 @@ func _process_patrol(delta: float) -> void:
 	else:
 		direction = to_target.normalized()
 	
-	velocity = direction * patrol_speed + external_velocity
+	velocity = direction * patrol_speed
 	move_and_slide()
 	play_animation(AnimationWrapper.new("run", false))
 	_face_target(to_target)
@@ -350,7 +340,7 @@ func _process_chase(delta: float) -> void:
 	else:
 		direction = to_attack_pos.normalized()
 	
-	velocity = direction * speed + external_velocity
+	velocity = direction * speed
 	move_and_slide()
 	play_animation(AnimationWrapper.new("run", false))
 	
@@ -365,7 +355,7 @@ func _process_chase(delta: float) -> void:
 		out_of_bounds_timer = 0.0
 
 #追击超范围后返回
-func _process_return(delta: float) -> void:
+func _process_return(_delta: float) -> void:
 	var visible_player = _find_nearest_visible_player()
 	if visible_player != null and _is_in_patrol_area():
 		target = visible_player
@@ -385,7 +375,7 @@ func _process_return(delta: float) -> void:
 	else:
 		direction = to_origin.normalized()
 	
-	velocity = direction * speed + external_velocity
+	velocity = direction * speed
 	move_and_slide()
 	play_animation(AnimationWrapper.new("run", false))
 	_face_target(to_origin)
@@ -431,9 +421,7 @@ func _process_windup(delta: float) -> void:
 	var to_player = target.position - self.position
 	_face_target(to_player)
 	
-	if external_velocity != Vector2.ZERO:
-		velocity = external_velocity
-		move_and_slide()
+	move_and_slide()
 	
 	state_timer -= delta
 	if state_timer <= 0:
@@ -453,11 +441,10 @@ func _process_attacking(delta: float) -> void:
 
 #攻击后摇
 func _process_recovery(delta: float) -> void:
+	velocity=Vector2.ZERO
 	play_animation(AnimationWrapper.new("idle", false))
 	
-	if external_velocity != Vector2.ZERO:
-		velocity = external_velocity
-		move_and_slide()
+	move_and_slide()
 	
 	state_timer -= delta
 	if state_timer <= 0:
@@ -472,10 +459,10 @@ func _process_recovery(delta: float) -> void:
 			patrol_idle_timer = 0.0
 
 #调整朝向
-func _face_target(velocity: Vector2) -> void:
-	if velocity.x > 0:
+func _face_target(custom_velocity: Vector2) -> void:
+	if custom_velocity.x > 0:
 		animated_sprite.flip_h = false
-	elif velocity.x < 0:
+	elif custom_velocity.x < 0:
 		animated_sprite.flip_h = true
 
 #动画完成处理

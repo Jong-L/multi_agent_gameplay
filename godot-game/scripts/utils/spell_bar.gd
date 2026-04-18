@@ -25,8 +25,8 @@ func _enter_tree() -> void:
 			button.binded_key = str(i)
 			i += 1
 
-func _process(delta: float) -> void:
-	## 根据相机状态控制可见性
+func _process(_delta: float) -> void:
+	#根据相机状态控制可见性
 	visible = bound_player_id >= 0 and CameraManager.should_show_player_ui(bound_player_id)
 
 #注册技能到按钮
@@ -202,12 +202,6 @@ func get_shortest_cooldown() -> float:
 		if cd < shortest:
 			shortest = cd
 	return 0.0 if shortest == INF else shortest
-
-## 设置按钮大小
-## @param size: 新大小
-func set_button_size(size: Vector2) -> void:
-	for button in spell_buttons:
-		button.custom_minimum_size = size
 
 ## 设置按钮间距
 ## @param separation: 间距（像素）

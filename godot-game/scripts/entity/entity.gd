@@ -15,7 +15,8 @@ extends CharacterBody2D
 @onready var animated_sprite: AnimatedSprite2D = $AnimatedSprite2D
 
 @export var max_health: float = 100 
-@export var damage_text_color = Color.AZURE   
+@export var damage_text_color = Color.AZURE
+@export var atk:float=10.0  
 
 var current_animation_wrapper: AnimationWrapper  
 var current_health: float                       
@@ -24,31 +25,26 @@ var is_dead: bool = false
 # 最后一次伤害来源（用于追踪击杀者）
 var last_damage_source: Entity = null
 
-# 外部推力系统,用于击退、击飞等
-# 与 velocity 独立，每帧向零衰减，实现平滑的受击位移
-var external_velocity: Vector2 = Vector2.ZERO
-var external_velocity_decay: float = 10.0        ## 推力衰减速率
-# 衰减公式：external_velocity.move_toward(ZERO, length * decay * delta)
-
 func _ready() -> void:
 	# 复制材质实例，避免多个实体共享同一材质导致状态互相影响
 	animated_sprite.material = animated_sprite.material.duplicate()
 	current_health = max_health
 
-func bear_damage(damage: float, source: Entity = null) -> void:#承受伤害
+func bear_damage(source: Entity,skill:Skill) -> void:#承受伤害
 	if current_health == 0:
 		return
 	
 	# 记录伤害来源（用于击杀判定）
 	if source != null:
 		last_damage_source = source
+	var damage=source.atk*skill.dmg_multiplier
 	
 	current_health = max(0, current_health - damage)
 	_show_damage_taken_effect()
 	_show_damage_popup(damage)
 	
 	# 发射全局受伤信号（供 RewardManager 监听）
-	EventBus.entity_damaged.emit(self, damage, source)
+	EventBus.entity_damaged.emit(self, source)
 	
 	if current_health == 0:
 		is_dead = true
@@ -79,7 +75,4 @@ func _show_damage_taken_effect() -> void:#受击特效
 			await get_tree().create_timer(0.05).timeout
 
 func _show_damage_popup(damage: float) -> void:#伤害跳字
-	var animation = animated_sprite.animation
-	var frame_texture = animated_sprite.sprite_frames.get_frame_texture(animation, 0)
-	var height = frame_texture.get_height()
 	FloatText.show_damage_text(str(int(damage)), self.global_position, damage_text_color)

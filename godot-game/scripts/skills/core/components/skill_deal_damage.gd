@@ -12,10 +12,8 @@ class_name SkillDealDamage
 ##   ├── SkillAnimationRunner (播放攻击动画)
 ##   └── SkillDealDamage (造成伤害)
 
-@export var damage: float = 10.0          ## 基础伤害值
-
 func _activate(context: SkillContext) -> void:
 	var targets = context.targets
 	for target in targets:
 		if target is Entity:
-			target.bear_damage(damage, context.caster)  ## 传入施法者作为伤害来源
+			target.bear_damage(context.caster,context.skill)  ## 传入施法者作为伤害来源

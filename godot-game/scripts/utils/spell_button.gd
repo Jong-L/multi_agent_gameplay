@@ -29,7 +29,7 @@ var binded_key: String = "":
 		cooldown_label.text = ""
 		keybind_label.text = key
 
-func _process(delta: float) -> void:
+func _process(_delta: float) -> void:
 	if skill == null:
 		return
 	#更新冷却状态
@@ -152,10 +152,9 @@ func trigger() -> void:
 func set_cooldown_label_visible(visible: bool) -> void:
 	cooldown_label.visible = visible
 
-## 设置进度条可见性
-## @param visible: 是否可见
-func set_progress_bar_visible(visible: bool) -> void:
-	progress_bar.visible = visible
+#设置进度条可见性
+#func set_progress_bar_visible(visible: bool) -> void:
+	#progress_bar.visible = visible
 
 ## 获取技能冷却时间
 ## @return: 总冷却时间（秒）

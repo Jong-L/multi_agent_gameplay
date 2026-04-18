@@ -131,7 +131,6 @@ func _setup_camera_switch_ui() -> void:
 	panel.set_owner(self)
 	
 	# 按钮配置,默认4个玩家，硬编码，以后看情况改
-	print(players[0].skin_color)
 	var button_configs := [
 		["主相机", 0],
 		["玩家{color}".format({"color":players[0].skin_color}), 1],
@@ -445,7 +444,6 @@ func _reset_with_transition(player:Player)->void:
 	await tween.finished
 # 处理玩家死亡信号
 func _on_player_player_died(player: Player) -> void:
-	var tween
 	var is_main_camera=CameraManager.current_camera_id==-1
 	
 	if is_main_camera:

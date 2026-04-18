@@ -3,11 +3,11 @@ extends Node
 
 @export var execution_delay_time: float = 0
 
-func _ready() -> void:
-	pass
-
-func _process(delta: float) -> void:
-	pass
+#func _ready() -> void:
+	#pass
+#
+#func _process(delta: float) -> void:
+	#pass
 
 func activate(context: SkillContext) -> void:
 	if execution_delay_time > 0:
@@ -15,7 +15,7 @@ func activate(context: SkillContext) -> void:
 	_activate(context)
 
 #实际执行逻辑
-func _activate(context: SkillContext) -> void:
+func _activate(_context: SkillContext) -> void:
 	push_warning("SkillComponent._activate() not implemented: %s" % name)
 	
 	
