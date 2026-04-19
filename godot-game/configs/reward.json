@@ -6,7 +6,7 @@
 	"cause_damage_to_player": 15.0,
 	"kill_enemy": 30.0,
 	"kill_player": 45.0,
-	"run": 0.001,
+	"run": -0.001,
 	"attack": -0.05,
 	"died": -20.0,
 	"starve_time": 20.0,

@@ -59,7 +59,8 @@ func _process(_delta: float) -> void:
 	_notify_action_rewards()
 	
 	#奖励标签
-	reward_label.text=String.num(ai_controller.reward,6)
+	if CameraManager.current_camera_id==player_id:
+		reward_label.text=String.num(ai_controller.reward,6)
 
 func _apply_skin_color() -> void:#根据skin_color设置使用的材质
 	if skin_color == "Blue":

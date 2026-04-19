@@ -5,6 +5,9 @@ extends Button
 func _ready() -> void:
 	modulate=Color(1.0, 1.0, 1.0)
 
+func _process(_delta: float) -> void:
+	visible=(CameraManager.current_camera_id!=-1)
+
 func _on_pressed() -> void:
 	if modulate==Color(0.5, 1.0, 0.7):
 		modulate=Color(1.0, 1.0, 1.0)

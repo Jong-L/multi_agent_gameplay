@@ -1,5 +1,6 @@
 extends AIController2D
 
+@onready var play_scene :PlayScene=$"../.."
 var move_action:int
 var n_time_step:int=0
 
@@ -22,12 +23,10 @@ func _physics_process(delta):
 
 func reset():
 	super.reset()
-	var play_scene := _player.get_parent() as PlayScene
 	play_scene._handle_reset()
 
 func get_obs() -> Dictionary:
 	# PlayScene分发
-	var play_scene := _player.get_parent() as PlayScene
 	if play_scene == null:
 		return {}
 	var obs=play_scene.get_obs_for_player(_player)

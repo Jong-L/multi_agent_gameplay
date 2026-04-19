@@ -70,9 +70,9 @@ Tiny Swords 是一款基于 Godot 引擎的 2D 俯视角四人混战竞技场游
 
 每个智能体的观测向量包含以下信息（全部归一化到 [0, 1] 或 [-1, 1]）：
 
-**自身状态**：自身 x 坐标、y 坐标、当前血量、最大血量，攻击力，攻击冷却剩余比例、朝向。
+**自身状态**：自身 x 坐标、y 坐标、当前血量、最大血量，攻击力，攻击冷却剩余比例、朝向、挨饿时间（告知，否则智能体不知道为什么奖励少了，挨饿时间可以设定一个最大值，利用这个最大值进行归一化）。
 
-**地图数据**：竞技场的矩形边界，地图中碰撞物的坐标数组
+**地图数据**：自身与边界的距离，自身相对于地图中碰撞物的坐标。
 
 **视野侦测数据**：视野范围内所有的奖励球，野怪，其他玩家的信息，具体来说：
 
@@ -281,35 +281,9 @@ flowchart LR
 
 ## 接口与通信协议
 
-### 一、Godot ↔ Python 通信架构
 
-Godot 游戏进程与 Python 训练进程之间通过 **TCP Socket** 进行进程间通信。Godot RL Agents 库封装了底层的 Socket 管理、数据序列化与同步逻辑，开发者只需在 Godot 侧配置 AIController 节点、在 Python 侧调用标准 Gym 接口即可。
 
-通信采用**同步锁步 (Lockstep)** 模式：Godot 环境在每个物理帧（`_physics_process`）收集所有智能体的观测并发送给 Python 侧，然后阻塞等待 Python 返回动作；Python 侧收到观测后进行策略推理，将动作发回 Godot，Godot 执行动作并推进到下一帧。这种模式保证了训练的确定性和可复现性。
-
-```mermaid
-sequenceDiagram
-    participant G as Godot 进程 (端口 11008)
-    participant S as TCP Socket 层 (Godot RL Agents)
-    participant P as Python 进程
-
-    Note over G,P: 启动阶段
-    P->>S: 启动 TCP Server, 监听端口 11008
-    G->>S: 连接 TCP Server
-    S-->>P: 连接建立
-
-    Note over G,P: 每个时间步的通信
-    G->>G: _physics_process() 执行游戏逻辑
-    G->>S: 发送观测数据 (JSON/MessagePack)
-    Note right of G: {obs: float[4][38],<br/>reward: float[4],<br/>done: bool[4],<br/>info: dict[4]}
-    S->>P: 反序列化为 NumPy 数组
-    P->>P: 策略网络推理
-    P->>S: 发送动作 (int[4])
-    S->>G: 反序列化为 GDScript Array
-    G->>G: 应用动作, 推进到下一帧
-```
-
-### 二、数据格式规范
+### 数据格式规范
 
 #### 观测数据 (Godot → Python)
 
@@ -344,14 +318,7 @@ func get_reward() -> float:
     ...
 
 func set_action(action: int) -> void:
-    # 将 Python 返回的动作应用到角色上
-    match action:
-        0: character.move(Vector2.UP)
-        1: character.move(Vector2.DOWN)
-        2: character.move(Vector2.LEFT)
-        3: character.move(Vector2.RIGHT)
-        4: character.attack()
-        5: pass  # Idle
+...
 ```
 
 
