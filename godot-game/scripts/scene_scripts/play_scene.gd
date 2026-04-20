@@ -391,8 +391,8 @@ func get_obs_for_player(player: Player) -> Dictionary:
 		arena_length,
 	)
 	#添加饥饿时间
-	var starve_duration:float=reward_manager.compute_starve_duration(player)
-	obs_dict["self_state"].append(starve_duration/reward_manager.MAX_STARVE_DURATION)
+	#var starve_duration:float=reward_manager.compute_starve_duration(player)
+	#obs_dict["self_state"].append(starve_duration/reward_manager.MAX_STARVE_DURATION)
 	# 添加地图状态到观测字典
 	obs_dict["map_state"] = _build_map_state(player)
 	

@@ -33,11 +33,18 @@ var PROXIMITY_TO_BALL_SCALE: float   #距离奖励：离球越近奖励越大（
 var VELOCITY_TOWARD_BALL_SCALE: float   #朝向球移动时额外奖励（每帧）
 var CENTER_REWARD_SCALE: float        #离竞技场中心越近奖励越大（每帧）
 
+#撞墙惩罚常量
+var WALL_COLLISION_PENALTY_MULTIPLIER: float  #撞墙时移动惩罚的倍数
+var WALL_COLLISION_COOLDOWN_FRAMES: int        #撞墙检测冷却帧数，避免连续惩罚
+
 var _play_scene: PlayScene = null
 
 #每个玩家的"上次获得正奖励"的游戏时间,用于饥饿机制
 #key: player_id, value: 游戏时间（秒，受 Engine.time_scale 影响）
 var _last_reward_time: Dictionary = {}
+
+#撞墙冷却追踪：key: player_id, value: 剩余冷却帧数
+var _wall_collision_cooldown: Dictionary = {}
 
 #累计游戏时间（受 Engine.time_scale 影响），用于饥饿计时
 var _game_time: float = 0.0
@@ -58,6 +65,11 @@ func _process(delta: float) -> void:
 	_process_starvation(delta)
 	_process_proximity_shaping(delta)
 	_process_center_shaping(delta)
+	_process_wall_collision(delta)
+	
+	for player in _play_scene.players:
+		if player.is_moving:
+			on_player_moved(player)
 
 #从 JSON 文件加载奖励配置
 func _load_reward_config() -> void:
@@ -116,6 +128,10 @@ func _load_reward_config() -> void:
 		VELOCITY_TOWARD_BALL_SCALE = float(data["velocity_toward_ball_scale"])
 	if data.has("center_reward_scale"):
 		CENTER_REWARD_SCALE = float(data["center_reward_scale"])
+	if data.has("wall_collision_penalty_multiplier"):
+		WALL_COLLISION_PENALTY_MULTIPLIER = float(data["wall_collision_penalty_multiplier"])
+	if data.has("wall_collision_cooldown_frames"):
+		WALL_COLLISION_COOLDOWN_FRAMES = int(data["wall_collision_cooldown_frames"])
 
 #全局信号连接
 func _connect_signals() -> void:
@@ -292,7 +308,7 @@ func _process_proximity_shaping(delta: float) -> void:
 			continue
 
 		var player_pos: Vector2 = player.global_position
-		#var player_vel: Vector2 = player.get_real_velocity()#采用“实际速度”，避免撞墙时还得到奖励
+		#var player_vel: Vector2 = player.get_real_velocity()#采用"实际速度"，避免撞墙时还得到奖励
 		var player_vel: Vector2=player.velocity #在逻辑帧中如果被挡住velocity会是0,因此用这个也行，被挡住了不会获得奖励
 
 		# 找到最近活跃球 
@@ -344,8 +360,53 @@ func _process_center_shaping(delta: float) -> void:
 		# 直接修改 AIController 的 reward
 		player.ai_controller.reward += center_reward * delta
 
+## ── 撞墙惩罚 ──
+
+# 每帧检测玩家撞墙并应用惩罚
+func _process_wall_collision(delta: float) -> void:
+	if _play_scene == null:
+		return
+
+	for player in _play_scene.players:
+		if player.is_dead:
+			continue
+
+		var pid: int = player.player_id
+
+		# 更新冷却时间
+		if _wall_collision_cooldown.has(pid):
+			_wall_collision_cooldown[pid] -= 1
+			if _wall_collision_cooldown[pid] <= 0:
+				_wall_collision_cooldown.erase(pid)
+
+		# 检测是否撞墙（包括左右墙、地板、天花板），并判断移动方向是否导致碰撞
+		var should_penalize: bool = false
+		var player_movement: Vector2 = player.movement
+		
+		if player.is_on_wall_only():
+			# 撞左右墙：只有水平移动（向左/右）才惩罚
+			if abs(player_movement.x) > 0.0:  # 有水平输入
+				should_penalize = true
+		elif player.is_on_floor_only():
+			# 撞地板（下边界）：只有向下移动才惩罚
+			if player_movement.y > 0.0:  # 向下输入
+				should_penalize = true
+		elif player.is_on_ceiling_only():
+			# 撞天花板（上边界）：只有向上移动才惩罚
+			if player_movement.y < -0.0:  # 向上输入
+				should_penalize = true
+
+		if should_penalize and not _wall_collision_cooldown.has(pid) and player.is_moving:
+			# 撞墙：应用移动惩罚的倍数
+			var wall_penalty: float = RUN * max(WALL_COLLISION_PENALTY_MULTIPLIER-1,0.0)
+			add_reward(pid, wall_penalty)
+
+			# 设置冷却，避免连续帧重复惩罚
+			_wall_collision_cooldown[pid] = WALL_COLLISION_COOLDOWN_FRAMES
+
 ## ── 重置 ──
 
 #游戏重置时调用
 func reset() -> void:
 	_init_starvation_timers()
+	_wall_collision_cooldown.clear()

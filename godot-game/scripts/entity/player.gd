@@ -55,8 +55,6 @@ func _process(_delta: float) -> void:
 	_handle_animation()
 	_execute_action()
 	
-	# 持续奖励：移动和攻击惩罚
-	_notify_action_rewards()
 	
 	#奖励标签
 	if CameraManager.current_camera_id!=-1:
@@ -142,16 +140,6 @@ func _on_death() -> void:
 func _on_animated_sprite_2d_animation_finished() -> void:
 	if current_animation_wrapper != null and current_animation_wrapper.name == "die":
 		player_died.emit(self)
-
-# 通知 RewardManager 当前帧的动作（移动），用于持续奖励惩罚
-func _notify_action_rewards() -> void:
-	var play_scene := get_parent() as PlayScene
-	if play_scene == null or play_scene.reward_manager == null:
-		return
-	
-	# 移动惩罚（每帧扣减，帧率无关由 RewardManager 的常量值控制）
-	if is_moving:#有期望速度就惩罚
-		play_scene.reward_manager.on_player_moved(self)
 
 func _on_reward_perform_button_pressed() -> void:
 	reward_label.visible=!reward_label.visible

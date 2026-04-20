@@ -213,6 +213,7 @@ damage_text_color = Color(0.9999998, 0.23224765, 0.098263316, 1)
 atk = 15.0
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=655665298]
+visible = false
 z_index = 3
 position = Vector2(-3, -2)
 shape = SubResource("CapsuleShape2D_physics")
@@ -230,7 +231,6 @@ script = ExtResource("3_e80uo")
 [node name="Slash" parent="SkillController" unique_id=1428192993 instance=ExtResource("4_tdg3f")]
 
 [node name="Area2D" type="Area2D" parent="." unique_id=1220356283]
-visible = false
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Area2D" unique_id=1611915700]
 z_index = 6
