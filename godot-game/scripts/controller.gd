@@ -34,8 +34,8 @@ func get_obs() -> Dictionary:
 	return obs
 
 func get_reward() -> float:
-	#if _player.player_id==0:
-		#print("{0} get reward {1}".format([_player.player_id,reward]))
+	if _player.player_id==0:
+		print("{0} get reward {1}".format([_player.player_id,reward]))
 	return reward
 
 func get_action_space() -> Dictionary:

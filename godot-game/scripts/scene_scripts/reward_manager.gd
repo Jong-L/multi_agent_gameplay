@@ -175,7 +175,7 @@ func add_reward(player_id: int, value: float) -> void:
 	player.ai_controller.reward += value
 
 	# 正奖励时刷新饥饿计时器
-	if value > 0.0:
+	if value > 0.1:
 		_last_reward_time[player_id] = _game_time
 
 ## ── 事件处理 ──

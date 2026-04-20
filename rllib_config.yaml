@@ -10,7 +10,7 @@ algorithm: PPO
 # Set to false if you have a single policy name for all agents set in AIControllers
 env_is_multiagent: true
 
-checkpoint_frequency: 20
+# checkpoint_frequency: 20  # Deprecated in newer versions of Ray
 
 # You can set one or more stopping criteria
 stop:
@@ -26,6 +26,9 @@ config:
         action_repeat: null # Doesn't need to be set here, you can set this in sync node in Godot editor as well
         show_window: true # Displays game window while training. Might be faster when false in some cases, turning off also reduces GPU usage if you don't need rendering.
         speedup: 30 # Speeds up Godot physics
+        # 添加以下配置项
+        port: 11008  # 明确指定端口
+        seed: 1      # 设置随机种子
 
     framework: torch # ONNX models exported with torch are compatible with the current Godot RL Agents Plugin
 
@@ -46,9 +49,9 @@ config:
     rollout_fragment_length: 32
     sgd_minibatch_size: 128
     num_workers: 4
-    num_envs_per_worker: 1 # This will be set automatically if not multi-agent. If multi-agent, changing this changes how many envs to launch per worker.
+    num_envs_per_env_runner: 1 # This will be set automatically if not multi-agent. If multi-agent, changing this changes how many envs to launch per worker.
     # The value below needs changing per env
-    # Basic calculation for this value can be rollout_fragment_length * num_workers * num_envs_per_worker (how many AIControllers you have if not multi_agent, otherwise the value you set)
+    # Basic calculation for this value can be rollout_fragment_length * num_workers * num_envs_per_env_runner (how many AIControllers you have if not multi_agent, otherwise the value you set)
     train_batch_size: 2048 
 
     num_sgd_iter: 4

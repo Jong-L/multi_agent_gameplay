@@ -10,7 +10,7 @@ enum Action {
 	IDLE,#4
 	ATTACK,#5:SkillController 的第 0 个技能
 }
-		
+
 @export var run_speed: float = 100#当前实际使用
 @export var player_spell_bar: SpellBar = null  #PlayScene 动态绑定技能栏
 @export var skin_color: String
@@ -23,7 +23,7 @@ enum Action {
 
 var is_moving: bool = false                #期望速度大于零就为true，而非实际速度
 var movement:Vector2=Vector2.ZERO     #键盘输入或智能体动作的期望移动方向                  
-var spawn_position: Vector2 = Vector2.ZERO
+var spawn_position: Vector2
 var pending_action: Action = Action.IDLE # 当前待执行动作
 
 signal player_died(player: Player)# 由PlayScene监听
@@ -59,7 +59,7 @@ func _process(_delta: float) -> void:
 	_notify_action_rewards()
 	
 	#奖励标签
-	if CameraManager.current_camera_id==player_id:
+	if CameraManager.current_camera_id!=-1:
 		reward_label.text=String.num(ai_controller.reward,6)
 
 func _apply_skin_color() -> void:#根据skin_color设置使用的材质
