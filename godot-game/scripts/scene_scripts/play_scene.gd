@@ -21,6 +21,9 @@ class_name PlayScene
 # 所有玩家引用,按 player_id 排序
 var players: Array[Player] = []
 var enemies:Array[Enemy]=[]
+# 缓存的存活玩家列表（供 Enemy AI 查询，避免重复 group 遍历）
+var alive_players_cache: Array[Player] = []
+var _alive_cache_dirty: bool = true
 # 奖励球管理器
 var reward_ball_manager: RewardBallManager = null
 # 奖励管理器
@@ -41,6 +44,24 @@ var collision_decoration_positions: Array[Vector2] = []  ## CollisionDecoration 
 var arena_length:float#正方形竞技场，只记录边长
 
 var is_resetting:bool=false #四个玩家都执行重置时只重置一次
+
+func _physics_process(_delta: float) -> void:
+	_update_alive_players_cache()
+
+# 更新存活玩家缓存（每物理帧执行一次，死亡事件即时标记脏）
+func _update_alive_players_cache() -> void:
+	if not _alive_cache_dirty:
+		return
+	alive_players_cache.clear()
+	for p in players:
+		if not p.is_dead:
+			alive_players_cache.append(p)
+	_alive_cache_dirty = false
+
+# 标记缓存脏（供 Player._on_death 调用）
+func mark_alive_cache_dirty() -> void:
+	_alive_cache_dirty = true
+
 func _ready() -> void:
 	#加载地图数据
 	_init_map_data()
@@ -407,6 +428,7 @@ func _apply_actions(actions: Array) -> void:# 将动作数组分发到各玩家
 func _handle_reset() -> void:
 	var time=Time.get_time_string_from_system()
 	print("[PlayScene] 执行游戏重置 at ",time)
+	_alive_cache_dirty = true  # 重置后标记缓存脏
 	for p in players:
 		p.current_animation_wrapper = null
 		p.is_dead = false
@@ -445,6 +467,7 @@ func _reset_with_transition(player:Player)->void:
 	await tween.finished
 # 处理玩家死亡信号
 func _on_player_player_died(player: Player) -> void:
+	_alive_cache_dirty = true  # 玩家死亡即时标记缓存脏
 	var is_main_camera=CameraManager.current_camera_id==-1
 	
 	if is_main_camera:

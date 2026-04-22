@@ -14,21 +14,26 @@ class_name Pathfinding
 @export var neighbour_check_radius: float = 10    ## 邻居检测半径（像素）
 @export var separation_force: float = 300         ## 分离力强度（值越大避障越激进）
 
+## 缓存的物理查询对象
+var _cached_shape: CircleShape2D
+var _cached_query: PhysicsShapeQueryParameters2D
+
+func _ready() -> void:
+	_cached_shape = CircleShape2D.new()
+	_cached_query = PhysicsShapeQueryParameters2D.new()
+	_cached_query.shape = _cached_shape
+	_cached_query.collide_with_areas = true
+	_cached_query.collide_with_bodies = false
+
 ## 计算带避障的移动方向
 ## @param target_position: 目标世界坐标
 ## @return: 移动方向向量（未归一化，保留大小信息）
 func find_path(target_position: Vector2) -> Vector2:
-	var shape = CircleShape2D.new()
-	shape.radius = neighbour_check_radius
-	
-	var query = PhysicsShapeQueryParameters2D.new()
-	query.shape = shape
-	query.collide_with_areas = true
-	query.collide_with_bodies = false
-	query.transform.origin = global_position
+	_cached_shape.radius = neighbour_check_radius
+	_cached_query.transform.origin = global_position
 	
 	var space_state = get_world_2d().direct_space_state
-	var results = space_state.intersect_shape(query)
+	var results = space_state.intersect_shape(_cached_query)
 	
 	var neighbours: Array[Enemy] = []
 	if results.size() > 0:

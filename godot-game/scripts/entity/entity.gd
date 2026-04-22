@@ -49,7 +49,10 @@ func bear_damage(source: Entity,skill:Skill) -> void:#承受伤害
 	if current_health == 0:
 		is_dead = true
 		_on_death()  # 死亡时立即触发（子类覆写此方法发射特定信号）
-		play_animation(AnimationWrapper.new("die", true))  # 死亡动画,高优先级
+		play_animation(_get_die_anim())  # 死亡动画,高优先级
+
+func _get_die_anim() -> AnimationWrapper:
+	return AnimationWrapper.new("die", true)
 
 ## 死亡回调（虚方法，子类覆写以发射特定信号）
 ## 在 is_dead = true 之后、死亡动画播放之前调用

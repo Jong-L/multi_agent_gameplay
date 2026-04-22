@@ -47,8 +47,16 @@ var patrol_rect: Rect2 = Rect2()                 #巡逻范围矩形
 
 const STICKY_FACTOR: float = 0.7                 # 黏性目标系数
 
+var _anim_idle: AnimationWrapper
+var _anim_run: AnimationWrapper
+var _anim_die: AnimationWrapper
+
 func _ready() -> void:
 	super._ready()
+	# 缓存常用 AnimationWrapper
+	_anim_idle = AnimationWrapper.new("idle", false)
+	_anim_run = AnimationWrapper.new("run", false)
+	_anim_die = AnimationWrapper.new("die", true)
 	_init_patrol_rect()
 	#
 	patrol_target = _pick_patrol_target()
@@ -61,8 +69,8 @@ func _init_patrol_rect() -> void:
 		#直接硬编码设置（Road tiles: -7,-7 to 6,6, scale=1.5, tile_size=16）
 		patrol_rect = Rect2(-168, -168, 336, 336)
 
-func _process(delta: float) -> void:
-	#重生倒计时
+func _physics_process(delta: float) -> void:
+	#重生倒计时（基于物理帧计时）
 	if is_respawning:
 		respawn_timer -= delta
 		if respawn_timer <= 0:
@@ -78,7 +86,7 @@ func _process(delta: float) -> void:
 		if state in [State.ATTACK_WINDUP, State.ATTACKING]:
 			state = State.ATTACK_RECOVERY
 			state_timer = attack_recovery_time * 0.5
-			play_animation(AnimationWrapper.new("idle", false))
+			_play_idle_anim()
 			return
 		elif state == State.CHASE:
 			var new_target = _find_nearest_player()
@@ -120,8 +128,20 @@ func _process(delta: float) -> void:
 		State.RETURN:
 			_process_return(delta)
 
-#获取所有存活玩家
+func _play_idle_anim() -> void:
+	play_animation(_anim_idle)
+
+func _play_run_anim() -> void:
+	play_animation(_anim_run)
+
+func _get_die_anim() -> AnimationWrapper:
+	return _anim_die
+
+#获取所有存活玩家（优先使用 PlayScene 缓存）
 func _get_alive_players() -> Array[Player]:
+	if _play_scene != null:
+		return _play_scene.alive_players_cache
+	# fallback：直接遍历 group
 	var result: Array[Player] = []
 	for node in get_tree().get_nodes_in_group("player"):
 		if node is Player and not node.is_dead:
@@ -231,7 +251,7 @@ func full_reset() -> void:
 	if animated_sprite.material != null:
 		animated_sprite.material.set_shader_parameter("is_hurt", false)
 	
-	play_animation(AnimationWrapper.new("idle", false))
+	play_animation(_anim_idle)
 
 #复活：死亡动画结束后调用
 func respawn() -> void:
@@ -249,7 +269,7 @@ func _process_patrol(delta: float) -> void:
 	#待机时间还没结束
 	if patrol_idle_timer > 0:
 		patrol_idle_timer -= delta
-		play_animation(AnimationWrapper.new("idle", false))#如果当前有在播放的动画play_animationn会直接返回，不会重复播放放
+		_play_idle_anim()
 		return
 	
 	#更新剩余巡逻时间
@@ -271,7 +291,7 @@ func _process_patrol(delta: float) -> void:
 	
 	velocity = direction * patrol_speed
 	move_and_slide()
-	play_animation(AnimationWrapper.new("run", false))
+	_play_run_anim()
 	_face_target(to_target)
 
 #选取巡逻目标点
@@ -321,7 +341,7 @@ func _process_chase(delta: float) -> void:
 	if _can_hit_target():
 		state = State.ATTACK_WINDUP
 		state_timer = attack_windup_time
-		play_animation(AnimationWrapper.new("idle", false))
+		_play_idle_anim()
 		return
 	
 	#到达攻击站位
@@ -330,7 +350,7 @@ func _process_chase(delta: float) -> void:
 	if to_attack_pos.length() <= stop_distance:
 		state = State.ATTACK_WINDUP
 		state_timer = attack_windup_time
-		play_animation(AnimationWrapper.new("idle", false))
+		_play_idle_anim()
 		return
 	
 	#继续移动
@@ -342,7 +362,7 @@ func _process_chase(delta: float) -> void:
 	
 	velocity = direction * speed
 	move_and_slide()
-	play_animation(AnimationWrapper.new("run", false))
+	_play_run_anim()
 	
 	#超范围检测
 	if not _is_in_patrol_area():
@@ -377,7 +397,7 @@ func _process_return(_delta: float) -> void:
 	
 	velocity = direction * speed
 	move_and_slide()
-	play_animation(AnimationWrapper.new("run", false))
+	_play_run_anim()
 	_face_target(to_origin)
 
 #计算攻击站位
@@ -415,7 +435,7 @@ func _process_windup(delta: float) -> void:
 		state_timer = attack_recovery_time * 0.5
 		if animated_sprite.material != null:
 			animated_sprite.material.set_shader_parameter("is_hurt", false)
-		play_animation(AnimationWrapper.new("idle", false))
+		_play_idle_anim()
 		return
 	
 	var to_player = target.position - self.position
@@ -437,12 +457,12 @@ func _process_attacking(delta: float) -> void:
 	if state_timer <= 0:
 		state = State.ATTACK_RECOVERY
 		state_timer = attack_recovery_time
-		play_animation(AnimationWrapper.new("idle", false))
+		_play_idle_anim()
 
 #攻击后摇
 func _process_recovery(delta: float) -> void:
 	velocity=Vector2.ZERO
-	play_animation(AnimationWrapper.new("idle", false))
+	_play_idle_anim()
 	
 	move_and_slide()
 	

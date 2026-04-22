@@ -60,10 +60,11 @@ func _exit_tree() -> void:
 	_disconnect_signals()
 	_disconnect_skill_signals()
 
-func _process(delta: float) -> void:
+func _physics_process(delta: float) -> void:
 	_game_time += delta
 	_process_starvation(delta)
-	_process_proximity_shaping(delta)
+
+	_process_reward_ball_shaping(delta)
 	_process_center_shaping(delta)
 	_process_wall_collision(delta)
 	
@@ -295,7 +296,7 @@ func compute_starve_duration(player:Player)->float:
 ##   1. 弱距离奖励：仅作为位置引导，系数降低以避免鼓励待机
 ##   2. 速度方向奖励：朝向最近球移动时额外奖励，鼓励主动接近行为
 ##   球被清完后，塑形归零，智能体自然往中心游荡 → 触发战斗事件奖励
-func _process_proximity_shaping(delta: float) -> void:
+func _process_reward_ball_shaping(delta: float) -> void:
 	if _play_scene == null:
 		return
 
