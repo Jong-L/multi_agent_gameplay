@@ -34,7 +34,7 @@ var VELOCITY_TOWARD_BALL_SCALE: float   #朝向球移动时额外奖励（每帧
 var CENTER_REWARD_SCALE: float        #离竞技场中心越近奖励越大（每帧）
 
 #撞墙惩罚常量
-var WALL_COLLISION_PENALTY_MULTIPLIER: float  #撞墙时移动惩罚的倍数
+var WALL_COLLISION_PENALTY: float  #撞墙时移动惩罚
 var WALL_COLLISION_COOLDOWN_FRAMES: int        #撞墙检测冷却帧数，避免连续惩罚
 
 var _play_scene: PlayScene = null
@@ -128,8 +128,8 @@ func _load_reward_config() -> void:
 		VELOCITY_TOWARD_BALL_SCALE = float(data["velocity_toward_ball_scale"])
 	if data.has("center_reward_scale"):
 		CENTER_REWARD_SCALE = float(data["center_reward_scale"])
-	if data.has("wall_collision_penalty_multiplier"):
-		WALL_COLLISION_PENALTY_MULTIPLIER = float(data["wall_collision_penalty_multiplier"])
+	if data.has("wall_collision_penalty"):
+		WALL_COLLISION_PENALTY = float(data["wall_collision_penalty"])
 	if data.has("wall_collision_cooldown_frames"):
 		WALL_COLLISION_COOLDOWN_FRAMES = int(data["wall_collision_cooldown_frames"])
 
@@ -336,9 +336,9 @@ func _process_proximity_shaping(delta: float) -> void:
 			if dot > 0.0:  # 朝向球移动
 				var velocity_reward: float = VELOCITY_TOWARD_BALL_SCALE * dot
 				total_shaping += velocity_reward
-			#elif dot<0.0:#离开球时等量惩罚，防止反复靠近刷分
-				#var velocity_reward: float = VELOCITY_TOWARD_BALL_SCALE * dot
-				#total_shaping += velocity_reward
+			elif dot<0.0:#离开球时等量惩罚，防止反复靠近刷分
+				var velocity_reward: float = VELOCITY_TOWARD_BALL_SCALE * dot
+				total_shaping += velocity_reward
 
 		# 直接修改reward,不走 add_reward 以避免刷新饥饿计时器
 		player.ai_controller.reward += total_shaping * delta
@@ -363,7 +363,7 @@ func _process_center_shaping(delta: float) -> void:
 ## ── 撞墙惩罚 ──
 
 # 每帧检测玩家撞墙并应用惩罚
-func _process_wall_collision(delta: float) -> void:
+func _process_wall_collision(_delta: float) -> void:
 	if _play_scene == null:
 		return
 
@@ -397,9 +397,9 @@ func _process_wall_collision(delta: float) -> void:
 				should_penalize = true
 
 		if should_penalize and not _wall_collision_cooldown.has(pid) and player.is_moving:
-			# 撞墙：应用移动惩罚的倍数
-			var wall_penalty: float = RUN * max(WALL_COLLISION_PENALTY_MULTIPLIER-1,0.0)
-			add_reward(pid, wall_penalty)
+			# 撞墙
+			var wall_penalty: float = WALL_COLLISION_PENALTY
+			add_reward(pid, -wall_penalty)
 
 			# 设置冷却，避免连续帧重复惩罚
 			_wall_collision_cooldown[pid] = WALL_COLLISION_COOLDOWN_FRAMES
