@@ -13,8 +13,7 @@
 	"max_starve_duration":10.0,
 	"starve_reward_decrease": 0.01,
 	"starve_more_func": "quadratic",
-	"proximity_to_ball_scale": 0.0,
-	"velocity_toward_ball_scale": 0.1,
+	"ball_potential_scale": 1.0,
 	"center_reward_scale": 0.0,
 	"wall_collision_penalty": 0.05,
 	"wall_collision_cooldown_frames": 1

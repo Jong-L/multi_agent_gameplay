@@ -27,7 +27,7 @@ var spawn_position: Vector2
 var pending_action: Action = Action.IDLE # 当前待执行动作
 var _anim_idle: AnimationWrapper
 var _anim_run: AnimationWrapper
-var _last_displayed_reward: float = 0.0  # 缓存上次显示的 reward 值，避免每帧字符串格式化
+var _last_displayed_reward: float = 0.0  # 缓存上次显示的 reward 值
 
 signal player_died(player: Player)# 由PlayScene监听
 

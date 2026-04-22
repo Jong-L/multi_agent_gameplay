@@ -12,6 +12,7 @@ class_name RewardManager
    - EventBus.player_died     击杀玩家/死亡惩罚
    - EventBus.reward_ball_collected → 拾取奖励球奖励"
 
+@export var _sync_node:Sync
 #奖励常量
 var COLLECT_BALL_A: float 
 var COLLECT_BALL_B: float
@@ -29,8 +30,7 @@ var STARVE_REWARD_DECREASE: float
 var STARVE_MORE_FUNC: String
 
 #塑形奖励常量
-var PROXIMITY_TO_BALL_SCALE: float   #距离奖励：离球越近奖励越大（每帧）
-var VELOCITY_TOWARD_BALL_SCALE: float   #朝向球移动时额外奖励（每帧）
+var BALL_POTENTIAL_SCALE: float      #球吸引势能缩放系数
 var CENTER_REWARD_SCALE: float        #离竞技场中心越近奖励越大（每帧）
 
 #撞墙惩罚常量
@@ -52,7 +52,12 @@ var _game_time: float = 0.0
 #奖励配置文件路径
 const REWARD_CONFIG_PATH: String = "res://configs/reward.json"
 
+# ── 势能塑形系统 ──
+var _prev_potentials: Dictionary = {}  # {player_id: 上帧总势能}
+var _shaping_gamma: float=0.99       # 塑形折扣因子
+var action_repeat_count:int=0
 func _ready() -> void:
+	_play_scene = get_parent() if get_parent() is PlayScene else null
 	_load_reward_config()
 	_connect_signals()
 
@@ -63,8 +68,9 @@ func _exit_tree() -> void:
 func _physics_process(delta: float) -> void:
 	_game_time += delta
 	_process_starvation(delta)
-
-	_process_reward_ball_shaping(delta)
+	action_repeat_count=(action_repeat_count+1)%_sync_node.action_repeat
+	if action_repeat_count==0:
+		_process_potential_shaping(delta)
 	_process_center_shaping(delta)
 	_process_wall_collision(delta)
 	
@@ -124,9 +130,9 @@ func _load_reward_config() -> void:
 	if data.has("starve_more_func"):
 		STARVE_MORE_FUNC = str(data["starve_more_func"])
 	if data.has("proximity_to_ball_scale"):
-		PROXIMITY_TO_BALL_SCALE = float(data["proximity_to_ball_scale"])
-	if data.has("velocity_toward_ball_scale"):
-		VELOCITY_TOWARD_BALL_SCALE = float(data["velocity_toward_ball_scale"])
+		BALL_POTENTIAL_SCALE = float(data["proximity_to_ball_scale"])
+	if data.has("ball_potential_scale"):
+		BALL_POTENTIAL_SCALE = float(data["ball_potential_scale"])
 	if data.has("center_reward_scale"):
 		CENTER_REWARD_SCALE = float(data["center_reward_scale"])
 	if data.has("wall_collision_penalty"):
@@ -151,11 +157,15 @@ func _disconnect_signals() -> void:
 	if EventBus.reward_ball_collected.is_connected(_on_reward_ball_collected):
 		EventBus.reward_ball_collected.disconnect(_on_reward_ball_collected)
 
-#初始化（由 PlayScene 调用）
+#初始化
 func setup(play_scene: PlayScene) -> void:
-	_play_scene = play_scene
+	if _play_scene == null:
+		_play_scene = play_scene
 	_init_starvation_timers()
 	_connect_skill_signals()
+	# 从 Sync 节点获取 gamma（由 Python --gamma 参数传入）
+	_init_shaping_gamma()
+	_init_potentials()
 
 #初始化饥饿计时器（所有玩家当前游戏时间）
 func _init_starvation_timers() -> void:
@@ -289,60 +299,86 @@ func compute_starve_duration(player:Player)->float:
 			return starve_duration
 	return 0.0
 
-## ── 塑形奖励（持续引导） ──
+## ── 势能塑形系统（Potential-Based Reward Shaping） ──
 
-## 每帧计算塑形奖励：靠近奖励球 + 速度方向奖励
-## 设计原则：Potential-Based Reward Shaping + 行为塑形
-##   1. 弱距离奖励：仅作为位置引导，系数降低以避免鼓励待机
-##   2. 速度方向奖励：朝向最近球移动时额外奖励，鼓励主动接近行为
-##   球被清完后，塑形归零，智能体自然往中心游荡 → 触发战斗事件奖励
-func _process_reward_ball_shaping(delta: float) -> void:
+# 从 Sync 节点获取 shaping_gamma
+func _init_shaping_gamma() -> void:
+	if _sync_node != null and _sync_node.args != null:
+		_shaping_gamma = _sync_node.args.get("gamma", "0.99").to_float()
+		print("[RewardManager] 势能塑形 gamma = ", _shaping_gamma, " (来自命令行参数)")
+	else:
+		_shaping_gamma = 0.99
+		print("[RewardManager] 势能塑形 gamma = ", _shaping_gamma, " (默认值)")
+
+# 初始化所有玩家的上一帧势能缓存
+func _init_potentials() -> void:
+	_prev_potentials.clear()
 	if _play_scene == null:
 		return
+	for player in _play_scene.players:
+		_prev_potentials[player.player_id] = calculate_total_potential(player)
 
+# 计算玩家的总势能
+func calculate_total_potential(player: Player) -> float:
+	var ball_potential:float=calculate_ball_potential(player)
+	#if player.player_id==0:
+		#print(ball_potential)
+	return ball_potential
+
+# 球吸引势能：距离最近活跃球越近，势能越高 [0, 10]
+func calculate_ball_potential(player: Player) -> float:
+	if _play_scene == null or _play_scene.reward_ball_manager == null:
+		return 0.0
+	
+	var player_pos := player.global_position
 	var ball_manager: RewardBallManager = _play_scene.reward_ball_manager
-	if ball_manager == null:
-		return
+	
+	var nearest_ball: RewardBall = null
+	var min_dist: float = INF
+	var vision_radius:float=_play_scene.vision_sensor.vision_radius
+	for ball in ball_manager.reward_balls:
+		if not is_instance_valid(ball) or not ball.is_active:
+			continue
+		
+		var dist: float = player_pos.distance_to(ball.global_position)
+		if dist < min_dist and dist<=vision_radius:
+			min_dist = dist
+			nearest_ball = ball
+	
+	if nearest_ball == null:
+		return 0.0
+	# 指数函数
+	#if nearest_ball in ball_manager.type_a_balls:
+		#return BALL_POTENTIAL_SCALE * COLLECT_BALL_A * exp(-5.0 * min_dist / vision_radius)
+	#elif nearest_ball in ball_manager.type_b_balls:
+		#return BALL_POTENTIAL_SCALE * COLLECT_BALL_B * exp(-5.0 * min_dist / vision_radius)
+	
+	#线性函数
+	if nearest_ball in ball_manager.type_a_balls:
+		return BALL_POTENTIAL_SCALE * maxf(0.0, COLLECT_BALL_A - COLLECT_BALL_A / vision_radius*min_dist)
+	elif nearest_ball in ball_manager.type_b_balls:
+		return BALL_POTENTIAL_SCALE * maxf(0.0, COLLECT_BALL_B - COLLECT_BALL_B / vision_radius*min_dist)
+	return 0.0
 
-	for player:Player in _play_scene.players:
+func _process_potential_shaping(_delta: float) -> void:
+	if _play_scene == null:
+		return
+	
+	for player in _play_scene.players:
 		if player.is_dead:
 			continue
-
-		var player_pos: Vector2 = player.global_position
-		#var player_vel: Vector2 = player.get_real_velocity()#采用"实际速度"，避免撞墙时还得到奖励
-		var player_vel: Vector2=player.velocity #在逻辑帧中如果被挡住velocity会是0,因此用这个也行，被挡住了不会获得奖励
-
-		# 找到最近活跃球 
-		var nearest_ball: RewardBall = null
-		var min_dist: float = INF
-		for ball in ball_manager.reward_balls:
-			var dist: float = player_pos.distance_to(ball.global_position)
-			if not is_instance_valid(ball) or not ball.is_active or dist>_play_scene.vision_sensor.vision_radius:
-				continue
-			if dist < min_dist:
-				min_dist = dist
-				nearest_ball = ball
-
-		var total_shaping: float = 0.0
-
-		if nearest_ball != null:
-			# 距离奖励
-			var dist_reward: float = PROXIMITY_TO_BALL_SCALE * maxf(0.0, 1.0 - 4*min_dist / _play_scene.arena_length)
-			total_shaping += dist_reward
-
-			#速度方向奖励
-			var to_ball_dir: Vector2 = (nearest_ball.global_position - player_pos).normalized()
-			var vel_dir: Vector2 = player_vel.normalized()
-			var dot: float = vel_dir.dot(to_ball_dir)  # -1~1
-			if dot > 0.0:  # 朝向球移动
-				var velocity_reward: float = VELOCITY_TOWARD_BALL_SCALE * dot
-				total_shaping += velocity_reward
-			elif dot<0.0:#离开球时等量惩罚，防止反复靠近刷分
-				var velocity_reward: float = VELOCITY_TOWARD_BALL_SCALE * dot
-				total_shaping += velocity_reward
-
-		# 直接修改reward,不走 add_reward 以避免刷新饥饿计时器
-		player.ai_controller.reward += total_shaping * delta
+		
+		var pid := player.player_id
+		var current_potential := calculate_total_potential(player)
+		var prev_potential :float= _prev_potentials.get(pid, 0.0)
+		
+		var shaping :float= _shaping_gamma * current_potential - prev_potential
+		
+		# 直接写入 AIController.reward
+		player.ai_controller.reward += shaping
+		
+		# 缓存当前势能为下一帧使用
+		_prev_potentials[pid] = current_potential
 
 ## 中央区域塑形奖励：鼓励智能体进入竞技场中心
 func _process_center_shaping(delta: float) -> void:
@@ -362,7 +398,6 @@ func _process_center_shaping(delta: float) -> void:
 		player.ai_controller.reward += center_reward * delta
 
 ## ── 撞墙惩罚 ──
-
 # 每帧检测玩家撞墙并应用惩罚
 func _process_wall_collision(_delta: float) -> void:
 	if _play_scene == null:
@@ -411,3 +446,4 @@ func _process_wall_collision(_delta: float) -> void:
 func reset() -> void:
 	_init_starvation_timers()
 	_wall_collision_cooldown.clear()
+	_init_potentials()

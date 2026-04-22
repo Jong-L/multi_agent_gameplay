@@ -49,7 +49,7 @@ parser.add_argument(
 )
 parser.add_argument(
     "--save_model_path",
-    default="savedmodel_no_reward_shaping",
+    default="savedmodel_ball_reward_shaping_linear",
     type=str,
     help="The path to use for saving the trained sb3 model after training is complete. Saved model can be used later "
     "to resume training. Extension will be set to .zip",
@@ -107,6 +107,7 @@ parser.add_argument(
     type=int,
     help="How many instances of the environment executable to " "launch - requires --env_path to be set if > 1.",
 )
+parser.add_argument("--gamma", default=0.99, type=float, help="Discount factor")
 args, extras = parser.parse_known_args()
 
 
@@ -159,7 +160,7 @@ if args.env_path is None and args.viz:
     print("Info: Using --viz without --env_path set has no effect, in-editor training will always render.")
 
 env = StableBaselinesGodotEnv(
-    env_path=args.env_path, show_window=args.viz, seed=args.seed, n_parallel=args.n_parallel, speedup=args.speedup
+    env_path=args.env_path, show_window=args.viz, seed=args.seed, n_parallel=args.n_parallel, speedup=args.speedup, gamma=args.gamma
 )
 env = VecMonitor(env)
 
@@ -197,6 +198,7 @@ if args.resume_model_path is None:
         n_steps=32,
         tensorboard_log=args.experiment_dir,
         learning_rate=learning_rate,
+        gamma=args.gamma,
     )
 else:
     path_zip = pathlib.Path(args.resume_model_path)

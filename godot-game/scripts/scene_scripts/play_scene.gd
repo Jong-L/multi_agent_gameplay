@@ -18,6 +18,8 @@ class_name PlayScene
 @onready var _collision_deco_layer:TileMapLayer=$Map/CollisonDecoration
 # 视野传感器（环境级工具，统一管理所有玩家的观测计算）
 @onready var vision_sensor: VisionSensor = $VisionSensor
+# 奖励管理器
+@onready var reward_manager: RewardManager = $RewardManager
 # 所有玩家引用,按 player_id 排序
 var players: Array[Player] = []
 var enemies:Array[Enemy]=[]
@@ -26,8 +28,7 @@ var alive_players_cache: Array[Player] = []
 var _alive_cache_dirty: bool = true
 # 奖励球管理器
 var reward_ball_manager: RewardBallManager = null
-# 奖励管理器
-var reward_manager: RewardManager = null
+
 # 相机切换按钮组
 var camera_buttons: Array[Button] = []
 # 玩家专属血条数组与技能栏，与各自的player对应
@@ -307,12 +308,8 @@ func _setup_reward_ball_manager() -> void:
 	reward_ball_manager.set_owner(self)
 	reward_ball_manager.setup(self)
 
-# 初始化奖励管理器
+# 初始化奖励管理器 有场景初始化，为了保证玩家已经加载
 func _setup_reward_manager() -> void:
-	reward_manager = RewardManager.new()
-	reward_manager.name = "RewardManager"
-	add_child(reward_manager)
-	reward_manager.set_owner(self)
 	reward_manager.setup(self)
 
 # 为每个玩家创建视野范围虚线圆

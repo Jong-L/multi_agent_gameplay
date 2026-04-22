@@ -19,6 +19,7 @@
 [ext_resource type="Script" uid="uid://bmy6w68efk7bl" path="res://addons/godot_rl_agents/sync.gd" id="16_r6opt"]
 [ext_resource type="Script" uid="uid://dqebgd3akinse" path="res://scripts/scene_scripts/vision_sensor.gd" id="17_vsens"]
 [ext_resource type="Script" uid="uid://cylw6obqfylrl" path="res://scripts/scene_scripts/reward_perform_button.gd" id="18_cvqji"]
+[ext_resource type="Script" uid="uid://bt16p28ccblpg" path="res://scripts/scene_scripts/reward_manager.gd" id="20_2qkdh"]
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_q2on3"]
 texture = ExtResource("2_lakq1")
@@ -610,8 +611,12 @@ drag_horizontal_enabled = true
 
 [node name="Sync" type="Node" parent="." unique_id=1321988269]
 script = ExtResource("16_r6opt")
-control_mode = 0
+speed_up = 10.0
 metadata/_custom_type_script = "uid://bmy6w68efk7bl"
+
+[node name="RewardManager" type="Node" parent="." unique_id=1836520612 node_paths=PackedStringArray("_sync_node")]
+script = ExtResource("20_2qkdh")
+_sync_node = NodePath("../Sync")
 
 [connection signal="player_died" from="Player_Blue" to="." method="_on_player_player_died"]
 [connection signal="player_died" from="Player_Black" to="." method="_on_player_player_died"]

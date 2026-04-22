@@ -34,12 +34,9 @@ var _play_scene: PlayScene = null
 var _ball_scene: PackedScene = preload("res://assets/scenes/RewardBall.tscn")
 ## B类球重生队列：[{"ball": RewardBall, "timer": float}]
 var _respawn_queue: Array[Dictionary] = []
-## 独立随机数生成器（不受全局 seed() 影响，避免 RL 框架固定种子导致位置重复）
-var _rng: RandomNumberGenerator = RandomNumberGenerator.new()
 
 
 func _ready() -> void:
-	_rng.randomize()  # 用时间戳初始化，确保每次运行位置不同
 	EventBus.reward_ball_collected.connect(_on_reward_ball_collected)
 
 func _exit_tree() -> void:
@@ -190,13 +187,10 @@ func _random_pos_avoiding_spawn(rect: Rect2, margin: float, spawn_positions: Arr
 	# 退避策略：返回最后一次随机位置
 	return _rng_pos_in_rect(rect, margin)
 
-
-## ── 内部随机位置生成（使用独立 RNG，不受全局 seed() 影响）──##
-
-## 在矩形内生成随机位置（使用 _rng 实例）
+## 在矩形内生成随机位置
 func _rng_pos_in_rect(rect: Rect2, margin: float) -> Vector2:
-	var x := _rng.randf_range(rect.position.x + margin, rect.end.x - margin)
-	var y := _rng.randf_range(rect.position.y + margin, rect.end.y - margin)
+	var x := randf_range(rect.position.x + margin, rect.end.x - margin)
+	var y := randf_range(rect.position.y + margin, rect.end.y - margin)
 	return Vector2(x, y)
 
 
