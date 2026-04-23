@@ -52,3 +52,10 @@ signal entity_damaged(entity: Entity, source: Entity)
 ## @param camera_id: -1=主相机, 0-3=玩家相机
 ## 连接：PlayScene._on_camera_switched() (play_scene.gd:156)
 signal camera_switched(camera_id: int)
+
+@warning_ignore("unused_signal")
+## 纯奖励值变更（不含塑形奖励）
+## @param player_id: 玩家 ID
+## @param total_pure_reward: 累计纯奖励值
+## 连接：ScoreboardDrawer._on_pure_reward_changed() (scoreboard_drawer.gd)
+signal pure_reward_changed(player_id: int, total_pure_reward: float)

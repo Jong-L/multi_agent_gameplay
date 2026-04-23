@@ -20,6 +20,7 @@
 [ext_resource type="Script" uid="uid://dqebgd3akinse" path="res://scripts/scene_scripts/vision_sensor.gd" id="17_vsens"]
 [ext_resource type="Script" uid="uid://cylw6obqfylrl" path="res://scripts/scene_scripts/reward_perform_button.gd" id="18_cvqji"]
 [ext_resource type="Script" uid="uid://bt16p28ccblpg" path="res://scripts/scene_scripts/reward_manager.gd" id="20_2qkdh"]
+[ext_resource type="Script" uid="uid://cbscorebd001" path="res://scripts/ui/scoreboard_drawer.gd" id="23_sbdraw"]
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_q2on3"]
 texture = ExtResource("2_lakq1")
@@ -604,6 +605,14 @@ keep_pressed_outside = true
 text = "显示奖励"
 script = ExtResource("18_cvqji")
 
+[node name="ScoreboardDrawer" type="Control" parent="CanvasLayer" unique_id=1234567890]
+layout_mode = 3
+anchors_preset = 0
+offset_top = 177.0
+offset_right = 158.0
+offset_bottom = 376.0
+script = ExtResource("23_sbdraw")
+
 [node name="CameraMain" type="Camera2D" parent="." unique_id=910393514]
 position = Vector2(78, 16)
 zoom = Vector2(0.79, 0.79)
@@ -611,6 +620,7 @@ drag_horizontal_enabled = true
 
 [node name="Sync" type="Node" parent="." unique_id=1321988269]
 script = ExtResource("16_r6opt")
+control_mode = 0
 metadata/_custom_type_script = "uid://bmy6w68efk7bl"
 
 [node name="RewardManager" type="Node" parent="." unique_id=1836520612 node_paths=PackedStringArray("_sync_node")]

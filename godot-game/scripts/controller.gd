@@ -23,9 +23,9 @@ func _physics_process(delta):
 
 func reset():
 	super.reset()
-	_player as Player
-	if _player.player_id==0:#只用重置一次
-		play_scene._handle_reset()
+	if _player is Player:#加这个判断用于代码提示，写在同一行条件语句没有代码提示
+		if _player.player_id==0:#只用重置一次
+			play_scene._handle_reset()
 
 func get_obs() -> Dictionary:
 	# PlayScene分发

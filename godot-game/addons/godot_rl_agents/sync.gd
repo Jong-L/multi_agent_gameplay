@@ -70,6 +70,7 @@ func _ready():
 
 
 func _initialize():
+	#print("sync init")
 	_get_agents()
 	args = _get_args()
 	Engine.physics_ticks_per_second = _get_speedup() * 60  # Replace with function body.

@@ -19,9 +19,10 @@ from godot_rl.wrappers.stable_baselines_wrapper import StableBaselinesGodotEnv
 if can_import("ray"):
     print("WARNING, stable baselines and ray[rllib] are not compatible")
 
-parser = argparse.ArgumentParser(allow_abbrev=False)
+parser = argparse.ArgumentParser(allow_abbrev=False)#全匹配
 parser.add_argument(
     "--env_path",
+    # default="godot-game/build/game.exe",
     default=None,
     type=str,
     help="The Godot binary to use, do not include for in editor training",
@@ -97,20 +98,19 @@ parser.add_argument(
 parser.add_argument(
     "--viz",
     action="store_true",
-    help="If set, the simulation will be displayed in a window during training. Otherwise "
+    help="If set true, the simulation will be displayed in a window during training. Otherwise "
     "training will run without rendering the simulation. This setting does not apply to in-editor training.",
-    default=False,
+    default=True,
 )
-parser.add_argument("--speedup", default=1, type=int, help="Whether to speed up the physics in the env")
+parser.add_argument("--speedup", default=5, type=int, help="Whether to speed up the physics in the env")
 parser.add_argument(
     "--n_parallel",
-    default=1,
+    default=4,
     type=int,
     help="How many instances of the environment executable to " "launch - requires --env_path to be set if > 1.",
 )
 parser.add_argument("--gamma", default=0.99, type=float, help="Discount factor")
 args, extras = parser.parse_known_args()
-
 
 def handle_onnx_export():
     # Enforce the extension of onnx and zip when saving model to avoid potential conflicts in case of same name

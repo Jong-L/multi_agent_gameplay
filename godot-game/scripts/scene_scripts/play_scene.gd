@@ -13,6 +13,7 @@ class_name PlayScene
 
 @onready var canvas_layer:CanvasLayer=$CanvasLayer
 @onready var control_node:Control=$CanvasLayer/Control
+@onready var scoreboard_drawer: ScoreboardDrawer = $CanvasLayer/ScoreboardDrawer
 @onready var _grass_layer:TileMapLayer=$Map/Grass
 @onready var _road_layer:TileMapLayer=$Map/Road
 @onready var _collision_deco_layer:TileMapLayer=$Map/CollisonDecoration
@@ -79,6 +80,7 @@ func _ready() -> void:
 	_setup_player_uis()         
 	_setup_reward_ball_manager()
 	_setup_reward_manager()
+	_setup_scoreboard_drawer()
 	_setup_vision_circles()         
 
 # 初始化地图数据：竞技场边界、巡逻区域、碰撞装饰物坐标
@@ -311,6 +313,20 @@ func _setup_reward_ball_manager() -> void:
 # 初始化奖励管理器 有场景初始化，为了保证玩家已经加载
 func _setup_reward_manager() -> void:
 	reward_manager.setup(self)
+
+# 初始化分数榜面板
+func _setup_scoreboard_drawer() -> void:
+	# 如果场景树中没有 ScoreboardDrawer，动态创建一个
+	if scoreboard_drawer == null:
+		var drawer := ScoreboardDrawer.new()
+		drawer.name = "ScoreboardDrawer"
+		drawer.size = Vector2(260, 648)
+		canvas_layer.add_child(drawer)
+		drawer.set_owner(self)
+		scoreboard_drawer = drawer
+	
+	if scoreboard_drawer != null:
+		scoreboard_drawer.setup(players)
 
 # 为每个玩家创建视野范围虚线圆
 func _setup_vision_circles() -> void:
