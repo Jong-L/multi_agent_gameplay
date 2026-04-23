@@ -1,10 +1,11 @@
 import argparse
 import os
 import pathlib
+import time
 from typing import Callable
 
 from stable_baselines3 import PPO
-from stable_baselines3.common.callbacks import CheckpointCallback
+from stable_baselines3.common.callbacks import CheckpointCallback, BaseCallback
 from stable_baselines3.common.vec_env.vec_monitor import VecMonitor
 
 from godot_rl.core.utils import can_import
@@ -141,6 +142,42 @@ def cleanup():
     close_env()
 
 
+class DebugStepCallback(BaseCallback):
+    """每秒打印一次step的详细信息，包括done状态"""
+    def __init__(self, verbose=0):
+        super().__init__(verbose)
+        self.last_print_time = time.time()
+        self.step_count = 0
+        
+    def _on_step(self) -> bool:
+        current_time = time.time()
+        self.step_count += 1
+        
+        # 每秒打印一次
+        if current_time - self.last_print_time >= 1.0:
+            # 获取infos信息
+            infos = self.locals.get("infos", [])
+            dones = self.locals.get("dones", [])
+            rewards = self.locals.get("rewards", [])
+            
+            print(f"\n{'='*60}")
+            print(f"[Debug] Step: {self.step_count}, Time: {time.strftime('%H:%M:%S')}")
+            print(f"  Number of envs: {len(dones)}")
+            
+            for i, (done, reward) in enumerate(zip(dones, rewards)):
+                print(f"  Env {i}: done={done}, reward={reward:.4f}")
+                
+                # 检查是否有episode完成的信息
+                if "episode" in infos[i]:
+                    ep_info = infos[i]["episode"]
+                    print(f"    -> Episode completed! Total reward: {ep_info['r']:.2f}, Length: {ep_info['l']}")
+            
+            print(f"{'='*60}\n")
+            self.last_print_time = current_time
+        
+        return True
+
+
 path_checkpoint = os.path.join(args.experiment_dir, args.experiment_name + "_checkpoints")
 abs_path_checkpoint = os.path.abspath(path_checkpoint)
 
@@ -212,6 +249,10 @@ if args.inference:
         obs, reward, done, info = env.step(action)
 else:
     learn_arguments = dict(total_timesteps=args.timesteps, tb_log_name=args.experiment_name)
+    
+    # 创建调试回调
+    debug_callback = DebugStepCallback()
+    
     if args.save_checkpoint_frequency:
         print("Checkpoint saving enabled. Checkpoints will be saved to: " + abs_path_checkpoint)
         checkpoint_callback = CheckpointCallback(
@@ -219,7 +260,14 @@ else:
             save_path=path_checkpoint,
             name_prefix=args.experiment_name,
         )
-        learn_arguments["callback"] = checkpoint_callback
+        # 如果有多个回调，使用CallbackList
+        from stable_baselines3.common.callbacks import CallbackList
+        # learn_arguments["callback"] = CallbackList([checkpoint_callback, debug_callback])
+        learn_arguments["callback"] = CallbackList([checkpoint_callback])
+    else:
+        # learn_arguments["callback"] = debug_callback
+        pass
+        
     try:
         model.learn(**learn_arguments)
     except (KeyboardInterrupt, ConnectionError, ConnectionResetError):

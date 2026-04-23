@@ -1,3 +1,4 @@
+- Godot Reinforcement Learning Agents：gdrl代理
 - **"Policy Invariance Under Reward Transformations: Theory and Application to Reward Shaping"**：奖励塑形开山之作，给出了不改变最优策略的奖励塑形方法
 -  Potential-Based Advice for Stochastic Policy Learning：允许势能函数依赖于状态-动作对
 - Potential-BasedShapingandQ-ValueInitializationare Equivalent：采用初始化可以简化设计

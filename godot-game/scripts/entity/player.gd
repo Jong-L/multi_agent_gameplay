@@ -52,7 +52,7 @@ func _physics_process(_delta: float) -> void:
 	_handle_movement()
 
 func _process(_delta: float) -> void:
-	if ai_controller.needs_reset and player_id==0:#只使用一个玩家重置
+	if ai_controller.needs_reset:
 		ai_controller.reset()
 		return
 	if is_dead:
