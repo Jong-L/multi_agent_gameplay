@@ -13,6 +13,7 @@ class_name RewardManager
    - EventBus.reward_ball_collected → 拾取奖励球奖励"
 
 @export var _sync_node:Sync
+@export var game_config:GameConfig
 #奖励常量
 var COLLECT_BALL_A: float 
 var COLLECT_BALL_B: float
@@ -173,9 +174,10 @@ func setup(play_scene: PlayScene) -> void:
 	# 从 Sync 节点获取 gamma（由 Python --gamma 参数传入）
 	_init_shaping_gamma()
 	_init_potentials()
-	# 初始化纯净奖励日志器
-	_reward_logger = RewardLogger.new()
-	_reward_logger.start_episode()
+	# 根据配置决定是否创建 RewardLogger
+	if game_config and game_config.reward_logger_enabled:
+		_reward_logger = RewardLogger.new()
+		_reward_logger.start_episode()
 
 #初始化饥饿计时器（所有玩家当前游戏时间）
 func _init_starvation_timers() -> void:
@@ -403,16 +405,16 @@ func calculate_ball_potential(player: Player) -> float:
 	if nearest_ball == null:
 		return 0.0
 	# 指数函数
-	#if nearest_ball in ball_manager.type_a_balls:
-		#return BALL_POTENTIAL_SCALE * COLLECT_BALL_A * exp(-min_dist / vision_radius)
-	#elif nearest_ball in ball_manager.type_b_balls:
-		#return BALL_POTENTIAL_SCALE * COLLECT_BALL_B * exp(-min_dist / vision_radius)
+	if nearest_ball in ball_manager.type_a_balls:
+		return BALL_POTENTIAL_SCALE * COLLECT_BALL_A * exp(-min_dist / vision_radius)
+	elif nearest_ball in ball_manager.type_b_balls:
+		return BALL_POTENTIAL_SCALE * COLLECT_BALL_B * exp(-min_dist / vision_radius)
 	
 	#线性函数
-	if nearest_ball in ball_manager.type_a_balls:
-		return BALL_POTENTIAL_SCALE * maxf(0.0, COLLECT_BALL_A - COLLECT_BALL_A / vision_radius*min_dist)
-	elif nearest_ball in ball_manager.type_b_balls:
-		return BALL_POTENTIAL_SCALE * maxf(0.0, COLLECT_BALL_B - COLLECT_BALL_B / vision_radius*min_dist)
+	#if nearest_ball in ball_manager.type_a_balls:
+		#return BALL_POTENTIAL_SCALE * maxf(0.0, COLLECT_BALL_A - COLLECT_BALL_A / vision_radius*min_dist)
+	#elif nearest_ball in ball_manager.type_b_balls:
+		#return BALL_POTENTIAL_SCALE * maxf(0.0, COLLECT_BALL_B - COLLECT_BALL_B / vision_radius*min_dist)
 	
 	#反比例函数
 	#if nearest_ball in ball_manager.type_a_balls:

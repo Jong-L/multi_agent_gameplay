@@ -20,13 +20,13 @@ func _init(log_path: String = "") -> void:
 
 func _get_default_log_path() -> String:
 	var t = Time.get_datetime_dict_from_system()
-	var time_str = "%04d-%02d-%02d_%02d-%02d-%02d" % [
-		t["year"], t["month"], t["day"],
-		t["hour"], t["minute"], t["second"]
+	var time_str = "%02d-%02d_%02d-%02d" % [
+		t["month"], t["day"],
+		t["hour"], t["minute"]
 	]
 	# 添加进程ID以区分并行训练的多个环境实例
 	var process_id = OS.get_process_id()
-	return "D:/schoolTour/softwares/multi-agent-gameplay/logs/game_reward_log/rewards_all_lrrs_%s_pid%d.csv" % [time_str, process_id]
+	return "D:/schoolTour/softwares/multi-agent-gameplay/logs/potential_function_comparison_v2/rewards_exprs_%s_pid%d.csv" % [time_str, process_id]
 
 func _ensure_file_open() -> void:
 	if _file != null:
@@ -58,11 +58,11 @@ func _ensure_file_open() -> void:
 
 func start_episode() -> void:
 	_episode_id += 1
-	# print("[RewardLogger] Episode %d 开始" % _episode_id)
+	#print("[RewardLogger] Episode %d 开始" % _episode_id)
 
 func end_episode() -> void:
 	_flush()
-	print("[RewardLogger] Episode %d 结束，已写入 CSV" % _episode_id)
+	#print("[RewardLogger] Episode %d 结束，已写入 CSV" % _episode_id)
 
 ## 外部调用：缓存一条奖励事件（game_time 截断到小数点后两位）
 func log_reward(player_id: int, source: String, value: float, game_time: float) -> void:

@@ -20,6 +20,7 @@
 [ext_resource type="Script" uid="uid://dqebgd3akinse" path="res://scripts/scene_scripts/vision_sensor.gd" id="17_vsens"]
 [ext_resource type="Script" uid="uid://cylw6obqfylrl" path="res://scripts/scene_scripts/reward_perform_button.gd" id="18_cvqji"]
 [ext_resource type="Script" uid="uid://bt16p28ccblpg" path="res://scripts/scene_scripts/reward_manager.gd" id="20_2qkdh"]
+[ext_resource type="Resource" uid="uid://1hvro5md7hfv" path="res://configs/game_config.tres" id="22_v1hpo"]
 [ext_resource type="Script" uid="uid://cbscorebd001" path="res://scripts/ui/scoreboard_drawer.gd" id="23_sbdraw"]
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_q2on3"]
@@ -625,6 +626,7 @@ metadata/_custom_type_script = "uid://bmy6w68efk7bl"
 [node name="RewardManager" type="Node" parent="." unique_id=1836520612 node_paths=PackedStringArray("_sync_node")]
 script = ExtResource("20_2qkdh")
 _sync_node = NodePath("../Sync")
+game_config = ExtResource("22_v1hpo")
 
 [connection signal="player_died" from="Player_Blue" to="." method="_on_player_player_died"]
 [connection signal="player_died" from="Player_Black" to="." method="_on_player_player_died"]
