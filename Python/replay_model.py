@@ -11,7 +11,7 @@ def main():
     parser.add_argument(
         "--model_path",
         type=str,
-        default="savedmodel_ball_reward_shaping.zip",
+        default="savedmodels\savedmodel_ball_reward_shaping.zip",
         help="Path to the saved .zip model file."
     )
     parser.add_argument(

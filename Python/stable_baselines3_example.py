@@ -1,4 +1,5 @@
 import argparse
+from math import fabs
 import os
 import pathlib
 import time
@@ -22,8 +23,8 @@ if can_import("ray"):
 parser = argparse.ArgumentParser(allow_abbrev=False)#全匹配
 parser.add_argument(
     "--env_path",
-    # default="godot-game/build/game.exe",
-    default=None,
+    default="godot-game/build/game.exe",
+    # default=None,
     type=str,
     help="The Godot binary to use, do not include for in editor training",
 )
@@ -51,7 +52,7 @@ parser.add_argument(
 )
 parser.add_argument(
     "--save_model_path",
-    default="savedmodel_ball_reward_shaping_linear",
+    default="ball_reward_shaping_linear_comp",
     type=str,
     help="The path to use for saving the trained sb3 model after training is complete. Saved model can be used later "
     "to resume training. Extension will be set to .zip",
@@ -74,7 +75,7 @@ parser.add_argument(
 )
 parser.add_argument(
     "--timesteps",
-    default=1_000_000,
+    default=1000_000,
     type=int,
     help="The number of environment steps to train for, default is 1_000_000. If resuming from a saved model, "
     "it will continue training for this amount of steps from the saved state without counting previously trained "
@@ -100,9 +101,9 @@ parser.add_argument(
     action="store_true",
     help="If set true, the simulation will be displayed in a window during training. Otherwise "
     "training will run without rendering the simulation. This setting does not apply to in-editor training.",
-    default=True,
+    default=False,
 )
-parser.add_argument("--speedup", default=5, type=int, help="Whether to speed up the physics in the env")
+parser.add_argument("--speedup", default=10, type=int, help="Whether to speed up the physics in the env")
 parser.add_argument(
     "--n_parallel",
     default=4,
@@ -269,6 +270,7 @@ else:
         pass
         
     try:
+        training_start_time = time.time()
         model.learn(**learn_arguments)
     except (KeyboardInterrupt, ConnectionError, ConnectionResetError):
         print(
@@ -277,3 +279,9 @@ else:
         )
     finally:
         cleanup()
+        training_end_time = time.time()
+        training_duration = training_end_time - training_start_time
+        hours = training_duration // 3600
+        minutes = (training_duration % 3600) // 60
+        seconds = training_duration % 60
+        print(f"Total training time: {hours}h {minutes}m {seconds}s")

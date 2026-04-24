@@ -620,7 +620,6 @@ drag_horizontal_enabled = true
 
 [node name="Sync" type="Node" parent="." unique_id=1321988269]
 script = ExtResource("16_r6opt")
-control_mode = 0
 metadata/_custom_type_script = "uid://bmy6w68efk7bl"
 
 [node name="RewardManager" type="Node" parent="." unique_id=1836520612 node_paths=PackedStringArray("_sync_node")]

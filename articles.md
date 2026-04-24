@@ -3,4 +3,4 @@
 -  Potential-Based Advice for Stochastic Policy Learning：允许势能函数依赖于状态-动作对
 - Potential-BasedShapingandQ-ValueInitializationare Equivalent：采用初始化可以简化设计
 - cnki，一种基于自生成样本学习的奖赏塑形方法：如名
-- 
+- [[2012.08824\] Learning to Run with Potential-Based Reward Shaping and Demonstrations from Video Data](https://ar5iv.labs.arxiv.org/html/2012.08824)：奖励塑形的不同势函数对训练速度有差异。

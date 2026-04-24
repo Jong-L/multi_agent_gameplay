@@ -33,10 +33,10 @@ var _players: Array[Player] = []
 
 func _ready() -> void:
 	# 确保自身大小有效
-	if size.x < 100:
-		size.x = 280
-	if size.y < 100:
-		size.y = get_viewport().get_visible_rect().size.y if get_viewport() != null else 648
+	if size.x < 100.0:
+		size.x = 280.0
+	if size.y < 100.0:
+		size.y = get_viewport().get_visible_rect().size.y if get_viewport() != null else 648.0
 	
 	_build_ui()
 	EventBus.pure_reward_changed.connect(_on_pure_reward_changed)
