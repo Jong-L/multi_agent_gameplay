@@ -128,9 +128,8 @@ func _process(delta: float) -> void:
 				ball.activate()
 			to_remove.append(i)
 	# 从后往前移除已重生的条目
-	for i in to_remove:
-		_respawn_queue.remove_at(i)
-
+	for i in range(to_remove.size() - 1, -1, -1):
+		_respawn_queue.remove_at(to_remove[i])
 
 ## 在巡逻区域内生成安全位置（避开玩家和障碍物）
 ## 检查：离所有玩家 >= BALL_B_MIN_PLAYER_DIST, 离所有障碍物 >= BALL_B_MIN_DECO_DIST

@@ -32,6 +32,7 @@ var STARVE_MORE_FUNC: String
 #塑形奖励常量
 var BALL_POTENTIAL_SCALE: float      #球吸引势能缩放系数
 var CENTER_REWARD_SCALE: float        #离竞技场中心越近奖励越大（每帧）
+var BALL_POTENTIAL_MODE: String = "nearest"  # 球势能计算模式："nearest"(最近球) 或 "all"(所有视野内球)
 
 #撞墙惩罚常量
 var WALL_COLLISION_PENALTY: float  #撞墙时移动惩罚
@@ -139,6 +140,8 @@ func _load_reward_config() -> void:
 		BALL_POTENTIAL_SCALE = float(data["proximity_to_ball_scale"])
 	if data.has("ball_potential_scale"):
 		BALL_POTENTIAL_SCALE = float(data["ball_potential_scale"])
+	if data.has("ball_potential_mode"):
+		BALL_POTENTIAL_MODE = str(data["ball_potential_mode"])
 	if data.has("center_reward_scale"):
 		CENTER_REWARD_SCALE = float(data["center_reward_scale"])
 	if data.has("wall_collision_penalty"):
@@ -336,13 +339,48 @@ func _init_potentials() -> void:
 		_prev_potentials[player.player_id] = calculate_total_potential(player)
 
 # 计算玩家的总势能
+# 根据 BALL_POTENTIAL_MODE 选择使用最近球势能或所有球势能之和
 func calculate_total_potential(player: Player) -> float:
-	var ball_potential:float=calculate_ball_potential(player)
-	#if player.player_id==0:
-		#print(ball_potential)
-	return ball_potential
+	var total_potential:float=0
+	var ball_potential: float
+	if BALL_POTENTIAL_MODE == "all":
+		ball_potential = calculate_ball_potential_all(player)
+	else:
+		ball_potential = calculate_ball_potential(player)
+	
+	total_potential+=ball_potential
+	return total_potential
 
-# 球吸引势能：距离最近活跃球越近，势能越高 [0, 10]
+# 球吸引势能计算视野内所有活跃球的势能之和
+func calculate_ball_potential_all(player: Player) -> float:
+	if _play_scene == null or _play_scene.reward_ball_manager == null:
+		return 0.0
+	
+	var player_pos := player.global_position
+	var ball_manager: RewardBallManager = _play_scene.reward_ball_manager
+	var vision_radius: float = _play_scene.vision_sensor.vision_radius
+	var total_potential: float = 0.0
+	
+	for ball in ball_manager.reward_balls:
+		if not is_instance_valid(ball) or not ball.is_active:
+			continue
+		
+		var dist: float = player_pos.distance_to(ball.global_position)
+		# 只计算视野内的球
+		if dist > vision_radius:
+			continue
+		
+		# 线性势函数
+		if ball in ball_manager.type_a_balls:
+			var potential: float = BALL_POTENTIAL_SCALE * maxf(0.0, COLLECT_BALL_A - COLLECT_BALL_A / vision_radius * dist)
+			total_potential += potential
+		elif ball in ball_manager.type_b_balls:
+			var potential: float = BALL_POTENTIAL_SCALE * maxf(0.0, COLLECT_BALL_B - COLLECT_BALL_B / vision_radius * dist)
+			total_potential += potential
+	
+	return total_potential
+
+# 球吸引势能：距离最近活跃球越近，势能越高 
 func calculate_ball_potential(player: Player) -> float:
 	if _play_scene == null or _play_scene.reward_ball_manager == null:
 		return 0.0
@@ -366,15 +404,21 @@ func calculate_ball_potential(player: Player) -> float:
 		return 0.0
 	# 指数函数
 	#if nearest_ball in ball_manager.type_a_balls:
-		#return BALL_POTENTIAL_SCALE * COLLECT_BALL_A * exp(-5.0 * min_dist / vision_radius)
+		#return BALL_POTENTIAL_SCALE * COLLECT_BALL_A * exp(-min_dist / vision_radius)
 	#elif nearest_ball in ball_manager.type_b_balls:
-		#return BALL_POTENTIAL_SCALE * COLLECT_BALL_B * exp(-5.0 * min_dist / vision_radius)
+		#return BALL_POTENTIAL_SCALE * COLLECT_BALL_B * exp(-min_dist / vision_radius)
 	
 	#线性函数
 	if nearest_ball in ball_manager.type_a_balls:
 		return BALL_POTENTIAL_SCALE * maxf(0.0, COLLECT_BALL_A - COLLECT_BALL_A / vision_radius*min_dist)
 	elif nearest_ball in ball_manager.type_b_balls:
 		return BALL_POTENTIAL_SCALE * maxf(0.0, COLLECT_BALL_B - COLLECT_BALL_B / vision_radius*min_dist)
+	
+	#反比例函数
+	#if nearest_ball in ball_manager.type_a_balls:
+		#return BALL_POTENTIAL_SCALE * COLLECT_BALL_A *min_dist/(min_dist+vision_radius)
+	#elif nearest_ball in ball_manager.type_b_balls:
+		#return BALL_POTENTIAL_SCALE * COLLECT_BALL_B *min_dist/(min_dist+vision_radius)
 	return 0.0
 
 func _process_potential_shaping(_delta: float) -> void:

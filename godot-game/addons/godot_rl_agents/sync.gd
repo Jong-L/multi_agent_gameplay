@@ -26,7 +26,7 @@ var onnx_models: Dictionary
 const MAJOR_VERSION := "0"
 const MINOR_VERSION := "7"
 const DEFAULT_PORT := "11008"
-const DEFAULT_SEED := "1"
+const DEFAULT_SEED := "0"
 var stream: StreamPeerTCP = null
 var connected = false
 var message_center
