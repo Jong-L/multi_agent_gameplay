@@ -5,3 +5,4 @@
 - cnki，一种基于自生成样本学习的奖赏塑形方法：如名
 - [[2012.08824\] Learning to Run with Potential-Based Reward Shaping and Demonstrations from Video Data](https://ar5iv.labs.arxiv.org/html/2012.08824)：奖励塑形的不同势函数对训练速度有差异。
 - [DeepMimic: Example-Guided Deep Reinforcement Learning of Physics-Based Character Skills](https://xbpeng.github.io/projects/DeepMimic/index.html)：奖励设计技巧
+- Deep Reinforcement Learning-Based Mobile Robot Navigation in Unknown Environments：智能体避障方法，射线检测障碍物

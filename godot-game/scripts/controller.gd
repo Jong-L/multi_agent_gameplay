@@ -12,13 +12,13 @@ func _physics_process(delta):
 	#n_time_step=(n_time_step+1)%60
 	#if n_time_step==0:
 		#var obs=get_obs()
-		#if _player.player_id == 0:  
+		#if _player.player_id == 1:  
 			#print("=== Player %d Observations ===" % _player.player_id)
 			#print("  self_state: ", obs.self_state)
 			#print("  nearby_players: ", obs.nearby_players)
 			#print("  nearby_balls: ", obs.nearby_balls)
 			#print("  nearby_enemies: ", obs.nearby_enemies)
-			#print("  map_state: ", obs.map_state,)
+			#print("  map_state: ", obs.map_state)
 	
 
 func reset():
