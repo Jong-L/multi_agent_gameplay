@@ -45,11 +45,11 @@ func _ready() -> void:
 	ai_controller.init(self)#初始化绑定该玩家到控制器
 	EventBus.player_cast_skill.connect(_handle_skill)  # 点击按钮也可以释放技能
 
-func _physics_process(_delta: float) -> void:
+func _physics_process(delta: float) -> void:
 	if is_dead:
 		return
 	
-	_handle_movement()
+	_handle_movement(delta)
 
 func _process(_delta: float) -> void:
 	if ai_controller.needs_reset:
@@ -94,7 +94,7 @@ func set_action(action: int) -> void:#设置待执行动作
 		pending_action = action as Action
 
 #根据 pending_action执行动作
-func _handle_movement() -> void:
+func _handle_movement(delta:float) -> void:
 	is_moving = false#不移动时为false
 	
 	#human模式下操控当前看到的角色
@@ -119,7 +119,8 @@ func _handle_movement() -> void:
 	
 	if velocity.length()>0:
 		is_moving=true
-	move_and_slide()
+	#move_and_slide()
+	move_and_collide(velocity*delta)
 
 func _execute_action() -> void:# 执行非移动动作（攻击/待机）
 	if pending_action == Action.ATTACK:

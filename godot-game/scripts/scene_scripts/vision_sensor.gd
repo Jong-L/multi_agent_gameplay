@@ -38,7 +38,7 @@ func scan(
 		player_pos.x / half_arena,#归一化到[-1,1]
 		player_pos.y / half_arena,
 		player.current_health / player.max_health,#归一化到[0,1]
-		float(player.animated_sprite.flip_h),#是否翻转影响攻击范围
+		int(player.animated_sprite.flip_h),#是否翻转影响攻击范围
 	]
 	# 视野内其他玩家
 	var nearby_players_data: Array = []
@@ -50,19 +50,19 @@ func scan(
 		if other.is_dead:
 			continue
 		
-		var dist := player_pos.distance_to(other.global_position)#距离
+		var dist :float= player_pos.distance_to(other.global_position)#距离
 		if dist > vision_radius:
 			continue
 		
-		var rel := (other.global_position - player_pos) / half_arena#向量距离
+		var rel := (other.global_position - player_pos) / vision_radius#向量距离
 		nearby_players_data.append({
 			"dist": dist,#填充并排序slot时用到，不进入最终观测
 			"slot": [#实际观测特征
-				rel.x,
+				rel.x,#[-1,1]
 				rel.y,
 				other.current_health / other.max_health,#归一化到[0,1]
-				float(other.animated_sprite.flip_h),
-				dist / half_arena,
+				int(other.animated_sprite.flip_h),
+				dist / vision_radius,
 			]
 		})
 
@@ -76,14 +76,14 @@ func scan(
 		var dist := player_pos.distance_to(ball.global_position)
 		if dist > vision_radius:
 			continue
-		var rel := (ball.global_position - player_pos) / half_arena
+		var rel := (ball.global_position - player_pos) / vision_radius
 		nearby_balls_data.append({
 			"dist": dist,
 			"slot": [
 				rel.x,
 				rel.y,
 				1.0 if ball.ball_type == RewardBall.BallType.TYPE_B else 0.0,  # 0=A, 1=B
-				dist / half_arena,
+				dist / vision_radius,
 			]
 		})
 
@@ -99,7 +99,7 @@ func scan(
 		var dist := player_pos.distance_to(enemy.global_position)
 		if dist > vision_radius:
 			continue
-		var rel := (enemy.global_position - player_pos) / half_arena
+		var rel := (enemy.global_position - player_pos) / vision_radius
 		nearby_enemies_data.append({
 			"dist": dist,
 			"slot": [
@@ -107,7 +107,7 @@ func scan(
 				rel.y,
 				enemy.current_health / enemy.max_health,#归一化到[0,1]
 				float(enemy.animated_sprite.flip_h),
-				dist / half_arena,
+				dist / vision_radius,
 			]
 		})
 
