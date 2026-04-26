@@ -16,5 +16,5 @@
 	"ball_potential_scale": 1.0,
 	"ball_potential_mode": "nearest",
 	"center_reward_scale": 0.0,
-	"wall_collision_penalty": 0.05
+	"wall_collision_penalty": 0.5
 }

@@ -5,3 +5,5 @@
 [resource]
 script = ExtResource("1")
 reward_logger_enabled = false
+ray_count = 12
+debug_draw_rays = false

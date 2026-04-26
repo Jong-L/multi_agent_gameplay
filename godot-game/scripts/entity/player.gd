@@ -24,6 +24,7 @@ enum Action {
 var is_moving: bool = false                #期望速度大于零就为true，而非实际速度
 var movement:Vector2=Vector2.ZERO     #键盘输入或智能体动作的期望移动方向                  
 var spawn_position: Vector2
+var last_collison_data: KinematicCollision2D = null  #move_and_collide返回数据
 var pending_action: Action = Action.IDLE # 当前待执行动作
 var _anim_idle: AnimationWrapper
 var _anim_run: AnimationWrapper
@@ -120,7 +121,7 @@ func _handle_movement(delta:float) -> void:
 	if velocity.length()>0:
 		is_moving=true
 	#move_and_slide()
-	move_and_collide(velocity*delta)
+	last_collison_data = move_and_collide(velocity * delta)
 
 func _execute_action() -> void:# 执行非移动动作（攻击/待机）
 	if pending_action == Action.ATTACK:

@@ -9,7 +9,7 @@ func _physics_process(delta):
 	if needs_reset:
 		done=true
 	
-	#n_time_step=(n_time_step+1)%60
+	#n_time_step=(n_time_step+1)%8
 	#if n_time_step==0:
 		#var obs=get_obs()
 		#if _player.player_id == 1:  
@@ -55,7 +55,7 @@ func get_obs_space() -> Dictionary:
 		"nearby_players": {"size": [VisionSensor.MAX_NEARBY_PLAYERS * VisionSensor.PLAYER_SLOT_DIM], "space": "box"},
 		"nearby_balls": {"size": [VisionSensor.MAX_NEARBY_BALLS * VisionSensor.BALL_SLOT_DIM], "space": "box"},
 		"nearby_enemies": {"size": [VisionSensor.MAX_NEARBY_ENEMIES * VisionSensor.ENEMY_SLOT_DIM], "space": "box"},
-		"map_state": {"size": [52], "space": "box"}
+		"map_state": {"size": [play_scene.game_config.ray_count if play_scene.game_config else 32], "space": "box"}
 	}
 
 func set_action(action) -> void:
