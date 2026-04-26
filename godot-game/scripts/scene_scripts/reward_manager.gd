@@ -404,23 +404,18 @@ func calculate_ball_potential(player: Player) -> float:
 	
 	if nearest_ball == null:
 		return 0.0
-	# 指数函数
+
+	#线性函数，终止非0
 	#if nearest_ball in ball_manager.type_a_balls:
-		#return BALL_POTENTIAL_SCALE * COLLECT_BALL_A * exp(-min_dist / vision_radius)
+		#return BALL_POTENTIAL_SCALE * maxf(0.0, COLLECT_BALL_A - COLLECT_BALL_A / vision_radius*min_dist)
 	#elif nearest_ball in ball_manager.type_b_balls:
-		#return BALL_POTENTIAL_SCALE * COLLECT_BALL_B * exp(-min_dist / vision_radius)
-	
-	#线性函数
+		#return BALL_POTENTIAL_SCALE * maxf(0.0, COLLECT_BALL_B - COLLECT_BALL_B / vision_radius*min_dist)
+	#
+	#线性函数，终止状态势函数为0：
 	if nearest_ball in ball_manager.type_a_balls:
-		return BALL_POTENTIAL_SCALE * maxf(0.0, COLLECT_BALL_A - COLLECT_BALL_A / vision_radius*min_dist)
+		return -BALL_POTENTIAL_SCALE * COLLECT_BALL_A / vision_radius*min_dist
 	elif nearest_ball in ball_manager.type_b_balls:
-		return BALL_POTENTIAL_SCALE * maxf(0.0, COLLECT_BALL_B - COLLECT_BALL_B / vision_radius*min_dist)
-	
-	#反比例函数
-	#if nearest_ball in ball_manager.type_a_balls:
-		#return BALL_POTENTIAL_SCALE * COLLECT_BALL_A *min_dist/(min_dist+vision_radius)
-	#elif nearest_ball in ball_manager.type_b_balls:
-		#return BALL_POTENTIAL_SCALE * COLLECT_BALL_B *min_dist/(min_dist+vision_radius)
+		return -BALL_POTENTIAL_SCALE * COLLECT_BALL_B / vision_radius*min_dist
 	return 0.0
 
 func _process_potential_shaping(_delta: float) -> void:
