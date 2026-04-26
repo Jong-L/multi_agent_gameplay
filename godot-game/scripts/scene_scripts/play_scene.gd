@@ -49,6 +49,7 @@ var ray_directions: Array[Vector2] = []  ## 射线方向（单位向量），数
 
 # 射线调试
 var _ray_debug_data: Dictionary = {}  ## {player_id: [{from, to, hit}, ...]}
+var last_map_states: Dictionary = {}  ## 缓存每个玩家上一帧的map_state，供reward_manager使用
 
 func _physics_process(_delta: float) -> void:
 	_update_alive_players_cache()
@@ -487,6 +488,9 @@ func get_obs_for_player(player: Player) -> Dictionary:
 	#obs_dict["self_state"].append(starve_duration/reward_manager.MAX_STARVE_DURATION)
 	# 添加地图状态到观测字典
 	obs_dict["map_state"] = _build_map_state(player)
+	
+	# 缓存当前帧的map_state，供reward_manager使用（下一帧访问时即为上一帧）
+	last_map_states[player.player_id] = obs_dict["map_state"]
 	
 	return obs_dict
 

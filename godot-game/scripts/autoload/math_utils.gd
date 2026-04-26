@@ -3,6 +3,7 @@ extends Node
 ## 数学/随机工具函数单例
 ## 提供项目中通用的随机位置生成、矩形计算等方法
 
+var reward_config = preload("uid://dnh5hksiuuxko") #res://configs/reward_config.tres
 
 ## 在矩形内生成随机位置（留边距避免贴边）
 ## @param rect 目标矩形区域
@@ -43,15 +44,15 @@ func quadrant_rect(bounds: Rect2, extent: Vector2, direction_x: int, direction_y
 ## @param starve_duration 已饥饿的持续时间（秒）
 ## @param func_type 增长函数类型："linear"(线性), "quadratic"(二次), "sqrt"(平方根)
 ## @return 衰减倍率（>= 1.0）
-func starve_rate_multiplier(starve_duration: float, func_type: String = "linear") -> float:
+func starve_rate_multiplier(starve_duration: float, func_type: int) -> float:
 	match func_type:
-		"linear":
+		reward_config.StarveFunc.LNEAR:
 			# 线性增长
 			return 0.1 + starve_duration
-		"quadratic":
+		reward_config.StarveFunc.QUADRATIC:
 			# 二次增长：惩罚加速变重
 			return starve_duration * starve_duration * 0.3
-		"sqrt":
+		reward_config.StarveFunc.SQRT:
 			# 平方根增长：初期快，后期慢
 			return 1.0 + sqrt(starve_duration)
 		_:
