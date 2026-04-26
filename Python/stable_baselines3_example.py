@@ -8,6 +8,7 @@ from typing import Callable
 from stable_baselines3 import PPO
 from stable_baselines3.common.callbacks import CheckpointCallback, BaseCallback
 from stable_baselines3.common.vec_env.vec_monitor import VecMonitor
+from stable_baselines3.common.vec_env.vec_normalize import VecNormalize
 
 from godot_rl.core.utils import can_import
 from godot_rl.wrappers.onnx.stable_baselines_export import export_model_as_onnx
@@ -23,8 +24,8 @@ if can_import("ray"):
 parser = argparse.ArgumentParser(allow_abbrev=False)#全匹配
 parser.add_argument(
     "--env_path",
-    default="godot-game/build/game.exe",
-    # default=None,
+    # default="godot-game/build2/game.exe",
+    default=None,
     type=str,
     help="The Godot binary to use, do not include for in editor training",
 )
@@ -52,8 +53,8 @@ parser.add_argument(
 )
 parser.add_argument(
     "--save_model_path",
-    # default="savedmodels/ball_reward_shaping_exp.zip",
-    default=None,
+    default="savedmodels/normal_reward_test",
+    # default=None,
     type=str,
     help="The path to use for saving the trained sb3 model after training is complete. Saved model can be used later "
     "to resume training. Extension will be set to .zip",
@@ -76,7 +77,7 @@ parser.add_argument(
 )
 parser.add_argument(
     "--timesteps",
-    default=800_000,
+    default=15_000,
     type=int,
     help="The number of environment steps to train for, default is 1_000_000. If resuming from a saved model, "
     "it will continue training for this amount of steps from the saved state without counting previously trained "
@@ -102,14 +103,26 @@ parser.add_argument(
     action="store_true",
     help="If set true, the simulation will be displayed in a window during training. Otherwise "
     "training will run without rendering the simulation. This setting does not apply to in-editor training.",
-    default=False,
+    default=True,
 )
 parser.add_argument("--speedup", default=10, type=int, help="Whether to speed up the physics in the env")
 parser.add_argument(
     "--n_parallel",
-    default=5,
+    default=1,
     type=int,
     help="How many instances of the environment executable to " "launch - requires --env_path to be set if > 1.",
+)
+parser.add_argument(
+    "--reward_norm",
+    action="store_true",
+    help="If set, apply VecNormalize to normalize rewards (and optionally observations).",
+    default=True,
+)
+parser.add_argument(
+    "--obs_norm",
+    action="store_true",
+    help="If set, also normalize observations via VecNormalize (requires --reward_norm).",
+    default=False,
 )
 parser.add_argument("--gamma", default=0.99, type=float, help="Discount factor")
 args, extras = parser.parse_known_args()
@@ -128,6 +141,11 @@ def handle_model_save():
         zip_save_path = pathlib.Path(args.save_model_path).with_suffix(".zip")
         print("Saving model to: " + os.path.abspath(zip_save_path))
         model.save(zip_save_path)
+        # 如果启用了 VecNormalize，同时保存归一化统计数据
+        if args.reward_norm:
+            vecnorm_path = pathlib.Path(args.save_model_path).with_suffix(".vecnormalize.pkl")
+            print("Saving VecNormalize stats to: " + os.path.abspath(vecnorm_path))
+            env.save(vecnorm_path)
 
 
 def close_env():
@@ -179,7 +197,6 @@ class DebugStepCallback(BaseCallback):
         
         return True
 
-
 path_checkpoint = os.path.join(args.experiment_dir, args.experiment_name + "_checkpoints")
 abs_path_checkpoint = os.path.abspath(path_checkpoint)
 
@@ -202,6 +219,17 @@ env = StableBaselinesGodotEnv(
     env_path=args.env_path, show_window=args.viz, seed=args.seed, n_parallel=args.n_parallel, speedup=args.speedup, gamma=args.gamma
 )
 env = VecMonitor(env)
+
+# ============ 奖励归一化（可选） ============
+# VecNormalize 用 running mean/std 对奖励做 z-score 归一化，稳定训练。
+# 用法：
+#   --reward_norm          仅归一化奖励
+#   --reward_norm --obs_norm  同时归一化奖励和观测
+# 不传这两个 flag 则不启用，完全不影响现有行为。
+if args.reward_norm:
+    env = VecNormalize(env, norm_obs=args.obs_norm, norm_reward=True, clip_obs=10.0, clip_reward=10.0)
+    print(f"[VecNormalize] Enabled: reward_norm=True, obs_norm={args.obs_norm}")
+# ============================================
 
 
 # LR schedule code snippet from:
@@ -243,6 +271,15 @@ else:
     path_zip = pathlib.Path(args.resume_model_path)
     print("Loading model: " + os.path.abspath(path_zip))
     model = PPO.load(path_zip, env=env, tensorboard_log=args.experiment_dir)
+    # 如果启用了 VecNormalize，尝试恢复归一化统计数据
+    if args.reward_norm:
+        vecnorm_path = path_zip.with_suffix(".vecnormalize.pkl")
+        if vecnorm_path.exists():
+            print("Loading VecNormalize stats from: " + os.path.abspath(vecnorm_path))
+            env.load(vecnorm_path)
+        else:
+            print(f"WARNING: --reward_norm is set but {vecnorm_path} not found. "
+                  "VecNormalize will start with fresh statistics.")
 
 if args.inference:
     obs = env.reset()

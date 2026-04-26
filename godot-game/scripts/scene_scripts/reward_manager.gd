@@ -411,16 +411,16 @@ func calculate_ball_potential(player: Player) -> float:
 		#return BALL_POTENTIAL_SCALE * COLLECT_BALL_B * exp(-min_dist / vision_radius)
 	
 	#线性函数
-	#if nearest_ball in ball_manager.type_a_balls:
-		#return BALL_POTENTIAL_SCALE * maxf(0.0, COLLECT_BALL_A - COLLECT_BALL_A / vision_radius*min_dist)
-	#elif nearest_ball in ball_manager.type_b_balls:
-		#return BALL_POTENTIAL_SCALE * maxf(0.0, COLLECT_BALL_B - COLLECT_BALL_B / vision_radius*min_dist)
-	#
-	#反比例函数
 	if nearest_ball in ball_manager.type_a_balls:
-		return BALL_POTENTIAL_SCALE * COLLECT_BALL_A *min_dist/(min_dist+vision_radius)
+		return BALL_POTENTIAL_SCALE * maxf(0.0, COLLECT_BALL_A - COLLECT_BALL_A / vision_radius*min_dist)
 	elif nearest_ball in ball_manager.type_b_balls:
-		return BALL_POTENTIAL_SCALE * COLLECT_BALL_B *min_dist/(min_dist+vision_radius)
+		return BALL_POTENTIAL_SCALE * maxf(0.0, COLLECT_BALL_B - COLLECT_BALL_B / vision_radius*min_dist)
+	
+	#反比例函数
+	#if nearest_ball in ball_manager.type_a_balls:
+		#return BALL_POTENTIAL_SCALE * COLLECT_BALL_A *min_dist/(min_dist+vision_radius)
+	#elif nearest_ball in ball_manager.type_b_balls:
+		#return BALL_POTENTIAL_SCALE * COLLECT_BALL_B *min_dist/(min_dist+vision_radius)
 	return 0.0
 
 func _process_potential_shaping(_delta: float) -> void:
@@ -466,33 +466,15 @@ func _process_wall_collision(_delta: float) -> void:
 	if _play_scene == null:
 		return
 
-	for player in _play_scene.players:
+	for player:Player in _play_scene.players:
 		if player.is_dead:
 			continue
 
 		var pid: int = player.player_id
 
-		# 检测是否撞墙（包括左右墙、地板、天花板），并判断移动方向是否导致碰撞
-		var should_penalize: bool = false
-		var player_movement: Vector2 = player.movement
-		
-		if player.is_on_wall_only():
-			# 撞左右墙：只有水平移动（向左/右）才惩罚
-			if abs(player_movement.x) > 0.0:  # 有水平输入
-				should_penalize = true
-		elif player.is_on_floor_only():
-			# 撞地板（下边界）：只有向下移动才惩罚
-			if player_movement.y > 0.0:  # 向下输入
-				should_penalize = true
-		elif player.is_on_ceiling_only():
-			# 撞天花板（上边界）：只有向上移动才惩罚
-			if player_movement.y < -0.0:  # 向上输入
-				should_penalize = true
-
-		if should_penalize and player.is_moving:
-			# 撞墙
-			var wall_penalty: float = WALL_COLLISION_PENALTY
-			add_reward(pid, -wall_penalty, "wall_collision")
+		# 惩罚
+		if player.last_collison_data and player.is_moving:
+			add_reward(pid, -WALL_COLLISION_PENALTY, "wall_collision")
 
 ## ── 重置 ──
 

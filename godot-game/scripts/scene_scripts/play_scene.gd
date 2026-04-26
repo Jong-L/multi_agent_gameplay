@@ -1,4 +1,4 @@
-extends Node
+extends Node2D
 class_name PlayScene
 """
  游戏主场景控制器
@@ -10,6 +10,7 @@ class_name PlayScene
 
 @export var screen_transition: ColorRect # 屏幕过渡遮罩
 @export var pause_menu: PauseMenu	# 暂停菜单
+@export var game_config: GameConfig	# 游戏全局配置
 
 @onready var canvas_layer:CanvasLayer=$CanvasLayer
 @onready var control_node:Control=$CanvasLayer/Control
@@ -37,15 +38,17 @@ var player_health_bars: Array[TextureProgressBar] = []
 var player_spell_bars: Array[SpellBar] = []
 # 视野圆可视化
 var vision_circles: Array[VisionCircle] = []
-var vision_circles_visible: bool = false  # 视野圆是否可见（默认隐藏）
+var vision_circles_visible: bool = false  # 视野圆是否可见
 
 # 地图数据
 var arena_bounds: Rect2 = Rect2()#Grass层表示的的竞技场区域
 var patrol_rect: Rect2 = Rect2()#Road层表示的巡逻区域
 var collision_decoration_positions: Array[Vector2] = []  ## CollisionDecoration 各 tile 的世界坐标
 var arena_length:float#正方形竞技场，只记录边长
+var ray_directions: Array[Vector2] = []  ## 射线方向（单位向量），数量由 game_config.ray_count 决定
 
-var is_resetting:bool=false #四个玩家都执行重置时只重置一次
+# 射线调试
+var _ray_debug_data: Dictionary = {}  ## {player_id: [{from, to, hit}, ...]}
 
 func _physics_process(_delta: float) -> void:
 	_update_alive_players_cache()
@@ -99,6 +102,13 @@ func _init_map_data() -> void:
 	# CollisionDecoration
 	if _collision_deco_layer != null:
 		collision_decoration_positions =MathUtils._tilemap_to_world_positions(_collision_deco_layer)
+	
+	# 初始化射线方向（单位向量），数量由 game_config 决定
+	ray_directions.clear()
+	var _ray_count := game_config.ray_count if game_config else 32
+	for i in _ray_count:
+		var angle := TAU * i / _ray_count  # 弧度，从0开始
+		ray_directions.append(Vector2.RIGHT.rotated(angle))
 	
 	#print("[PlayScene] 地图数据初始化完成")
 	#print("  竞技场边界: %s" % arena_bounds)
@@ -363,9 +373,9 @@ func _update_vision_toggle_highlight() -> void:
 	if btn == null:
 		return
 	if vision_circles_visible:
-		btn.modulate = Color(0.5, 1.0, 0.7)  # 绿色高亮 = 已开启
+		btn.modulate = Color(0.5, 1.0, 0.7)  # 绿色高亮
 	else:
-		btn.modulate = Color(1.0, 1.0, 1.0)   # 白色 = 已关闭
+		btn.modulate = Color(1.0, 1.0, 1.0)   # 白色
 
 # 相机切换按钮回调（由按钮 pressed 信号触发）
 func _on_camera_button_pressed(index: int) -> void:
@@ -384,23 +394,71 @@ func _update_button_highlight(camera_id: int) -> void:
 		else:
 			camera_buttons[i].modulate = Color(1.0, 1.0, 1.0)   # 默认白色
 
-# 构建 map_state（边界距离 + 障碍物相对向量）
+# 构建 map_state（射线检测距离，数量由 game_config.ray_count 决定）
 func _build_map_state(player: Player) -> Array[float]:
 	var map_state: Array[float] = []
 	var player_pos = player.global_position
 	
-	# 4个边界距离[0, 1]
-	map_state.append((player_pos.x - arena_bounds.position.x) / arena_length)
-	map_state.append((arena_bounds.end.x - player_pos.x) / arena_length)
-	map_state.append((player_pos.y - arena_bounds.position.y) / arena_length)
-	map_state.append((arena_bounds.end.y - player_pos.y) / arena_length)
+	# 获取物理空间状态和视野半径
+	var space_state := get_world_2d().direct_space_state
+	var max_distance :float= vision_sensor.vision_radius if vision_sensor else 250.0
 	
-	#障碍物的相对向量 [-1, 1]
-	for deco_pos in collision_decoration_positions:
-		map_state.append((deco_pos.x - player_pos.x) / arena_length)
-		map_state.append((deco_pos.y - player_pos.y) / arena_length)
+	# 射线检测碰撞层
+	var collision_mask := 4
+	
+	var ray_results: Array[Dictionary] = []
+	var _debug := game_config and game_config.debug_draw_rays
+	
+	for dir in ray_directions:
+		var end_pos :Vector2= player_pos + dir * max_distance
+		var query := PhysicsRayQueryParameters2D.create(player_pos, end_pos, collision_mask)
+		var result := space_state.intersect_ray(query)
+		
+		if result.is_empty():
+			# 无碰撞，归一化距离为1.0（最远）
+			map_state.append(1.0)
+			if _debug:
+				ray_results.append({"from": player_pos, "to": end_pos, "hit": false})
+		else:
+			# 有碰撞，归一化距离 = 碰撞距离 / 最大距离
+			var collision_distance :float= player_pos.distance_to(result.position)
+			map_state.append(collision_distance / max_distance)
+			if _debug:
+				ray_results.append({"from": player_pos, "to": result.position, "hit": true})
+	
+	# 存储调试数据并触发重绘
+	if _debug:
+		_ray_debug_data[player.player_id] = ray_results
+		queue_redraw()
 	
 	return map_state
+
+## 射线调试绘制：在 _draw() 中调用，不需要时注释掉此调用即可
+func _draw() -> void:
+	_draw_rays_debug()
+
+## 绘制所有玩家的射线（命中=红色粗线，未命中=玩家色细线）
+func _draw_rays_debug() -> void:
+	if not (game_config and game_config.debug_draw_rays) or _ray_debug_data.is_empty():
+		return
+	var player_colors := {
+		0: Color(0.3, 0.6, 1.0, 0.8),   # Blue
+		1: Color(0.7, 0.7, 0.7, 0.8),   # Black
+		2: Color(1.0, 0.3, 0.3, 0.8),   # Red
+		3: Color(1.0, 1.0, 0.3, 0.8),   # Yellow
+	}
+	for pid in _ray_debug_data:
+		var base_color: Color = player_colors.get(pid, Color.WHITE)
+		var hit_color := Color(1.0, 0.2, 0.2, 0.8)
+		for ray in _ray_debug_data[pid]:
+			var from_local := to_local(ray["from"])
+			var _to_local := to_local(ray["to"])
+			if ray["hit"]:
+				draw_line(from_local, _to_local, hit_color, 2.0)
+				# 在命中点画一个小圆点
+				draw_circle(_to_local, 1.5, Color(1.0, 1.0, 0.0, 0.9))
+			else:
+				draw_line(from_local, _to_local, base_color, 2.0)
 
 #为指定玩家生成观测数据
 func get_obs_for_player(player: Player) -> Dictionary:
@@ -439,8 +497,8 @@ func _apply_actions(actions: Array) -> void:# 将动作数组分发到各玩家
 
 # 处理游戏重置请求
 func _handle_reset() -> void:
-	var time=Time.get_time_string_from_system()
-	print("[PlayScene] 执行游戏重置 at ",time)
+	#var time=Time.get_time_string_from_system()
+	#print("[PlayScene] 执行游戏重置 at ",time)
 	_alive_cache_dirty = true  # 重置后标记缓存脏
 	for p in players:
 		p.current_animation_wrapper = null
