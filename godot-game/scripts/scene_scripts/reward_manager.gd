@@ -74,12 +74,12 @@ func _exit_tree() -> void:
 
 func _physics_process(delta: float) -> void:
 	_game_time += delta
-	_process_starvation(delta)
 	
 	action_repeat_count=(action_repeat_count+1)%_sync_node.action_repeat
 	if action_repeat_count==0:
 		_process_potential_shaping(delta)
 		_process_wall_collision(delta)
+		_process_starvation(delta)
 		for player in _play_scene.players:
 			if player.is_moving:
 				on_player_moved(player)
