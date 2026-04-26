@@ -4,4 +4,4 @@
 
 [resource]
 script = ExtResource("1_y2fv5")
-starve_time = 2.0
+starve_time = 10.0

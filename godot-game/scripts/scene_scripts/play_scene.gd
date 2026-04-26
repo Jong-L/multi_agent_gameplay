@@ -466,7 +466,7 @@ func get_obs_for_player(player: Player) -> Dictionary:
 	if vision_sensor == null or not is_instance_valid(vision_sensor):
 		# 无传感器时返回最小观测
 		return {
-			"self_state": [0.0, 0.0, 0.0, 0.0,0.0],
+			"self_state": [0.0, 0.0, 0.0, 0.0],
 			"nearby_players": [],
 			"nearby_balls": [],
 			"nearby_enemies": [],
@@ -505,16 +505,7 @@ func _handle_reset() -> void:
 	#print("[PlayScene] 执行游戏重置 at ",time)
 	_alive_cache_dirty = true  # 重置后标记缓存脏
 	for p in players:
-		p.current_animation_wrapper = null
-		p.is_dead = false
-		p.position = p.spawn_position
-		p.current_health = p.max_health
-		p.pending_action = Player.Action.IDLE
-		p.last_damage_source = null  # 清除伤害来源记录
-		# 重置所有技能冷却
-		for skill in p.skill_controller.cooldowns.keys():
-			p.skill_controller.cooldowns[skill] = 0.0
-			skill.current_cooldown = 0.0
+		p.reset()
 	
 	for enemy in enemies:
 		enemy.full_reset()
@@ -527,17 +518,10 @@ func _handle_reset() -> void:
 	if reward_manager:
 		reward_manager.reset()
 
-func _reset_player_state(player: Player) -> void:
-	player.current_animation_wrapper = null
-	player.is_dead = false
-	player.position = player.spawn_position
-	player.current_health = player.max_health
-	player.last_damage_source = null  # 清除伤害来源记录
-
 func _reset_with_transition(player:Player)->void:
 	var tween = fade_in()
 	await tween.finished
-	_reset_player_state(player)
+	player.reset()
 	tween = fade_out()
 	await tween.finished
 # 处理玩家死亡信号
@@ -546,7 +530,7 @@ func _on_player_player_died(player: Player) -> void:
 	var is_main_camera=CameraManager.current_camera_id==-1
 	
 	if is_main_camera:
-		_reset_player_state(player)
+		player.reset()
 		return
 	_reset_with_transition(player)
 

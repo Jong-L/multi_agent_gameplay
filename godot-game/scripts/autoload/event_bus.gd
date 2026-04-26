@@ -30,8 +30,8 @@ signal reward_ball_collected(player_id: int, ball_type: int, ball: RewardBall)
 @warning_ignore("unused_signal")
 ## 玩家死亡
 ## @param player: 死亡的玩家实例
-## 连接：RewardManager._on_player_died() (reward_manager.gd:117)
-## 连接：PlayScene._on_player_player_died() (play_scene.gd:446)
+## 连接：RewardManager._on_player_died() 
+## 连接：PlayScene._on_player_player_died()
 signal player_died(player: Player)
 
 @warning_ignore("unused_signal")

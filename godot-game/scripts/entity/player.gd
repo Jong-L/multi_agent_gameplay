@@ -151,6 +151,21 @@ func _on_death() -> void:
 func _get_die_anim() -> AnimationWrapper:
 	return AnimationWrapper.new("die", true)
 
+func reset() -> void:
+	current_animation_wrapper = null
+	is_dead = false
+	position = spawn_position
+	velocity = Vector2.ZERO
+	current_health=max_health
+	is_moving = false
+	movement = Vector2.ZERO
+	pending_action = Action.IDLE
+	last_collison_data = null
+	last_damage_source = null
+	for skill in skill_controller.skills:
+		skill_controller.cooldowns[skill] = 0.0
+		skill.current_cooldown=0.0
+
 func _on_animated_sprite_2d_animation_finished() -> void:
 	if current_animation_wrapper != null and current_animation_wrapper.name == "die":
 		player_died.emit(self)
