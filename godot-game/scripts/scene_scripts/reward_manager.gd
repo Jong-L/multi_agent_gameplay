@@ -3,7 +3,7 @@ class_name RewardManager
 
 " 奖励管理器
  统一管理所有 RL 奖励的发放，奖励计算不嵌入各个游戏逻辑代码
- 读取 configs/reward.json 了解各个事件的奖励数值
+ 读取 configs/reward_config.tres 了解各个事件的奖励数值
  提供奖励变更接口（如 add_reward），各模块调用即可进行奖励更改
 
  监听的信号：
@@ -14,6 +14,7 @@ class_name RewardManager
 
 @export var _sync_node:Sync
 @export var game_config:GameConfig
+@export var reward_config:RewardConfig
 #奖励常量
 var COLLECT_BALL_A: float 
 var COLLECT_BALL_B: float
@@ -28,15 +29,18 @@ var DIED: float
 var STARVE_TIME: float 
 var MAX_STARVE_DURATION:float
 var STARVE_REWARD_DECREASE: float 
-var STARVE_MORE_FUNC: String
+var STARVE_MORE_FUNC: int
 
 #塑形奖励常量
 var BALL_POTENTIAL_SCALE: float      #球吸引势能缩放系数
 var CENTER_REWARD_SCALE: float        #离竞技场中心越近奖励越大（每帧）
-var BALL_POTENTIAL_MODE: String = "nearest"  # 球势能计算模式："nearest"(最近球) 或 "all"(所有视野内球)
+var BALL_POTENTIAL_MODE: int = reward_config.BallPotentialMode.NEAREST  # 球势能计算模式枚举
 
 #撞墙惩罚常量
 var WALL_COLLISION_PENALTY: float  #撞墙时移动惩罚
+
+# 墙壁势能塑形模式枚举：NONE, LINEAR, INVERSE, COLLISION
+var WALL_POTENTIAL_MODE: int = reward_config.WallPotentialMode.NONE
 
 var _play_scene: PlayScene = null
 var _reward_logger: RewardLogger = null
@@ -51,9 +55,6 @@ var _pure_rewards: Dictionary = {}
 
 #累计游戏时间（受 Engine.time_scale 影响），用于饥饿计时
 var _game_time: float = 0.0
-
-#奖励配置文件路径
-const REWARD_CONFIG_PATH: String = "res://configs/reward.json"
 
 # ── 势能塑形系统 ──
 var _prev_potentials: Dictionary = {}  # {player_id: 上帧总势能}
@@ -79,74 +80,34 @@ func _physics_process(delta: float) -> void:
 	if action_repeat_count==0:
 		_process_potential_shaping(delta)
 		_process_wall_collision(delta)
+		for player in _play_scene.players:
+			if player.is_moving:
+				on_player_moved(player)
 		
 	_process_center_shaping(delta)
 	
-	for player in _play_scene.players:
-		if player.is_moving:
-			on_player_moved(player)
-
 #从 JSON 文件加载奖励配置
 func _load_reward_config() -> void:
-	if not FileAccess.file_exists(REWARD_CONFIG_PATH):
-		print("[RewardManager] 奖励配置文件不存在: %s, 使用默认值" % REWARD_CONFIG_PATH)
-		return
-
-	var file := FileAccess.open(REWARD_CONFIG_PATH, FileAccess.READ)
-	if file == null:
-		print("[RewardManager] 无法打开奖励配置文件: %s" % REWARD_CONFIG_PATH)
-		return
-
-	var json_text := file.get_as_text()
-	file.close()
-
-	var json := JSON.new()
-	var error := json.parse(json_text)
-	if error != OK:
-		print("[RewardManager] JSON 解析错误: %s (行 %d)" % [json.get_error_message(), json.get_error_line()])
-		return
-
-	var data: Dictionary = json.data
-
-	# 按键映射到常量
-	if data.has("collect_ball_A"):
-		COLLECT_BALL_A = float(data["collect_ball_A"])
-	if data.has("collect_ball_B"):
-		COLLECT_BALL_B = float(data["collect_ball_B"])
-	if data.has("bear_damage"):
-		BEAR_DAMAGE = float(data["bear_damage"])
-	if data.has("cause_damage_to_enemy"):
-		CAUSE_DAMAGE_TO_ENEMY = float(data["cause_damage_to_enemy"])
-	if data.has("cause_damage_to_player"):
-		CAUSE_DAMAGE_TO_PLAYER = float(data["cause_damage_to_player"])
-	if data.has("kill_enemy"):
-		KILL_ENEMY = float(data["kill_enemy"])
-	if data.has("kill_player"):
-		KILL_PLAYER = float(data["kill_player"])
-	if data.has("run"):
-		RUN = float(data["run"])
-	if data.has("attack"):
-		ATTACK = float(data["attack"])
-	if data.has("died"):
-		DIED = float(data["died"])
-	if data.has("starve_time"):
-		STARVE_TIME = float(data["starve_time"])
-	if data.has("max_starve_duration"):
-		MAX_STARVE_DURATION=float(data["max_starve_duration"])
-	if data.has("starve_reward_decrease"):
-		STARVE_REWARD_DECREASE = float(data["starve_reward_decrease"])
-	if data.has("starve_more_func"):
-		STARVE_MORE_FUNC = str(data["starve_more_func"])
-	if data.has("proximity_to_ball_scale"):
-		BALL_POTENTIAL_SCALE = float(data["proximity_to_ball_scale"])
-	if data.has("ball_potential_scale"):
-		BALL_POTENTIAL_SCALE = float(data["ball_potential_scale"])
-	if data.has("ball_potential_mode"):
-		BALL_POTENTIAL_MODE = str(data["ball_potential_mode"])
-	if data.has("center_reward_scale"):
-		CENTER_REWARD_SCALE = float(data["center_reward_scale"])
-	if data.has("wall_collision_penalty"):
-		WALL_COLLISION_PENALTY = float(data["wall_collision_penalty"])
+	COLLECT_BALL_A = reward_config.collect_ball_A
+	COLLECT_BALL_B = reward_config.collect_ball_B
+	BEAR_DAMAGE = reward_config.bear_damage
+	CAUSE_DAMAGE_TO_ENEMY = reward_config.cause_damage_to_enemy
+	CAUSE_DAMAGE_TO_PLAYER = reward_config.cause_damage_to_player
+	KILL_ENEMY = reward_config.kill_enemy
+	KILL_PLAYER = reward_config.kill_player
+	RUN = reward_config.run
+	ATTACK = reward_config.attack
+	DIED = reward_config.died
+	STARVE_TIME = reward_config.starve_time
+	MAX_STARVE_DURATION = reward_config.max_starve_duration
+	STARVE_REWARD_DECREASE = reward_config.starve_reward_decrease
+	STARVE_MORE_FUNC = reward_config.starve_more_func
+	BALL_POTENTIAL_SCALE = reward_config.ball_potential_scale
+	BALL_POTENTIAL_MODE = reward_config.ball_potential_mode
+	CENTER_REWARD_SCALE = reward_config.center_reward_scale
+	WALL_COLLISION_PENALTY = reward_config.wall_collision_penalty
+	WALL_POTENTIAL_MODE = reward_config.wall_potential_mode
+	
 
 #全局信号连接
 func _connect_signals() -> void:
@@ -344,14 +305,69 @@ func _init_potentials() -> void:
 # 根据 BALL_POTENTIAL_MODE 选择使用最近球势能或所有球势能之和
 func calculate_total_potential(player: Player) -> float:
 	var total_potential:float=0
-	var ball_potential: float
-	if BALL_POTENTIAL_MODE == "all":
+	var ball_potential: float = 0.0
+	
+	# 根据模式计算球势能
+	if BALL_POTENTIAL_MODE == reward_config.BallPotentialMode.ALL:
 		ball_potential = calculate_ball_potential_all(player)
 	else:
+		#print("nearest")
 		ball_potential = calculate_ball_potential(player)
 	
 	total_potential+=ball_potential
+	
+	# 添加墙壁势能（方案一和方案二）
+	if WALL_POTENTIAL_MODE in [reward_config.WallPotentialMode.LINEAR, reward_config.WallPotentialMode.INVERSE]:
+		var wall_potential: float = calculate_wall_potential(player)
+		total_potential += wall_potential
+	
 	return total_potential
+
+# 墙壁势能计算,根据最小射线距离计算墙壁势能
+func calculate_wall_potential(player: Player) -> float:
+	if _play_scene == null:
+		return 0.0
+	
+	var pid: int = player.player_id
+	
+	# 从 PlayScene 的 last_map_states 缓存中获取上一帧的 map_state
+	# 注意：这里获取的是上一帧的 map_state，用于势能计算
+	var map_state:Array = _play_scene.last_map_states.get(pid, [])
+	
+	if map_state.size() == 0:
+		map_state=_play_scene._build_map_state(player)
+		if map_state.size()==0:
+			print("map empty")
+			return 0.0
+	
+	# 找到最小的射线距离（归一化，1.0表示无碰撞）
+	var min_distance_normalized: float = 1.0
+	for distance in map_state:
+		if distance < min_distance_normalized:
+			min_distance_normalized = distance
+	
+	# 如果最小距离为1.0（无碰撞），势能为0
+	if min_distance_normalized >= 1.0:
+		return 0.0
+	
+	# 将归一化距离转换为实际距禿
+	var vision_radius: float = _play_scene.vision_sensor.vision_radius if _play_scene.vision_sensor else 250.0
+	var d_min: float = min_distance_normalized * vision_radius
+	
+	if WALL_POTENTIAL_MODE == reward_config.WallPotentialMode.LINEAR:
+		# 方案一 线性函数 
+		#print("linear")
+		var potential: float = (WALL_COLLISION_PENALTY / vision_radius) * d_min - WALL_COLLISION_PENALTY
+		return potential
+	
+	elif WALL_POTENTIAL_MODE == reward_config.WallPotentialMode.INVERSE:
+		# 方案二：反比例函数 
+		#print("invp")
+		var epsilon: float = 1.0 / WALL_COLLISION_PENALTY
+		var potential: float = -1.0 / (d_min + epsilon)
+		return potential
+	
+	return 0.0
 
 # 球吸引势能计算视野内所有活跃球的势能之和
 func calculate_ball_potential_all(player: Player) -> float:
@@ -406,16 +422,11 @@ func calculate_ball_potential(player: Player) -> float:
 		return 0.0
 
 	#线性函数，终止非0
-	#if nearest_ball in ball_manager.type_a_balls:
-		#return BALL_POTENTIAL_SCALE * maxf(0.0, COLLECT_BALL_A - COLLECT_BALL_A / vision_radius*min_dist)
-	#elif nearest_ball in ball_manager.type_b_balls:
-		#return BALL_POTENTIAL_SCALE * maxf(0.0, COLLECT_BALL_B - COLLECT_BALL_B / vision_radius*min_dist)
-	#
-	#线性函数，终止状态势函数为0：
 	if nearest_ball in ball_manager.type_a_balls:
-		return -BALL_POTENTIAL_SCALE * COLLECT_BALL_A / vision_radius*min_dist
+		return BALL_POTENTIAL_SCALE * maxf(0.0, COLLECT_BALL_A - COLLECT_BALL_A / vision_radius*min_dist)
 	elif nearest_ball in ball_manager.type_b_balls:
-		return -BALL_POTENTIAL_SCALE * COLLECT_BALL_B / vision_radius*min_dist
+		return BALL_POTENTIAL_SCALE * maxf(0.0, COLLECT_BALL_B - COLLECT_BALL_B / vision_radius*min_dist)
+	
 	return 0.0
 
 func _process_potential_shaping(_delta: float) -> void:
@@ -456,8 +467,8 @@ func _process_center_shaping(delta: float) -> void:
 		player.ai_controller.reward += center_reward * delta
 
 ## ── 撞墙惩罚 ──
-# 每帧检测玩家撞墙并应用惩罚
 func _process_wall_collision(_delta: float) -> void:
+	#print(WALL_POTENTIAL_MODE == reward_config.WallPotentialMode.COLLISION)
 	if _play_scene == null:
 		return
 
@@ -467,9 +478,32 @@ func _process_wall_collision(_delta: float) -> void:
 
 		var pid: int = player.player_id
 
-		# 惩罚
+		# 撞墙惩罚
 		if player.last_collison_data and player.is_moving:
-			add_reward(pid, -WALL_COLLISION_PENALTY, "wall_collision")
+			if player.last_collison_data.get_collider() is TileMapLayer:
+				add_reward(pid, -WALL_COLLISION_PENALTY, "wall_collision")  
+		
+		# 方案三距离惩罚
+		if WALL_POTENTIAL_MODE == reward_config.WallPotentialMode.COLLISION:
+			var map_state:Array = _play_scene.last_map_states.get(pid, [])
+			if map_state.size()==0:
+				map_state=_play_scene._build_map_state(player)
+				if map_state.size()==0:
+					print("map_state empty")
+					break
+			# 找到最小的射线距离（归一化，1.0=无碰撞）
+			var min_distance_normalized: float = 1.0
+			for distance in map_state:
+				if distance < min_distance_normalized:
+					min_distance_normalized = distance
+			
+			var epsilon: float = 1.0 / WALL_COLLISION_PENALTY
+			var d_min: float = min_distance_normalized * (_play_scene.vision_sensor.vision_radius if _play_scene.vision_sensor else 250.0)
+			var rd: float = -1.0 / (d_min + epsilon)  
+			
+			#if pid==0:
+				#print("add ",rd)
+			add_reward(pid, rd, "wall_distance")
 
 ## ── 重置 ──
 
