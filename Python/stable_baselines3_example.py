@@ -6,7 +6,7 @@ import time
 from typing import Callable
 
 from stable_baselines3 import PPO
-from stable_baselines3.common.callbacks import CheckpointCallback, BaseCallback
+from stable_baselines3.common.callbacks import CheckpointCallback, BaseCallback, CallbackList
 from stable_baselines3.common.vec_env.vec_monitor import VecMonitor
 from stable_baselines3.common.vec_env.vec_normalize import VecNormalize
 
@@ -24,8 +24,8 @@ if can_import("ray"):
 parser = argparse.ArgumentParser(allow_abbrev=False)#全匹配
 parser.add_argument(
     "--env_path",
-    # default="godot-game/build2/game.exe",
-    default=None,
+    default="godot-game/build/game.exe",
+    # default=None,
     type=str,
     help="The Godot binary to use, do not include for in editor training",
 )
@@ -53,7 +53,7 @@ parser.add_argument(
 )
 parser.add_argument(
     "--save_model_path",
-    default="savedmodels/normal_reward_test",
+    default="savedmodels/model-v1",
     # default=None,
     type=str,
     help="The path to use for saving the trained sb3 model after training is complete. Saved model can be used later "
@@ -77,7 +77,7 @@ parser.add_argument(
 )
 parser.add_argument(
     "--timesteps",
-    default=15_000,
+    default=800_000,
     type=int,
     help="The number of environment steps to train for, default is 1_000_000. If resuming from a saved model, "
     "it will continue training for this amount of steps from the saved state without counting previously trained "
@@ -103,12 +103,12 @@ parser.add_argument(
     action="store_true",
     help="If set true, the simulation will be displayed in a window during training. Otherwise "
     "training will run without rendering the simulation. This setting does not apply to in-editor training.",
-    default=True,
+    default=False,
 )
 parser.add_argument("--speedup", default=10, type=int, help="Whether to speed up the physics in the env")
 parser.add_argument(
     "--n_parallel",
-    default=1,
+    default=5,
     type=int,
     help="How many instances of the environment executable to " "launch - requires --env_path to be set if > 1.",
 )
@@ -117,12 +117,6 @@ parser.add_argument(
     action="store_true",
     help="If set, apply VecNormalize to normalize rewards (and optionally observations).",
     default=True,
-)
-parser.add_argument(
-    "--obs_norm",
-    action="store_true",
-    help="If set, also normalize observations via VecNormalize (requires --reward_norm).",
-    default=False,
 )
 parser.add_argument("--gamma", default=0.99, type=float, help="Discount factor")
 args, extras = parser.parse_known_args()
@@ -197,6 +191,46 @@ class DebugStepCallback(BaseCallback):
         
         return True
 
+
+class VecNormalizeCheckpointCallback(BaseCallback):
+    """在保存检查点时同时保存VecNormalize统计数据"""
+    def __init__(self, checkpoint_callback, save_vecnormalize=True, verbose=0):
+        super().__init__(verbose)
+        self.checkpoint_callback = checkpoint_callback
+        self.save_vecnormalize = save_vecnormalize
+        
+    def _on_step(self) -> bool:
+        continue_training = self.checkpoint_callback.on_step()
+        
+        # 如果checkpoint被触发且需要保存VecNormalize
+        if self.save_vecnormalize and hasattr(self.checkpoint_callback, 'last_save_path'):
+            if self.checkpoint_callback.last_save_path is not None:
+                # 构造VecNormalize统计文件路径
+                checkpoint_path = pathlib.Path(self.checkpoint_callback.last_save_path)
+                vecnorm_path = checkpoint_path.with_suffix('.vecnormalize.pkl')
+                
+                try:
+                    # 找到env中的VecNormalize层并保存
+                    vec_normalize_env = self._find_vec_normalize(self.training_env)
+                    if vec_normalize_env is not None:
+                        vec_normalize_env.save(vecnorm_path)
+                        if self.verbose > 0:
+                            print(f"Saved VecNormalize stats to: {vecnorm_path}")
+                except Exception as e:
+                    print(f"Warning: Failed to save VecNormalize stats: {e}")
+        
+        return continue_training
+    
+    def _find_vec_normalize(self, env):
+        """递归查找环境中的VecNormalize实例"""
+        if isinstance(env, VecNormalize):
+            return env
+        elif hasattr(env, 'venv'):
+            return self._find_vec_normalize(env.venv)
+        elif hasattr(env, 'env'):
+            return self._find_vec_normalize(env.env)
+        return None
+
 path_checkpoint = os.path.join(args.experiment_dir, args.experiment_name + "_checkpoints")
 abs_path_checkpoint = os.path.abspath(path_checkpoint)
 
@@ -227,8 +261,8 @@ env = VecMonitor(env)
 #   --reward_norm --obs_norm  同时归一化奖励和观测
 # 不传这两个 flag 则不启用，完全不影响现有行为。
 if args.reward_norm:
-    env = VecNormalize(env, norm_obs=args.obs_norm, norm_reward=True, clip_obs=10.0, clip_reward=10.0)
-    print(f"[VecNormalize] Enabled: reward_norm=True, obs_norm={args.obs_norm}")
+    env = VecNormalize(env, norm_obs=False, norm_reward=True, clip_reward=10.0)
+    print(f"[VecNormalize] Enabled: reward_norm=True")
 # ============================================
 
 
@@ -276,7 +310,7 @@ else:
         vecnorm_path = path_zip.with_suffix(".vecnormalize.pkl")
         if vecnorm_path.exists():
             print("Loading VecNormalize stats from: " + os.path.abspath(vecnorm_path))
-            env.load(vecnorm_path)
+            env = VecNormalize.load(vecnorm_path, env)
         else:
             print(f"WARNING: --reward_norm is set but {vecnorm_path} not found. "
                   "VecNormalize will start with fresh statistics.")
@@ -299,10 +333,20 @@ else:
             save_path=path_checkpoint,
             name_prefix=args.experiment_name,
         )
-        # 如果有多个回调，使用CallbackList
-        from stable_baselines3.common.callbacks import CallbackList
-        # learn_arguments["callback"] = CallbackList([checkpoint_callback, debug_callback])
-        learn_arguments["callback"] = CallbackList([checkpoint_callback])
+        
+        # 如果启用了VecNormalize，使用自定义回调同时保存统计数据
+        if args.reward_norm:
+            from stable_baselines3.common.callbacks import CallbackList
+            vecnorm_checkpoint_callback = VecNormalizeCheckpointCallback(
+                checkpoint_callback, 
+                save_vecnormalize=True,
+                verbose=1
+            )
+            learn_arguments["callback"] = vecnorm_checkpoint_callback
+            print("[Checkpoint] VecNormalize stats will be saved with each checkpoint")
+        else:
+            # learn_arguments["callback"] = CallbackList([checkpoint_callback, debug_callback])
+            learn_arguments["callback"] = checkpoint_callback
     else:
         # learn_arguments["callback"] = debug_callback
         pass
@@ -321,5 +365,4 @@ else:
         training_duration = training_end_time - training_start_time
         hours = training_duration // 3600
         minutes = (training_duration % 3600) // 60
-        seconds = training_duration % 60
-        print(f"Total training time: {hours}h {minutes}m {seconds}s")
+        print(f"Total training time: {hours}h {minutes}m")
