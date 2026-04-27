@@ -6,20 +6,21 @@ class_name RewardBallManager
 ## 由 PlayScene 在 _ready() 中创建并添加为子节点
 ##
 ## A类球：4个玩家各3个=12个，出生点所在角的子区域内生成，不重生
-## B类球：巡逻区域内最多5个，8秒后重生（位置由 Manager 决定）
+## B类球：巡逻区域内最多5个，5秒后重生（位置由 Manager 决定）
 
 const BALL_A_PER_PLAYER: int = 3
 const BALL_B_MAX_COUNT: int = 5
 const BALL_A_REWARD: float = 1.0
 const BALL_B_REWARD: float = 1.5
-const BALL_B_RESPAWN_DELAY: float = 8.0
-const BALL_A_SPAWN_MARGIN: float = 30.0   ## A类球距子区域边缘的最小距离
+const BALL_B_RESPAWN_DELAY: float = 5.0
+const BALL_A_SPAWN_MARGIN: float = 10.0   ## A类球距子区域边缘的最小距离
+const BALL_A_MIN_DECO_DIST: float = 50.0   ## A类球与障碍物的最小距离
 const BALL_A_EXTENT_RATIO: float = 0.2    ## A类球子区域占竞技场尺寸的比例
-const BALL_A_MIN_SPAWN_DIST: float = 40.0 ## A类球与玩家出生点的最小距离
+const BALL_A_MIN_SPAWN_DIST: float = 20.0 ## A类球与玩家出生点的最小距离
 const BALL_B_SPAWN_MARGIN: float = 10.0   ## B类球距巡逻区边缘的最小距离
 const BALL_B_MIN_PLAYER_DIST: float = 60.0 ## B类球与任何玩家的最小距离
 const BALL_B_MIN_DECO_DIST: float = 30.0   ## B类球与障碍物的最小距离
-const _SAFE_POS_MAX_ATTEMPTS: int = 30     ## 安全位置生成的最大重试次数
+const _SAFE_POS_MAX_ATTEMPTS: int = 50     ## 安全位置生成的最大重试次数
 
 ## 所有奖励球引用（A+B）
 var reward_balls: Array[RewardBall] = []
@@ -65,6 +66,10 @@ func _spawn_type_a_balls() -> void:
 	for player in _play_scene.players:
 		spawn_positions.append(player.spawn_position)
 	
+	var collision_decoration_positions: Array[Vector2] =[]
+	if _play_scene:
+		collision_decoration_positions = _play_scene.collision_decoration_positions
+	
 	for player in _play_scene.players:
 		var spawn_pos := player.spawn_position
 		var center := arena.get_center()
@@ -74,7 +79,7 @@ func _spawn_type_a_balls() -> void:
 		var quadrant := MathUtils.quadrant_rect(arena, extent, dir_x, dir_y)
 		
 		for i in range(BALL_A_PER_PLAYER):
-			var pos := _random_pos_avoiding_spawn(quadrant, BALL_A_SPAWN_MARGIN, spawn_positions, BALL_A_MIN_SPAWN_DIST)
+			var pos := _random_pos_avoiding_spawn_and_deco(quadrant, BALL_A_SPAWN_MARGIN, spawn_positions, BALL_A_MIN_SPAWN_DIST, collision_decoration_positions, BALL_A_MIN_DECO_DIST)
 			var ball := _create_ball(RewardBall.BallType.TYPE_A, BALL_A_REWARD, pos)
 			type_a_balls.append(ball)
 			reward_balls.append(ball)
@@ -183,8 +188,29 @@ func _random_pos_avoiding_spawn(rect: Rect2, margin: float, spawn_positions: Arr
 				break
 		if not too_close:
 			return pos
-	# 退避策略：返回最后一次随机位置
+	# 保底返回
 	return _rng_pos_in_rect(rect, margin)
+
+func _random_pos_avoiding_spawn_and_deco(rect: Rect2, margin: float, spawn_positions: Array[Vector2], min_dist: float, deco_positions: Array[Vector2], min_deco_dist: float) -> Vector2:
+	
+	var pos: Vector2
+	for attempt in range(_SAFE_POS_MAX_ATTEMPTS):
+		pos = _rng_pos_in_rect(rect, margin)
+		var too_close := false
+		for sp in spawn_positions:
+			if pos.distance_to(sp) < min_dist:
+				too_close = true
+				break
+		if not too_close:
+			for deco_pos in deco_positions:
+				if pos.distance_to(deco_pos) < min_deco_dist:
+					too_close = true
+					break
+			if not too_close:
+				return pos
+	# 保底返回
+	print("Failed to find a safe position, returning the last position")
+	return pos
 
 ## 在矩形内生成随机位置
 func _rng_pos_in_rect(rect: Rect2, margin: float) -> Vector2:
