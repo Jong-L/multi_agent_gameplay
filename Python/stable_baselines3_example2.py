@@ -86,21 +86,18 @@ parser.add_argument(
 parser.add_argument(
     "--inference",
     default=False,
-    action="store_true",
     help="Instead of training, it will run inference on a loaded model for --timesteps steps. "
     "Requires --resume_model_path to be set.",
 )
 parser.add_argument(
     "--linear_lr_schedule",
     default=False,
-    action="store_true",
     help="Use a linear LR schedule for training. If set, learning rate will decrease until it reaches 0 at "
     "--timesteps"
     "value. Note: On resuming training, the schedule will reset. If disabled, constant LR will be used.",
 )
 parser.add_argument(
     "--viz",
-    action="store_true",
     help="If set true, the simulation will be displayed in a window during training. Otherwise "
     "training will run without rendering the simulation. This setting does not apply to in-editor training.",
     default=False,
@@ -114,7 +111,6 @@ parser.add_argument(
 )
 parser.add_argument(
     "--reward_norm",
-    action="store_true",
     help="If set, apply VecNormalize to normalize rewards (and optionally observations).",
     default=True,
 )

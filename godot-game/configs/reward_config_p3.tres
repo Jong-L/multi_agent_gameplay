@@ -1,0 +1,7 @@
+[gd_resource type="Resource" script_class="RewardConfig" format=3]
+
+[ext_resource type="Script" path="res://scripts/config/reward_config.gd" id="1_y2fv5"]
+
+[resource]
+script = ExtResource("1_y2fv5")
+starve_time = 10.0
