@@ -32,7 +32,7 @@ var _game_time: float = 0.0
 # ── 势能塑形系统 ──
 var _prev_potentials: Dictionary = {}  # {player_id: 上帧总势能}
 var _shaping_gamma: float=0.99       # 塑形折扣因子
-var action_repeat_count:int=0
+var action_repeat_count:int=1
 
 # ── 配置路由 ──
 
@@ -58,7 +58,7 @@ func _exit_tree() -> void:
 func _physics_process(delta: float) -> void:
 	_game_time += delta
 
-	action_repeat_count=(action_repeat_count+1)%_sync_node.action_repeat
+	#Rewardmanager在同一个物理帧在sync之前执行，让sync获取最新的奖励，之前有一个物理帧的误差，实际获取的是上一个物理帧的奖励
 	if action_repeat_count==0:
 		_process_potential_shaping(delta)
 		_process_wall_collision(delta)
@@ -67,6 +67,8 @@ func _physics_process(delta: float) -> void:
 		for player in _play_scene.players:
 			if player.is_moving:
 				on_player_moved(player)
+
+	action_repeat_count=(action_repeat_count+1)%_sync_node.action_repeat
 
 
 #全局信号连接
@@ -92,7 +94,7 @@ func setup(play_scene: PlayScene) -> void:
 		_play_scene = play_scene
 	_init_starvation_timers()
 	_connect_skill_signals()
-	# 从 Sync 节点获取 gamma（由 Python --gamma 参数传入）
+	# 从 Sync 节点获取 gamma
 	_init_shaping_gamma()
 	_init_potentials()
 	# 根据配置决定是否创建 RewardLogger
@@ -475,7 +477,7 @@ func reset() -> void:
 		_reward_logger.end_episode()
 		_reward_logger.start_episode()
 
-	action_repeat_count=0
+	action_repeat_count=1
 	_init_starvation_timers()
 	_init_potentials()
 	_pure_rewards.clear()

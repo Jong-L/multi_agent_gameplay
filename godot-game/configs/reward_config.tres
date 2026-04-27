@@ -4,4 +4,4 @@
 
 [resource]
 script = ExtResource("1_y2fv5")
-wall_potential_mode = 2
+wall_potential_mode = 3
