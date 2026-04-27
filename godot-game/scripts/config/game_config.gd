@@ -9,3 +9,6 @@ class_name GameConfig
 
 @export_category("LiDAR")
 @export var ray_count: int = 32            #射线检测数量（map_state 维度）
+
+@export_category("Observation")
+@export var use_observation_valid_mask: bool = false
