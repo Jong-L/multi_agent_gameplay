@@ -12,7 +12,7 @@ def main():
     parser.add_argument(
         "--model_path",
         type=str,
-        default="savedmodels/normal_reward_test.zip",
+        default="savedmodels/model-v1.zip",
         help="Path to the saved .zip model file."
     )
     parser.add_argument(

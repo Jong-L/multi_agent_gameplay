@@ -22,6 +22,9 @@ class_name PlayScene
 @onready var vision_sensor: VisionSensor = $VisionSensor
 # 奖励管理器
 @onready var reward_manager: RewardManager = $RewardManager
+#sync节点
+@onready var sync_node: Sync = $Sync
+
 # 所有玩家引用,按 player_id 排序
 var players: Array[Player] = []
 var enemies:Array[Enemy]=[]
@@ -38,6 +41,7 @@ var player_health_bars: Array[TextureProgressBar] = []
 var player_spell_bars: Array[SpellBar] = []
 # 视野圆可视化
 var vision_circles: Array[VisionCircle] = []
+var ray_debug_visible: bool = false
 var vision_circles_visible: bool = false  # 视野圆是否可见
 
 # 地图数据
@@ -49,7 +53,8 @@ var ray_directions: Array[Vector2] = []  ## 射线方向（单位向量），数
 
 # 射线调试
 var _ray_debug_data: Dictionary = {}  ## {player_id: [{from, to, hit}, ...]}
-var last_map_states: Dictionary = {}  ## 缓存每个玩家上一帧的map_state，供reward_manager使用
+var map_states: Dictionary = {}
+var _map_states_physics_frame: int = -1
 
 func _physics_process(_delta: float) -> void:
 	_update_alive_players_cache()
@@ -67,6 +72,19 @@ func _update_alive_players_cache() -> void:
 # 标记缓存脏（供 Player._on_death 调用）
 func mark_alive_cache_dirty() -> void:
 	_alive_cache_dirty = true
+
+#保证地图状态是当前帧的
+func ensure_map_states_current() -> void:
+	var frame := Engine.get_physics_frames()
+	if _map_states_physics_frame == frame:
+		return
+
+	map_states.clear()
+	for p in players:
+		if is_instance_valid(p) and not p.is_dead:
+			map_states[p.player_id] = _build_map_state(p)
+
+	_map_states_physics_frame = frame
 
 func _ready() -> void:
 	#加载地图数据
@@ -158,7 +176,7 @@ func _setup_camera_switch_ui() -> void:
 	var panel = VBoxContainer.new()
 	panel.name = "CameraSwitchPanel"
 	panel.offset_left = start_x
-	panel.offset_top = start_y - 250
+	panel.offset_top = start_y - 310
 	panel.offset_right = start_x + 150.0
 	panel.offset_bottom = start_y
 	panel.add_theme_constant_override("separation", 5)
@@ -201,6 +219,16 @@ func _setup_camera_switch_ui() -> void:
 	vision_btn.pressed.connect(_on_vision_toggle_pressed)
 	panel.add_child(vision_btn)
 	vision_btn.set_owner(self)
+
+	var ray_btn := Button.new()
+	ray_btn.name = "RayToggleButton"
+	ray_btn.text = "射线提示"
+	ray_btn.custom_minimum_size = Vector2(150, 40)
+	ray_btn.tooltip_text = "显示/隐藏射线检测绘制"
+	ray_btn.modulate = Color(1.0, 1.0, 1.0)
+	ray_btn.pressed.connect(_on_ray_toggle_pressed)
+	panel.add_child(ray_btn)
+	ray_btn.set_owner(self)
 
 # 动态创建玩家的血条和技能栏
 func _setup_player_uis() -> void:
@@ -378,6 +406,22 @@ func _update_vision_toggle_highlight() -> void:
 	else:
 		btn.modulate = Color(1.0, 1.0, 1.0)   # 白色
 
+func _on_ray_toggle_pressed() -> void:
+	ray_debug_visible = not ray_debug_visible
+	if not ray_debug_visible:
+		_ray_debug_data.clear()
+	_update_ray_toggle_highlight()
+	queue_redraw()
+
+func _update_ray_toggle_highlight() -> void:
+	var btn: Button = canvas_layer.get_node_or_null("CameraSwitchPanel/RayToggleButton") as Button
+	if btn == null:
+		return
+	if ray_debug_visible:
+		btn.modulate = Color(0.5, 1.0, 0.7)
+	else:
+		btn.modulate = Color(1.0, 1.0, 1.0)
+
 # 相机切换按钮回调（由按钮 pressed 信号触发）
 func _on_camera_button_pressed(index: int) -> void:
 	CameraManager.switch_by_index(index)
@@ -408,7 +452,7 @@ func _build_map_state(player: Player) -> Array[float]:
 	var collision_mask := 4
 	
 	var ray_results: Array[Dictionary] = []
-	var _debug := game_config and game_config.debug_draw_rays
+	var _debug := ray_debug_visible
 	
 	for dir in ray_directions:
 		var end_pos :Vector2= player_pos + dir * max_distance
@@ -440,7 +484,7 @@ func _draw() -> void:
 
 ## 绘制所有玩家的射线（命中=红色粗线，未命中=玩家色细线）
 func _draw_rays_debug() -> void:
-	if not (game_config and game_config.debug_draw_rays) or _ray_debug_data.is_empty():
+	if not ray_debug_visible or _ray_debug_data.is_empty():
 		return
 	var player_colors := {
 		0: Color(0.3, 0.6, 1.0, 0.8),   # Blue
@@ -487,10 +531,11 @@ func get_obs_for_player(player: Player) -> Dictionary:
 	#var starve_duration:float=reward_manager.compute_starve_duration(player)
 	#obs_dict["self_state"].append(starve_duration/reward_manager.MAX_STARVE_DURATION)
 	# 添加地图状态到观测字典
-	obs_dict["map_state"] = _build_map_state(player)
-	
-	# 缓存当前帧的map_state，供reward_manager使用（下一帧访问时即为上一帧）
-	last_map_states[player.player_id] = obs_dict["map_state"]
+	ensure_map_states_current()
+	if map_states.has(player.player_id):
+		obs_dict["map_state"] = map_states[player.player_id]
+	else:
+		obs_dict["map_state"] = _build_map_state(player)
 	
 	return obs_dict
 
@@ -517,6 +562,9 @@ func _handle_reset() -> void:
 	# 重置奖励管理器
 	if reward_manager:
 		reward_manager.reset()
+
+	map_states.clear()
+	_map_states_physics_frame = -1
 
 func _reset_with_transition(player:Player)->void:
 	var tween = fade_in()

@@ -6,3 +6,4 @@
 - [[2012.08824\] Learning to Run with Potential-Based Reward Shaping and Demonstrations from Video Data](https://ar5iv.labs.arxiv.org/html/2012.08824)：奖励塑形的不同势函数对训练速度有差异。
 - [DeepMimic: Example-Guided Deep Reinforcement Learning of Physics-Based Character Skills](https://xbpeng.github.io/projects/DeepMimic/index.html)：奖励设计技巧
 - Deep Reinforcement Learning-Based Mobile Robot Navigation in Unknown Environments：智能体避障方法，射线检测障碍物
+- R. S. Sutton and A. G. Barto, Reinforcement Learning: An Introduction. Cambridge, MA, USA: MIT Press, 2018.：强化学习介绍，说明奖励设计有多么重要

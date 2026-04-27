@@ -32,7 +32,8 @@ var _game_time: float = 0.0
 # ── 势能塑形系统 ──
 var _prev_potentials: Dictionary = {}  # {player_id: 上帧总势能}
 var _shaping_gamma: float=0.99       # 塑形折扣因子
-var action_repeat_count:int=1
+var action_repeat_count:int=0
+var first_frame:bool=true  #第一帧
 
 # ── 配置路由 ──
 
@@ -59,7 +60,7 @@ func _physics_process(delta: float) -> void:
 	_game_time += delta
 
 	#Rewardmanager在同一个物理帧在sync之前执行，让sync获取最新的奖励，之前有一个物理帧的误差，实际获取的是上一个物理帧的奖励
-	if action_repeat_count==0:
+	if action_repeat_count==0 and first_frame==false:
 		_process_potential_shaping(delta)
 		_process_wall_collision(delta)
 		_process_starvation(delta)
@@ -68,6 +69,8 @@ func _physics_process(delta: float) -> void:
 			if player.is_moving:
 				on_player_moved(player)
 
+	if first_frame==true:
+		first_frame=false
 	action_repeat_count=(action_repeat_count+1)%_sync_node.action_repeat
 
 
@@ -293,14 +296,14 @@ func calculate_wall_potential(player: Player) -> float:
 	var cfg := _cfg(player.player_id)
 	var pid: int = player.player_id
 
-	# 从 PlayScene 的 last_map_states 缓存中获取上一帧的 map_state
-	# 注意：这里获取的是上一帧的 map_state，用于势能计算
-	var map_state:Array = _play_scene.last_map_states.get(pid, [])
+	_play_scene.ensure_map_states_current()
+	var map_state:Array = _play_scene.map_states.get(pid, [])
 
 	if map_state.size() == 0:
+		# if player.player_id==0:
+		# 	print("map empty")
 		map_state=_play_scene._build_map_state(player)
 		if map_state.size()==0:
-			print("map empty")
 			return 0.0
 
 	# 找到最小的射线距离（归一化，1.0表示无碰撞）
@@ -408,6 +411,7 @@ func _process_potential_shaping(_delta: float) -> void:
 
 		# 直接写入 AIController.reward
 		player.ai_controller.reward += shaping
+		# add_reward(pid, shaping, "potential_shaping")
 
 		# 缓存当前势能为下一帧使用
 		_prev_potentials[pid] = current_potential
@@ -449,7 +453,8 @@ func _process_wall_collision(_delta: float) -> void:
 
 		# 方案三距离惩罚
 		if cfg.wall_potential_mode == RewardConfig.WallPotentialMode.COLLISION:
-			var map_state:Array = _play_scene.last_map_states.get(pid, [])
+			_play_scene.ensure_map_states_current()
+			var map_state:Array = _play_scene.map_states.get(pid, [])
 			if map_state.size()==0:
 				map_state=_play_scene._build_map_state(player)
 				if map_state.size()==0:
@@ -467,7 +472,8 @@ func _process_wall_collision(_delta: float) -> void:
 			var epsilon: float = 1.0 / cfg.wall_collision_penalty
 			var d_min: float = min_distance_normalized * (_play_scene.vision_sensor.vision_radius if _play_scene.vision_sensor else 250.0)
 			var rd: float = -1.0 / (d_min + epsilon)
-			add_reward(pid, rd, "wall_distance")
+			# add_reward(pid, rd, "wall_distance")
+			player.ai_controller.reward += rd
 
 ## ── 重置 ──
 
@@ -477,7 +483,8 @@ func reset() -> void:
 		_reward_logger.end_episode()
 		_reward_logger.start_episode()
 
-	action_repeat_count=1
+	action_repeat_count=0
+	first_frame=true
 	_init_starvation_timers()
 	_init_potentials()
 	_pure_rewards.clear()
