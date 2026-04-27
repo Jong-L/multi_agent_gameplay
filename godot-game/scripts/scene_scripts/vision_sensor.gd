@@ -29,6 +29,7 @@ func scan(
 	all_enemies: Array[Enemy],
 	all_balls: Array[RewardBall],
 	arena_length: float,
+	use_valid_mask: bool = false,
 ) -> Dictionary:
 	var half_arena := arena_length / 2.0
 	var player_pos := player.global_position
@@ -112,31 +113,35 @@ func scan(
 		})
 
 	# 按距离排序并填充固定维度 slot
-	var nearby_players := _fill_slots(nearby_players_data, MAX_NEARBY_PLAYERS, PLAYER_SLOT_DIM)
-	var nearby_balls := _fill_slots(nearby_balls_data, MAX_NEARBY_BALLS, BALL_SLOT_DIM)
-	var nearby_enemies := _fill_slots(nearby_enemies_data, MAX_NEARBY_ENEMIES, ENEMY_SLOT_DIM)
+	var nearby_players := _fill_slots(nearby_players_data, MAX_NEARBY_PLAYERS, PLAYER_SLOT_DIM, use_valid_mask)
+	var nearby_balls := _fill_slots(nearby_balls_data, MAX_NEARBY_BALLS, BALL_SLOT_DIM, use_valid_mask)
+	var nearby_enemies := _fill_slots(nearby_enemies_data, MAX_NEARBY_ENEMIES, ENEMY_SLOT_DIM, use_valid_mask)
 
-	return {
+	var obs := {
 		"self_state": self_state,
 		"nearby_players": nearby_players,
 		"nearby_balls": nearby_balls,
 		"nearby_enemies": nearby_enemies,
 	}
+	return obs
 
 
 #将视野内实体数据按距离排序后填入固定维度 slot
-static func _fill_slots(data_list: Array, max_slots: int, slot_dim: int) -> Array:
+static func _fill_slots(data_list: Array, max_slots: int, slot_dim: int, use_valid_mask: bool = false) -> Array:
 	# 按距离从近到远排序
 	data_list.sort_custom(func(a, b): return a["dist"] < b["dist"])
 
+	var output_slot_dim := slot_dim + (1 if use_valid_mask else 0)
 	var result: Array = []
-	result.resize(max_slots * slot_dim)
+	result.resize(max_slots * output_slot_dim)
 	result.fill(0.0)
 
 	var count := mini(data_list.size(), max_slots)#奖励球，但正常情况视野内的奖励球不会超过8个
 	for i in count:
 		var slot: Array = data_list[i]["slot"]
 		for j in slot.size():
-			result[i * slot_dim + j] = slot[j]
+			result[i * output_slot_dim + j] = slot[j]
+		if use_valid_mask:
+			result[i * output_slot_dim + slot_dim] = 1.0#有效
 
 	return result

@@ -507,15 +507,17 @@ func _draw_rays_debug() -> void:
 
 #为指定玩家生成观测数据
 func get_obs_for_player(player: Player) -> Dictionary:
+	var use_valid_mask := game_config.use_observation_valid_mask if game_config else false
 	if vision_sensor == null or not is_instance_valid(vision_sensor):
 		# 无传感器时返回最小观测
-		return {
+		var fallback_obs := {
 			"self_state": [0.0, 0.0, 0.0, 0.0],
 			"nearby_players": [],
 			"nearby_balls": [],
 			"nearby_enemies": [],
 			"map_state":[]
 		}
+		return fallback_obs
 	# 收集当前活跃的奖励球
 	var all_balls: Array[RewardBall] = []
 	if reward_ball_manager != null:
@@ -526,6 +528,7 @@ func get_obs_for_player(player: Player) -> Dictionary:
 		enemies,
 		all_balls,
 		arena_length,
+		use_valid_mask,
 	)
 	#添加饥饿时间
 	#var starve_duration:float=reward_manager.compute_starve_duration(player)

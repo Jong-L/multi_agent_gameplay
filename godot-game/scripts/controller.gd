@@ -50,13 +50,23 @@ func get_action_space() -> Dictionary:
 
 ## 覆写 get_obs_space() 以支持多 key 字典观测空间
 func get_obs_space() -> Dictionary:
-	return {
+	var ray_count := 32
+	var use_valid_mask := false
+	if play_scene != null and play_scene.game_config != null:
+		ray_count = play_scene.game_config.ray_count
+		use_valid_mask = play_scene.game_config.use_observation_valid_mask
+	
+	var player_slot_dim := VisionSensor.PLAYER_SLOT_DIM + (1 if use_valid_mask else 0)
+	var ball_slot_dim := VisionSensor.BALL_SLOT_DIM + (1 if use_valid_mask else 0)
+	var enemy_slot_dim := VisionSensor.ENEMY_SLOT_DIM + (1 if use_valid_mask else 0)
+	var obs_space := {
 		"self_state": {"size": [VisionSensor.SELF_STATE_DIM], "space": "box"},
-		"nearby_players": {"size": [VisionSensor.MAX_NEARBY_PLAYERS * VisionSensor.PLAYER_SLOT_DIM], "space": "box"},
-		"nearby_balls": {"size": [VisionSensor.MAX_NEARBY_BALLS * VisionSensor.BALL_SLOT_DIM], "space": "box"},
-		"nearby_enemies": {"size": [VisionSensor.MAX_NEARBY_ENEMIES * VisionSensor.ENEMY_SLOT_DIM], "space": "box"},
-		"map_state": {"size": [play_scene.game_config.ray_count if play_scene.game_config else 32], "space": "box"}
+		"nearby_players": {"size": [VisionSensor.MAX_NEARBY_PLAYERS * player_slot_dim], "space": "box"},
+		"nearby_balls": {"size": [VisionSensor.MAX_NEARBY_BALLS * ball_slot_dim], "space": "box"},
+		"nearby_enemies": {"size": [VisionSensor.MAX_NEARBY_ENEMIES * enemy_slot_dim], "space": "box"},
+		"map_state": {"size": [ray_count], "space": "box"}
 	}
+	return obs_space
 
 func set_action(action) -> void:
 	move_action = action["move_action"]
