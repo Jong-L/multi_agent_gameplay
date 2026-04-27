@@ -33,6 +33,7 @@ var alive_players_cache: Array[Player] = []
 var _alive_cache_dirty: bool = true
 # 奖励球管理器
 var reward_ball_manager: RewardBallManager = null
+var arena_tile_positions: Array[Vector2] = []
 
 # 相机切换按钮组
 var camera_buttons: Array[Button] = []
@@ -110,6 +111,7 @@ func _init_map_data() -> void:
 	# Grass 层（竞技场）
 	if _grass_layer:
 		arena_bounds = MathUtils._tilemap_to_world_rect(_grass_layer)
+		arena_tile_positions = MathUtils._tilemap_to_world_positions(_grass_layer)
 		arena_length=arena_bounds.size[0]
 	else:
 		print("get tile_layer error")
