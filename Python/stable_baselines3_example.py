@@ -54,8 +54,8 @@ parser.add_argument(
 )
 parser.add_argument(
     "--save_model_path",
-    default="savedmodels/model-v1",
-    # default=None,
+    # default="savedmodels/model-v1",
+    default=None,
     type=str,
     help="The path to use for saving the trained sb3 model after training is complete. Saved model can be used later "
     "to resume training. Extension will be set to .zip",
@@ -78,7 +78,7 @@ parser.add_argument(
 )
 parser.add_argument(
     "--timesteps",
-    default=2500_000,
+    default=800_000,
     type=int,
     help="The number of environment steps to train for, default is 1_000_000. If resuming from a saved model, "
     "it will continue training for this amount of steps from the saved state without counting previously trained "
@@ -92,7 +92,7 @@ parser.add_argument(
 )
 parser.add_argument(
     "--linear_lr_schedule",
-    default=True,
+    default=False,
     help="Use a linear LR schedule for training. If set, learning rate will decrease until it reaches 0 at "
     "--timesteps"
     "value. Note: On resuming training, the schedule will reset. If disabled, constant LR will be used.",
@@ -106,7 +106,7 @@ parser.add_argument(
 parser.add_argument("--speedup", default=10, type=int, help="Whether to speed up the physics in the env")
 parser.add_argument(
     "--n_parallel",
-    default=1,
+    default=5,
     type=int,
     help="How many instances of the environment executable to " "launch - requires --env_path to be set if > 1.",
 )

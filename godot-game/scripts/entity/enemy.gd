@@ -18,7 +18,6 @@ enum State {
 @onready var pathfinding: Pathfinding = $Pathfinding
 @onready var _play_scene:PlayScene=$".."
 
-#@export var atk:float=10.0     					
 @export var speed: float = 30                    #追击移动速度
 @export var patrol_speed: float = 20             #巡逻移动速度
 @export var stop_distance: float = 8             #到达判定距离
