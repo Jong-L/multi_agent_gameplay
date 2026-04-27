@@ -26,7 +26,7 @@ func _get_default_log_path() -> String:
 	]
 	# 添加进程ID以区分并行训练的多个环境实例
 	var process_id = OS.get_process_id()
-	return "D:/schoolTour/softwares/multi-agent-gameplay/logs/potential_func_terminal_zero_comparison/lrrs_terminal_zero_%s_pid%d.csv" % [time_str, process_id]
+	return "D:\\schoolTour\\softwares\\multi-agent-gameplay\\logs\\wall_potential_comparison\\invprs_%s_pid%d.csv" % [time_str, process_id]
 
 func _ensure_file_open() -> void:
 	if _file != null:

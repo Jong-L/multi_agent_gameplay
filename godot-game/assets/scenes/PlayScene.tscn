@@ -23,6 +23,11 @@
 [ext_resource type="Resource" uid="uid://1hvro5md7hfv" path="res://configs/game_config.tres" id="22_v1hpo"]
 [ext_resource type="Resource" uid="uid://cilgrxpptw7oy" path="res://configs/reward_config.tres" id="23_p25hk"]
 [ext_resource type="Script" uid="uid://cbscorebd001" path="res://scripts/ui/scoreboard_drawer.gd" id="23_sbdraw"]
+[ext_resource type="Script" uid="uid://dnh5hksiuuxko" path="res://scripts/config/reward_config.gd" id="24_54rql"]
+[ext_resource type="Resource" uid="uid://85pmureakqf0" path="res://configs/reward_config_p0.tres" id="25_eg0d4"]
+[ext_resource type="Resource" path="res://configs/reward_config_p1.tres" id="26_4g37e"]
+[ext_resource type="Resource" path="res://configs/reward_config_p2.tres" id="27_s2mm6"]
+[ext_resource type="Resource" path="res://configs/reward_config_p3.tres" id="28_q3er0"]
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_q2on3"]
 texture = ExtResource("2_lakq1")
@@ -619,7 +624,6 @@ drag_horizontal_enabled = true
 
 [node name="Sync" type="Node" parent="." unique_id=1321988269]
 script = ExtResource("16_r6opt")
-control_mode = 0
 metadata/_custom_type_script = "uid://bmy6w68efk7bl"
 
 [node name="RewardManager" type="Node" parent="." unique_id=1836520612 node_paths=PackedStringArray("_sync_node")]
@@ -627,6 +631,7 @@ script = ExtResource("20_2qkdh")
 _sync_node = NodePath("../Sync")
 game_config = ExtResource("22_v1hpo")
 reward_config = ExtResource("23_p25hk")
+player_reward_configs = Array[ExtResource("24_54rql")]([ExtResource("25_eg0d4"), ExtResource("26_4g37e"), ExtResource("27_s2mm6"), ExtResource("28_q3er0")])
 
 [connection signal="player_died" from="Player_Blue" to="." method="_on_player_player_died"]
 [connection signal="player_died" from="Player_Black" to="." method="_on_player_player_died"]
