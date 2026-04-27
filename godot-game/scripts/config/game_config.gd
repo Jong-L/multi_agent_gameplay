@@ -9,4 +9,3 @@ class_name GameConfig
 
 @export_category("LiDAR")
 @export var ray_count: int = 32            #射线检测数量（map_state 维度）
-@export var debug_draw_rays: bool = true       #射线可视化调试开关
