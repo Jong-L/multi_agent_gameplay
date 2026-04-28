@@ -411,7 +411,7 @@ func _process_potential_shaping(_delta: float) -> void:
 
 		# 直接写入 AIController.reward
 		player.ai_controller.reward += shaping
-		# add_reward(pid, shaping, "potential_shaping")
+		#add_reward(pid, shaping, "potential_shaping")
 
 		# 缓存当前势能为下一帧使用
 		_prev_potentials[pid] = current_potential
