@@ -1,13 +1,13 @@
 63f7b34db8d8cdea90c76aacccf841ec
-::res://::1777369026
-export_presets.cfg::TextFile::-1::1777362142::0::1::::<><><>0<>0<><>::
+::res://::1777387465
+export_presets.cfg::TextFile::-1::1777381874::0::1::::<><><>0<>0<><>::
 icon.svg::CompressedTexture2D::4541085455082572640::1771848123::1777215542::1::::<><><>0<>0<>224bf56117706275fd2108ed6375a969<>res://.godot/imported/icon.svg-218a8f2b3041327d8a5756f3a245f83b.ctex::
 ::res://addons/::1776081641
-::res://addons/godot_rl_agents/::1777215538
+::res://addons/godot_rl_agents/::1777381856
 godot_rl_agents.gd::GDScript::6631589191103270225::1776081641::0::1::::<>EditorPlugin<><>0<>1<><>::
 icon.png::CompressedTexture2D::6647170078918811651::1776081641::1777215538::1::::<><><>0<>0<>9e1afdd3315785f72e1e43ce96da0756<>res://.godot/imported/icon.png-45a871b53434e556222f5901d598ab34.ctex::
 plugin.cfg::TextFile::-1::1776081641::0::1::::<><><>0<>0<><>::
-sync.gd::GDScript::3280155067079846029::1777287131::0::1::::Sync<>Node<><>0<>0<><>::
+sync.gd::GDScript::3280155067079846029::1777381856::0::1::::Sync<>Node<><>0<>0<><>::
 ::res://addons/godot_rl_agents/controller/::1776081642
 ai_controller_2d.gd::GDScript::5342740127198031415::1776081641::0::1::::AIController2D<>Node2D<><>0<>0<><>::
 ai_controller_3d.gd::GDScript::6022549138298087321::1776081641::0::1::::AIController3D<>Node3D<><>0<>0<><>::
@@ -66,12 +66,12 @@ Path_Middle.png::CompressedTexture2D::409809407847814806::1772099372::1777215543
 Path_Tile.png::CompressedTexture2D::4965467884027766906::1772099372::1777215543::1::::<><><>0<>0<>d9bc0cfbf7792b5a111957c463ad8a72<>res://.godot/imported/Path_Tile.png-bb317c958d17543bce4e744cbf1e7501.ctex::
 Water_Middle.png::CompressedTexture2D::4688218169088215205::1772099372::1777215543::1::::<><><>0<>0<>e66e00c50aeed9349e40759f4a17368c<>res://.godot/imported/Water_Middle.png-b12d715a820dbdd4c4bcafd6434e740d.ctex::
 Water_Tile.png::CompressedTexture2D::7032075365160121469::1772099372::1777215543::1::::<><><>0<>0<>4c5df5cfde5c3fc0bc72515c00fa82d9<>res://.godot/imported/Water_Tile.png-d58eb9623468c6df663ba48bb9a8450a.ctex::
-::res://assets/scenes/::1777362132
+::res://assets/scenes/::1777381868
 cpu_hit_particles.tscn::PackedScene::4030934838665518992::1773232671::0::1::::<><><>0<>0<><>::
 enemy.tscn::PackedScene::3859967108673344725::1777350489::0::1::::<><><>0<>0<><>::uid://b6t17dcry64c1::::res://scripts/entity/enemy.gd<>uid://dxe38dagqp7mt::::res://shaders/entity.gdshader<>uid://bmqs2gqdk0osp::::res://assets/Tiny RPG Character Asset Pack v1.03b -Free Soldier&Orc/Tiny RPG Character Asset Pack v1.03 -Free Soldier&Orc/Characters(100x100)/Soldier/Soldier/Soldier-Death.png<>uid://bl25sftvk03dd::::res://scripts/skills/core/skill_controller.gd<>uid://dwe6iyyofvxs4::::res://assets/Tiny RPG Character Asset Pack v1.03b -Free Soldier&Orc/Tiny RPG Character Asset Pack v1.03 -Free Soldier&Orc/Characters(100x100)/Soldier/Soldier/Soldier-Hurt.png<>uid://b1tj45nrn03gn::::res://assets/scenes/skill_scene/skeleton_slash.tscn<>uid://csbmrt4x4m06t::::res://assets/Tiny RPG Character Asset Pack v1.03b -Free Soldier&Orc/Tiny RPG Character Asset Pack v1.03 -Free Soldier&Orc/Characters(100x100)/Soldier/Soldier/Soldier-Idle.png<>uid://cag1vrje7ssyf::::res://scripts/skills/core/skill.gd<>uid://il372d6vhq1p::::res://assets/Tiny RPG Character Asset Pack v1.03b -Free Soldier&Orc/Tiny RPG Character Asset Pack v1.03 -Free Soldier&Orc/Characters(100x100)/Soldier/Soldier/Soldier-Walk.png<>uid://2ushdpd6bm1g::::res://assets/Tiny RPG Character Asset Pack v1.03b -Free Soldier&Orc/Tiny RPG Character Asset Pack v1.03 -Free Soldier&Orc/Characters(100x100)/Soldier/Soldier/Soldier-Attack01.png<>uid://bxou54q031i7a::::res://assets/scenes/cpu_hit_particles.tscn<>uid://4snhks5is2lx::::res://scripts/entity/pathfinding.gd
 home_scene.tscn::PackedScene::2584747012604007361::1776959281::0::1::::<><><>0<>0<><>::uid://dwco0isq6i3j::::res://scripts/utils/hom_scene.gd<>uid://bonpoq2d1n7qy::::res://assets/bg_video-1.ogv<>uid://dhsvksi4no5bl::::res://assets/Tiny Swords (Free Pack)/UI Elements/UI Elements/Buttons/play_regular-removebg-preview.png<>uid://ph7l5hwojyb2::::res://assets/Tiny Swords (Free Pack)/UI Elements/UI Elements/Buttons/play_pressed-removebg-preview.png<>uid://dm6xprr5xvhha::::res://assets/Tiny Swords (Free Pack)/UI Elements/UI Elements/Buttons/exit_regular-removebg-preview.png<>uid://cc257g1ts0n4r::::res://assets/Tiny Swords (Free Pack)/UI Elements/UI Elements/Buttons/exit_pressed-removebg-preview.png
 Player.tscn::PackedScene::6753617555612357581::1777336854::0::1::::<><><>0<>0<><>::uid://dxoggoyf3hh77::::res://scripts/entity/player.gd<>uid://dkxrca8ott2ix::::res://assets/Tiny Swords (Free Pack)/Units/Blue Units/Warrior/Warrior_Idle.png<>uid://dxe38dagqp7mt::::res://shaders/entity.gdshader<>uid://crewl40lp33gs::::res://assets/Tiny Swords (Free Pack)/Units/Blue Units/Warrior/Warrior_Run.png<>uid://bl25sftvk03dd::::res://scripts/skills/core/skill_controller.gd<>uid://ccishdwvfyoyy::::res://assets/Tiny Swords (Free Pack)/Particle FX/Dust_01.png<>uid://ubsuldtsvf4p::::res://assets/scenes/skill_scene/slash.tscn<>uid://dirmui5fqjtt1::::res://scripts/controller.gd<>uid://c4tdbx4y0l32e::::res://assets/healthbarUnder.png<>uid://b4a1530uw0150::::res://scripts/entity/health_bar_on_player.gd<>uid://ccfcowrmeakqg::::res://assets/healthbarProgress.png
-PlayScene.tscn::PackedScene::7869208505085660971::1777362132::0::1::::<><><>0<>0<><>::uid://c7dwahgdbhif1::::res://scripts/scene_scripts/play_scene.gd<>uid://c3hrdhfjuyutx::::res://assets/scenes/Player.tscn<>uid://dc13r4nhhuahn::::res://assets/Cute_Fantasy_Free/Tiles/Cliff_Tile.png<>uid://cc0ksbmff5khe::::res://assets/Cute_Fantasy_Free/Tiles/Path_Tile.png<>uid://btu425h4gph6h::::res://assets/Cute_Fantasy_Free/Outdoor decoration/Outdoor_Decor_Free.png<>uid://bu82dhbuyesfd::::res://assets/scenes/enemy.tscn<>uid://b73ijmsprk70q::::res://assets/Tiny Swords (Free Pack)/Terrain/Tileset/Water Background color.png<>uid://dmsrnmaj4yym0::::res://scripts/utils/spell_bar.gd<>uid://cjsprv40pjd4o::::res://assets/Tiny Swords (Free Pack)/Terrain/Decorations/Rocks in the Water/Water Rocks_01.png<>uid://4gi4tao1s66f::::res://assets/scenes/texture_button.tscn<>uid://3y848vwu75yt::::res://assets/Tiny Swords (Free Pack)/UI Elements/UI Elements/Bars/bigbar(已处理).png<>uid://cugcjtxlhfy1k::::res://assets/Tiny Swords (Free Pack)/UI Elements/UI Elements/Bars/调整血条长度.png<>uid://b4py31tkefxhl::::res://scripts/utils/player_health_bar.gd<>uid://dy0kgjhghnl88::::res://assets/Tiny Swords (Free Pack)/UI Elements/UI Elements/Buttons/esc_regular-removebg-preview.png<>uid://diuarn77ml1cl::::res://assets/Tiny Swords (Free Pack)/UI Elements/UI Elements/Buttons/esc_pressed-removebg-preview.png<>uid://cixywhkot8gx6::::res://scripts/utils/pause_menu.gd<>uid://bmy6w68efk7bl::::res://addons/godot_rl_agents/sync.gd<>uid://dqebgd3akinse::::res://scripts/scene_scripts/vision_sensor.gd<>uid://cylw6obqfylrl::::res://scripts/scene_scripts/reward_perform_button.gd<>uid://bt16p28ccblpg::::res://scripts/scene_scripts/reward_manager.gd<>uid://1hvro5md7hfv::::res://configs/game_config.tres<>uid://cilgrxpptw7oy::::res://configs/reward_config.tres<>uid://cbscorebd001::::res://scripts/ui/scoreboard_drawer.gd<>uid://dnh5hksiuuxko::::res://scripts/config/reward_config.gd<>uid://85pmureakqf0::::res://configs/reward_config_p0.tres<>res://configs/reward_config_p1.tres<>res://configs/reward_config_p2.tres<>res://configs/reward_config_p3.tres
+PlayScene.tscn::PackedScene::7869208505085660971::1777381868::0::1::::<><><>0<>0<><>::uid://c7dwahgdbhif1::::res://scripts/scene_scripts/play_scene.gd<>uid://c3hrdhfjuyutx::::res://assets/scenes/Player.tscn<>uid://dc13r4nhhuahn::::res://assets/Cute_Fantasy_Free/Tiles/Cliff_Tile.png<>uid://cc0ksbmff5khe::::res://assets/Cute_Fantasy_Free/Tiles/Path_Tile.png<>uid://btu425h4gph6h::::res://assets/Cute_Fantasy_Free/Outdoor decoration/Outdoor_Decor_Free.png<>uid://bu82dhbuyesfd::::res://assets/scenes/enemy.tscn<>uid://b73ijmsprk70q::::res://assets/Tiny Swords (Free Pack)/Terrain/Tileset/Water Background color.png<>uid://dmsrnmaj4yym0::::res://scripts/utils/spell_bar.gd<>uid://cjsprv40pjd4o::::res://assets/Tiny Swords (Free Pack)/Terrain/Decorations/Rocks in the Water/Water Rocks_01.png<>uid://4gi4tao1s66f::::res://assets/scenes/texture_button.tscn<>uid://3y848vwu75yt::::res://assets/Tiny Swords (Free Pack)/UI Elements/UI Elements/Bars/bigbar(已处理).png<>uid://cugcjtxlhfy1k::::res://assets/Tiny Swords (Free Pack)/UI Elements/UI Elements/Bars/调整血条长度.png<>uid://b4py31tkefxhl::::res://scripts/utils/player_health_bar.gd<>uid://dy0kgjhghnl88::::res://assets/Tiny Swords (Free Pack)/UI Elements/UI Elements/Buttons/esc_regular-removebg-preview.png<>uid://diuarn77ml1cl::::res://assets/Tiny Swords (Free Pack)/UI Elements/UI Elements/Buttons/esc_pressed-removebg-preview.png<>uid://cixywhkot8gx6::::res://scripts/utils/pause_menu.gd<>uid://bmy6w68efk7bl::::res://addons/godot_rl_agents/sync.gd<>uid://dqebgd3akinse::::res://scripts/scene_scripts/vision_sensor.gd<>uid://cylw6obqfylrl::::res://scripts/scene_scripts/reward_perform_button.gd<>uid://bt16p28ccblpg::::res://scripts/scene_scripts/reward_manager.gd<>uid://1hvro5md7hfv::::res://configs/game_config.tres<>uid://cilgrxpptw7oy::::res://configs/reward_config.tres<>uid://cbscorebd001::::res://scripts/ui/scoreboard_drawer.gd<>uid://dnh5hksiuuxko::::res://scripts/config/reward_config.gd<>uid://85pmureakqf0::::res://configs/reward_config_p0.tres<>res://configs/reward_config_p1.tres<>res://configs/reward_config_p2.tres<>res://configs/reward_config_p3.tres
 RewardBall.tscn::PackedScene::6011703837836939509::1776251660::0::1::::<><><>0<>0<><>::uid://cjmbrmyg1gtvu::::res://scripts/entity/reward_ball.gd
 texture_button.tscn::PackedScene::2048401254607909263::1776156613::0::1::::<><><>0<>0<><>::uid://bi8unrouuqqhu::::res://assets/Tiny Swords (Free Pack)/UI Elements/UI Elements/Buttons/SmallBlueSquareButton_Regular.png<>uid://dgkwpajhs1l8p::::res://assets/Tiny Swords (Free Pack)/UI Elements/UI Elements/Icons/Icon_05.png<>uid://dasjtr4pgc1v2::::res://scripts/utils/spell_button.gd<>uid://dhpngwwbcikg1::::res://assets/Tiny Swords (Free Pack)/UI Elements/UI Elements/Wood Table/WoodTable_Slots.png
 ::res://assets/scenes/skill_scene/::1776503562
@@ -641,14 +641,14 @@ Warrior_Attack2.png::CompressedTexture2D::7073586538729315035::1772544818::17772
 Warrior_Guard.png::CompressedTexture2D::5122531808029597808::1772544818::1777215542::1::::<><><>0<>0<>9488e893094eca039672765f40da14d6<>res://.godot/imported/Warrior_Guard.png-bf90c2fb998360a1c6d2541851592d52.ctex::
 Warrior_Idle.png::CompressedTexture2D::8826463927871327828::1772544818::1777215542::1::::<><><>0<>0<>af86f2caee981729f88676638b189cc3<>res://.godot/imported/Warrior_Idle.png-cd7801d6e0824933baa6edded06ce3bd.ctex::
 Warrior_Run.png::CompressedTexture2D::8092458362867969914::1772544818::1777215542::1::::<><><>0<>0<>b91d6f7ddcef63840241f435d83ec736<>res://.godot/imported/Warrior_Run.png-83ec0fe6b3ae646e84f08f3a1e23804f.ctex::
-::res://build/::1777362142
+::res://build/::1777381874
 index.apple-touch-icon.png::CompressedTexture2D::2207323107353363557::1773548580::1777215542::1::::<><><>0<>0<>4f33d6b4fd3bbeb1de9342eee6533408<>res://.godot/imported/index.apple-touch-icon.png-dcd2c094bfa3f769157f6f2ba930cc56.ctex::
 index.icon.png::CompressedTexture2D::6903671498343453785::1773548580::1777215542::1::::<><><>0<>0<>d368f733ebc5842c856f4a40f15f89b5<>res://.godot/imported/index.icon.png-96098a584bb713a61c1e8aa1df56a1bb.ctex::
 index.png::CompressedTexture2D::4142150333055362816::1773548580::1777215542::1::::<><><>0<>0<>26cd501d7b51b07c266562cf6fb444f6<>res://.godot/imported/index.png-659c11691fe5279cf81f33eb936290a4.ctex::
-::res://build2/::1777352478
-::res://configs/::1777362132
-game_config.tres::Resource/GameConfig::1840666776433273995::1777362132::0::1::::<><><>0<>0<><>::uid://dnfqy4lfxwg7r::::res://scripts/config/game_config.gd
-reward_config.tres::Resource/RewardConfig::5357456164155044212::1777351889::0::1::::<><><>0<>0<><>::uid://dnh5hksiuuxko::::res://scripts/config/reward_config.gd
+::res://build2/::1777380060
+::res://configs/::1777381868
+game_config.tres::Resource/GameConfig::1840666776433273995::1777381868::0::1::::<><><>0<>0<><>::uid://dnfqy4lfxwg7r::::res://scripts/config/game_config.gd
+reward_config.tres::Resource/RewardConfig::5357456164155044212::1777380095::0::1::::<><><>0<>0<><>::uid://dnh5hksiuuxko::::res://scripts/config/reward_config.gd
 reward_config_p0.tres::Resource/RewardConfig::2379096434006049043::1777220526::0::1::::<><><>0<>0<><>::uid://dnh5hksiuuxko::::res://scripts/config/reward_config.gd
 reward_config_p1.tres::Resource/RewardConfig::-1::1777219467::0::1::::<><><>0<>0<><>::res://scripts/config/reward_config.gd
 reward_config_p2.tres::Resource/RewardConfig::-1::1777219469::0::1::::<><><>0<>0<><>::res://scripts/config/reward_config.gd
@@ -664,7 +664,7 @@ float_text.gd::GDScript::7111928330322528408::1776482115::0::1::::<>Node<><>0<>0
 math_utils.gd::GDScript::9065722835086383580::1777216550::0::1::::<>Node<><>0<>0<><>::
 ::res://scripts/config/::1777215351
 game_config.gd::GDScript::8083054778510792297::1777290633::0::1::::GameConfig<>Resource<><>0<>0<><>::
-reward_config.gd::GDScript::8088002226423474846::1777350832::0::1::::RewardConfig<>Resource<><>0<>0<><>::
+reward_config.gd::GDScript::8088002226423474846::1777373517::0::1::::RewardConfig<>Resource<><>0<>0<><>::
 ::res://scripts/entity/::1777136766
 enemy.gd::GDScript::4603133962481511018::1777292695::0::1::::Enemy<>Entity<><>0<>0<><>::
 entity.gd::GDScript::5036182182024248930::1776826352::0::1::::Entity<>CharacterBody2D<><>0<>0<><>::
@@ -672,10 +672,10 @@ health_bar_on_player.gd::GDScript::4423530875038151141::1776499158::0::1::::<>Te
 pathfinding.gd::GDScript::2073437640953786825::1776828419::0::1::::Pathfinding<>Node2D<><>0<>0<><>::
 player.gd::GDScript::8802882532697999892::1777218380::0::1::::Player<>Entity<><>0<>0<><>::
 reward_ball.gd::GDScript::5429405236329484090::1777292562::0::1::::RewardBall<>Area2D<><>0<>0<><>::
-::res://scripts/scene_scripts/::1777303578
+::res://scripts/scene_scripts/::1777381719
 play_scene.gd::GDScript::7026413647976484620::1777298917::0::1::::PlayScene<>Node2D<><>0<>0<><>::
 reward_ball_manager.gd::GDScript::2314794399285788993::1777301101::0::1::::RewardBallManager<>Node<><>0<>0<><>::
-reward_manager.gd::GDScript::3775593017308200024::1777352018::0::1::::RewardManager<>Node<><>0<>0<><>::
+reward_manager.gd::GDScript::3775593017308200024::1777381719::0::1::::RewardManager<>Node<><>0<>0<><>::
 reward_perform_button.gd::GDScript::6481473641051862345::1776574331::0::1::::<>Button<><>0<>0<><>::
 vision_sensor.gd::GDScript::8290612692898523772::1777291729::0::1::::VisionSensor<>Node<><>0<>0<><>::
 ::res://scripts/skills/::1775704233
@@ -697,12 +697,12 @@ skill_manifest.gd::GDScript::9193545068890042817::1776498171::0::1::::SkillManif
 slash_manifest.gd::GDScript::1979293078020963394::1776498171::0::1::::SlashManifest<>SkillManifest<><>0<>0<><>::
 ::res://scripts/ui/::1777003498
 scoreboard_drawer.gd::GDScript::143539304259533496::1777003498::0::1::::ScoreboardDrawer<>Control<><>0<>0<><>::
-::res://scripts/utils/::1777336854
+::res://scripts/utils/::1777380095
 animation_wrapper.gd::GDScript::8658040552075311675::1775717284::0::1::::AnimationWrapper<>RefCounted<><>0<>0<><>::
 hom_scene.gd::GDScript::256130602886250265::1776959234::0::1::::<>Node<><>0<>0<><>::
 pause_menu.gd::GDScript::5383329683900425149::1775717611::0::1::::PauseMenu<>VBoxContainer<><>0<>0<><>::
 player_health_bar.gd::GDScript::4454371420980979645::1776498435::0::1::::<>TextureProgressBar<><>0<>0<><>::
-reward_logger.gd::GDScript::6168985759833246284::1777352485::0::1::::RewardLogger<>RefCounted<><>0<>0<><>::
+reward_logger.gd::GDScript::6168985759833246284::1777380095::0::1::::RewardLogger<>RefCounted<><>0<>0<><>::
 spell_bar.gd::GDScript::8039743009235407041::1776482768::0::1::::SpellBar<>PanelContainer<><>0<>0<><>::
 spell_button.gd::GDScript::7197002172057409629::1776482527::0::1::::SpellButton<>TextureButton<><>0<>0<><>::
 vision_circle.gd::GDScript::6159604478145149816::1776393627::0::1::::VisionCircle<>Node2D<><>0<>0<><>::
