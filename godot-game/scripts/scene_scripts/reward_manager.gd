@@ -288,7 +288,7 @@ func calculate_total_potential(player: Player) -> float:
 
 	return total_potential
 
-# 墙壁势能计算,根据最小射线距离计算墙壁势能
+# 障碍物势能计算
 func calculate_wall_potential(player: Player) -> float:
 	if _play_scene == null:
 		return 0.0
@@ -306,31 +306,96 @@ func calculate_wall_potential(player: Player) -> float:
 		if map_state.size()==0:
 			return 0.0
 
-	# 找到最小的射线距离（归一化，1.0表示无碰撞）
-	var min_distance_normalized: float = 1.0
+	var vision_radius: float = _play_scene.vision_sensor.vision_radius if _play_scene.vision_sensor else 250.0
+	
+	# 过滤出有碰撞的距离值（归一化距离 < 1.0）
+	var collision_distances:Array[float] = []
 	for distance in map_state:
-		if distance < min_distance_normalized:
-			min_distance_normalized = distance
-
-	# 如果最小距离为1.0（无碰撞），势能为0
-	if min_distance_normalized >= 1.0:
+		if distance < 1.0:
+			collision_distances.append(distance)
+	
+	# 如果没有碰撞，返回0势能
+	if collision_distances.is_empty():
 		return 0.0
 
-	# 将归一化距离转换为实际距离
-	var vision_radius: float = _play_scene.vision_sensor.vision_radius if _play_scene.vision_sensor else 250.0
+	# 根据计算模式处理
+	match cfg.wall_potential_calculate_mode:
+		RewardConfig.WallPotentialCalculateMode.MIN:
+			return _calculate_min_potential(collision_distances, cfg, vision_radius)
+		
+		RewardConfig.WallPotentialCalculateMode.WEIGHTED_AVERAGE:
+			return _calculate_weighted_average_potential(collision_distances, cfg, vision_radius)
+		
+		RewardConfig.WallPotentialCalculateMode.AVERAGE:
+			return _calculate_average_potential(collision_distances, cfg, vision_radius)
+	
+	return 0.0
+
+# 计算最小距离的势能
+func _calculate_min_potential(distances: Array[float], cfg: RewardConfig, vision_radius: float) -> float:
+	var min_distance_normalized: float = distances.reduce(func(a, b): return min(a, b), 1.0)
 	var d_min: float = min_distance_normalized * vision_radius
+	
+	match cfg.wall_potential_mode:
+		RewardConfig.WallPotentialMode.LINEAR:
+			return (cfg.wall_collision_penalty / vision_radius) * d_min - cfg.wall_collision_penalty
+		
+		RewardConfig.WallPotentialMode.INVERSE:
+			var epsilon: float = 1.0 / cfg.wall_collision_penalty
+			return -1.0 / (d_min + epsilon)
+		
+		# RewardConfig.WallPotentialMode.EXP:
+	
+	return 0.0
 
-	if cfg.wall_potential_mode == RewardConfig.WallPotentialMode.LINEAR:
-		# 方案一 线性函数
-		var potential: float = (cfg.wall_collision_penalty / vision_radius) * d_min - cfg.wall_collision_penalty
-		return potential
+# 计算加权平均势能
+func _calculate_weighted_average_potential(distances: Array[float], cfg: RewardConfig, vision_radius: float) -> float:
+	if distances.is_empty():
+		return 0.0
+	
+	# 计算权重（1-距离）
+	var weights:Array[float] = []
+	var total_weight: float = 0.0
+	for distance in distances:
+		var weight: float = 1.0 - distance
+		weights.append(weight)
+		total_weight += weight
+	
+	# 归一化权重
+	if total_weight <= 0.0:
+		return 0.0
+	
+	var weighted_sum: float = 0.0
+	for i in range(distances.size()):
+		var normalized_weight: float = weights[i] / total_weight
+		var potential: float = _calculate_single_potential(distances[i], cfg, vision_radius)
+		weighted_sum += normalized_weight * potential
+	
+	return weighted_sum
 
-	elif cfg.wall_potential_mode == RewardConfig.WallPotentialMode.INVERSE:
-		# 方案二：反比例函数
-		var epsilon: float = 1.0 / cfg.wall_collision_penalty
-		var potential: float = -1.0 / (d_min + epsilon)
-		return potential
+# 计算平均势能
+func _calculate_average_potential(distances: Array[float], cfg: RewardConfig, vision_radius: float) -> float:
+	if distances.is_empty():
+		return 0.0
+	
+	var total_potential: float = 0.0
+	for distance in distances:
+		total_potential += _calculate_single_potential(distance, cfg, vision_radius)
+	
+	return total_potential / distances.size()
 
+# 计算单个距离的势能值
+func _calculate_single_potential(distance_normalized: float, cfg: RewardConfig, vision_radius: float) -> float:
+	var d_actual: float = distance_normalized * vision_radius
+	
+	match cfg.wall_potential_mode:
+		RewardConfig.WallPotentialMode.LINEAR:
+			return (cfg.wall_collision_penalty / vision_radius) * d_actual - cfg.wall_collision_penalty
+		
+		RewardConfig.WallPotentialMode.INVERSE:
+			var epsilon: float = 1.0 / cfg.wall_collision_penalty
+			return -1.0 / (d_actual + epsilon)
+	
 	return 0.0
 
 # 球吸引势能计算视野内所有活跃球的势能之和
