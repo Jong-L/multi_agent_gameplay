@@ -54,8 +54,8 @@ parser.add_argument(
 )
 parser.add_argument(
     "--save_model_path",
-    # default="savedmodels/model-v1",
-    default=None,
+    default="savedmodels/valid-mask-model",
+    # default=None,
     type=str,
     help="The path to use for saving the trained sb3 model after training is complete. Saved model can be used later "
     "to resume training. Extension will be set to .zip",
@@ -78,7 +78,7 @@ parser.add_argument(
 )
 parser.add_argument(
     "--timesteps",
-    default=800_000,
+    default=1000_000,
     type=int,
     help="The number of environment steps to train for, default is 1_000_000. If resuming from a saved model, "
     "it will continue training for this amount of steps from the saved state without counting previously trained "

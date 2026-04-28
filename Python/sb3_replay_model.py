@@ -12,7 +12,7 @@ def main():
     parser.add_argument(
         "--model_path",
         type=str,
-        default="savedmodels/model-v1.zip",
+        default="savedmodels/valid-mask-model.zip",
         help="Path to the saved .zip model file."
     )
     parser.add_argument(
@@ -64,11 +64,9 @@ def main():
         n_parallel=1
     )
     env = VecMonitor(env)
-
     # Apply VecNormalize if enabled (must match training configuration)
     if args.reward_norm:
         env = VecNormalize(env, norm_obs=args.obs_norm, norm_reward=True, clip_obs=10.0, clip_reward=10.0)
-        print(f"[VecNormalize] Enabled: reward_norm=True, obs_norm={args.obs_norm}")
         
         # Try to load VecNormalize statistics if available
         vecnorm_path = model_path.with_suffix(".vecnormalize.pkl")
