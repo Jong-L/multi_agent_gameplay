@@ -28,6 +28,7 @@ var _pure_rewards: Dictionary = {}
 
 #累计游戏时间
 var _game_time: float = 0.0
+var _skip_potential_shaping_once: Dictionary = {}
 
 # ── 势能塑形系统 ──
 var _prev_potentials: Dictionary = {}  # {player_id: 上帧总势能}
@@ -187,7 +188,6 @@ func _on_enemy_died(enemy: Enemy) -> void:
 		add_reward(killer.player_id, _cfg(killer.player_id).kill_enemy, "kill_enemy")
 
 ## 玩家死亡处理
-## @param player 死亡的玩家
 func _on_player_died(player: Player) -> void:
 	if _play_scene == null:
 		return
@@ -207,6 +207,10 @@ func _on_reward_ball_collected(player_id: int, ball_type: int, _ball: RewardBall
 		add_reward(player_id, cfg.collect_ball_A, "collect_ball_A")
 	elif ball_type == RewardBall.BallType.TYPE_B:
 		add_reward(player_id, cfg.collect_ball_B, "collect_ball_B")
+	
+	#球被捡到，打上标记
+	if _play_scene != null and player_id >= 0 and player_id < _play_scene.players.size():
+		_skip_potential_shaping_once[player_id] = true
 
 #玩家攻击惩罚,不同skill的惩罚力度不一样，但目前只有一个技能
 func _on_player_skill_activated(entity: Entity, _skill: Skill) -> void:
@@ -261,13 +265,45 @@ func _init_shaping_gamma() -> void:
 # 初始化所有玩家的上一帧势能缓存
 func _init_potentials() -> void:
 	_prev_potentials.clear()
+	_skip_potential_shaping_once.clear()
 	if _play_scene == null:
 		return
 	for player in _play_scene.players:
 		_prev_potentials[player.player_id] = calculate_total_potential(player)
 
+
+func _process_potential_shaping(_delta: float) -> void:
+	if _play_scene == null:
+		return
+
+	for player in _play_scene.players:
+		if player.is_dead:
+			continue
+
+		var pid := player.player_id
+		var current_potential := calculate_total_potential(player)
+		if _skip_potential_shaping_once.get(pid, false):
+			_prev_potentials[pid] = current_potential # 重置势能缓存
+			_skip_potential_shaping_once.erase(pid)
+			continue  # 球被捡到，跳过本次奖励发放
+
+		var prev_potential :float= _prev_potentials.get(pid, 0.0)
+
+		var shaping :float=0.0
+		shaping = _shaping_gamma * current_potential - prev_potential
+
+		# 直接写入 AIController.reward
+		player.ai_controller.reward += shaping
+		#add_reward(pid, shaping, "potential_shaping")
+
+		if pid==0:
+			print("[RewardManager] 势能塑形 shaping = ", shaping, " for player ", pid)
+
+		# 缓存当前势能为下一帧使用
+		_prev_potentials[pid] = current_potential
+
+
 # 计算玩家的总势能
-# 根据 ball_potential_mode 选择使用最近球势能或所有球势能之和
 func calculate_total_potential(player: Player) -> float:
 	var cfg := _cfg(player.player_id)
 	var total_potential:float=0
@@ -282,9 +318,9 @@ func calculate_total_potential(player: Player) -> float:
 	total_potential+=ball_potential
 
 	# 添加墙壁势能（方案一和方案二）
-	if cfg.wall_potential_mode in [RewardConfig.WallPotentialMode.LINEAR, RewardConfig.WallPotentialMode.INVERSE]:
-		var wall_potential: float = calculate_wall_potential(player)
-		total_potential += wall_potential
+	# if cfg.wall_potential_mode in [RewardConfig.WallPotentialMode.LINEAR, RewardConfig.WallPotentialMode.INVERSE]:
+	# 	var wall_potential: float = calculate_wall_potential(player)
+	# 	total_potential += wall_potential
 
 	return total_potential
 
@@ -459,27 +495,6 @@ func calculate_ball_potential(player: Player) -> float:
 		return cfg.ball_potential_scale * maxf(0.0, cfg.collect_ball_B - cfg.collect_ball_B / vision_radius*min_dist)
 
 	return 0.0
-
-func _process_potential_shaping(_delta: float) -> void:
-	if _play_scene == null:
-		return
-
-	for player in _play_scene.players:
-		if player.is_dead:
-			continue
-
-		var pid := player.player_id
-		var current_potential := calculate_total_potential(player)
-		var prev_potential :float= _prev_potentials.get(pid, 0.0)
-
-		var shaping :float= _shaping_gamma * current_potential - prev_potential
-
-		# 直接写入 AIController.reward
-		player.ai_controller.reward += shaping
-		#add_reward(pid, shaping, "potential_shaping")
-
-		# 缓存当前势能为下一帧使用
-		_prev_potentials[pid] = current_potential
 
 ## 中央区域塑形奖励：鼓励智能体进入竞技场中心
 func _process_center_shaping(delta: float) -> void:

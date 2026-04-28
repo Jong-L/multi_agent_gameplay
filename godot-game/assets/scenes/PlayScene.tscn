@@ -148,7 +148,7 @@ texture = ExtResource("4_wxnc3")
 3:11/0 = 0
 
 [sub_resource type="TileSet" id="TileSet_c0hqu"]
-physics_layer_0/collision_layer = 4
+physics_layer_0/collision_layer = 0
 physics_layer_0/collision_mask = 3
 sources/0 = SubResource("TileSetAtlasSource_onnvd")
 
@@ -188,7 +188,7 @@ texture = ExtResource("6_oxvl8")
 3:3/0/physics_layer_0/polygon_0/points = PackedVector2Array(-8, -8, 8, -8, 8, 8, -8, 8)
 
 [sub_resource type="TileSet" id="TileSet_6lokm"]
-physics_layer_0/collision_layer = 4
+physics_layer_0/collision_layer = 0
 sources/0 = SubResource("TileSetAtlasSource_r6opt")
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_o2rb5"]
@@ -631,6 +631,7 @@ player_reward_configs = Array[ExtResource("24_54rql")]([ExtResource("25_eg0d4"),
 
 [node name="Sync" type="Node" parent="." unique_id=1321988269]
 script = ExtResource("16_r6opt")
+control_mode = 0
 metadata/_custom_type_script = "uid://bmy6w68efk7bl"
 
 [connection signal="player_died" from="Player_Blue" to="." method="_on_player_player_died"]

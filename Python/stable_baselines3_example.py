@@ -48,14 +48,15 @@ parser.add_argument("--seed", type=int, default=0, help="seed of the experiment"
 parser.add_argument(
     "--resume_model_path",
     default=None,
+    # default="savedmodels/no-wall-model",
     type=str,
     help="The path to a model file previously saved using --save_model_path or a checkpoint saved using "
     "--save_checkpoints_frequency. Use this to resume training or infer from a saved model.",
 )
 parser.add_argument(
     "--save_model_path",
-    default="savedmodels/valid-mask-model",
-    # default=None,
+    # default="savedmodels/no-wall-model",
+    default=None,
     type=str,
     help="The path to use for saving the trained sb3 model after training is complete. Saved model can be used later "
     "to resume training. Extension will be set to .zip",
@@ -78,7 +79,7 @@ parser.add_argument(
 )
 parser.add_argument(
     "--timesteps",
-    default=1000_000,
+    default=800_000,
     type=int,
     help="The number of environment steps to train for, default is 1_000_000. If resuming from a saved model, "
     "it will continue training for this amount of steps from the saved state without counting previously trained "
@@ -106,7 +107,7 @@ parser.add_argument(
 parser.add_argument("--speedup", default=10, type=int, help="Whether to speed up the physics in the env")
 parser.add_argument(
     "--n_parallel",
-    default=5,
+    default=10,
     type=int,
     help="How many instances of the environment executable to " "launch - requires --env_path to be set if > 1.",
 )
@@ -291,7 +292,7 @@ if args.resume_model_path is None:
     model: PPO = PPO(
         "MultiInputPolicy",
         env,
-        ent_coef=0.0001,
+        ent_coef=0.001,
         verbose=1,
         n_steps=32,
         tensorboard_log=args.experiment_dir,
