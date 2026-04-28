@@ -25,8 +25,8 @@ if can_import("ray"):
 parser = argparse.ArgumentParser(allow_abbrev=False)#全匹配
 parser.add_argument(
     "--env_path",
-    default="godot-game/build/game.exe",
-    # default=None,
+    # default="godot-game/build/game.exe",
+    default=None,
     type=str,
     help="The Godot binary to use, do not include for in editor training",
 )
@@ -107,7 +107,7 @@ parser.add_argument(
 parser.add_argument("--speedup", default=10, type=int, help="Whether to speed up the physics in the env")
 parser.add_argument(
     "--n_parallel",
-    default=10,
+    default=1,
     type=int,
     help="How many instances of the environment executable to " "launch - requires --env_path to be set if > 1.",
 )

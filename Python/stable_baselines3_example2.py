@@ -105,7 +105,7 @@ parser.add_argument(
 parser.add_argument("--speedup", default=10, type=int, help="Whether to speed up the physics in the env")
 parser.add_argument(
     "--n_parallel",
-    default=10,
+    default=5,
     type=int,
     help="How many instances of the environment executable to " "launch - requires --env_path to be set if > 1.",
 )

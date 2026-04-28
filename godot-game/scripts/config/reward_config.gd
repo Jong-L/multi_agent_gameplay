@@ -7,6 +7,7 @@ class_name RewardConfig
 enum WallPotentialMode { NONE, LINEAR, INVERSE, COLLISION ,EXP}
 enum WallPotentialCalculateMode { MIN, WEIGHTED_AVERAGE, AVERAGE }
 enum BallPotentialMode { NEAREST, ALL }
+enum BallPotentialFunc { LINEAR, EXPONENTIAL, INVERSE, DISTANCE_REWARD }
 enum StarveFunc{LNEAR ,QUADRATIC,SQRT}
 
 # 奖励常量
@@ -30,6 +31,8 @@ enum StarveFunc{LNEAR ,QUADRATIC,SQRT}
 # 塑形奖励
 @export var ball_potential_scale: float = 1.0
 @export var ball_potential_mode: BallPotentialMode = BallPotentialMode.NEAREST
+@export var ball_potential_func: BallPotentialFunc = BallPotentialFunc.LINEAR
+@export var distance_reward_scale: float = 0.1
 @export var center_reward_scale: float = 0.0
 
 # 撞墙惩罚

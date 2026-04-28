@@ -210,6 +210,7 @@ func _training_process():
 			just_reset = false
 
 			var reply = {"type": "reset", "obs": obs, "info": info}
+			
 			_send_dict_as_json_message(reply)
 			# this should go straight to getting the action and setting it checked the agent, no need to perform one phyics tick
 			get_tree().set_pause(false)
@@ -222,6 +223,8 @@ func _training_process():
 			#_reset_agents_if_done() # this ensures the new observation is from the next env instance : NEEDS REFACTOR
 
 			var reply = {"type": "step", "obs": obs, "reward": reward, "done": done, "info": info}
+			#print(obs)
+			#print(reward)
 			_send_dict_as_json_message(reply)
 
 		var handled = handle_message()

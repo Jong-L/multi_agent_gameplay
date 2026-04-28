@@ -33,6 +33,8 @@ var _skip_potential_shaping_once: Dictionary = {}
 # ── 势能塑形系统 ──
 var _prev_potentials: Dictionary = {}  # {player_id: 上帧总势能}
 var _shaping_gamma: float=0.99       # 塑形折扣因子
+# 方案4需要缓存上帧距离
+var _prev_ball_distances: Dictionary = {}  # {player_id: 上帧最近球距离}
 var action_repeat_count:int=0
 var first_frame:bool=true  #第一帧
 
@@ -265,11 +267,14 @@ func _init_shaping_gamma() -> void:
 # 初始化所有玩家的上一帧势能缓存
 func _init_potentials() -> void:
 	_prev_potentials.clear()
+	_prev_ball_distances.clear()
 	_skip_potential_shaping_once.clear()
 	if _play_scene == null:
 		return
 	for player in _play_scene.players:
-		_prev_potentials[player.player_id] = calculate_total_potential(player)
+		var pid := player.player_id
+		_prev_potentials[pid] = calculate_total_potential(player)
+		_prev_ball_distances[pid] = _get_nearest_ball_distance(player)
 
 
 func _process_potential_shaping(_delta: float) -> void:
@@ -281,6 +286,13 @@ func _process_potential_shaping(_delta: float) -> void:
 			continue
 
 		var pid := player.player_id
+		var cfg := _cfg(pid)
+
+		# 方案4：距离差奖励，不走 PBRS
+		if cfg.ball_potential_func == RewardConfig.BallPotentialFunc.DISTANCE_REWARD:
+			_process_distance_reward(player, pid, cfg)
+			continue
+
 		var current_potential := calculate_total_potential(player)
 		if _skip_potential_shaping_once.get(pid, false):
 			_prev_potentials[pid] = current_potential # 重置势能缓存
@@ -296,17 +308,40 @@ func _process_potential_shaping(_delta: float) -> void:
 		player.ai_controller.reward += shaping
 		#add_reward(pid, shaping, "potential_shaping")
 
-		if pid==0:
-			print("[RewardManager] 势能塑形 shaping = ", shaping, " for player ", pid)
+		# if pid==0:
+		# 	print("[RewardManager] 势能塑形 shaping = ", shaping, " for player ", pid)
 
 		# 缓存当前势能为下一帧使用
 		_prev_potentials[pid] = current_potential
 
 
+# 方案4：距离差奖励 R = scale * (d_{t-1} - d_t)
+func _process_distance_reward(player: Player, pid: int, cfg: RewardConfig) -> void:
+	var current_dist: float = _get_nearest_ball_distance(player)
+	if current_dist==INF:
+		return
+	var prev_dist: float = _prev_ball_distances.get(pid, current_dist)
+
+	# 球被捡到时跳过
+	if _skip_potential_shaping_once.get(pid, false):
+		_prev_ball_distances[pid] = current_dist
+		_skip_potential_shaping_once.erase(pid)
+		return
+
+	var reward: float = cfg.distance_reward_scale * (prev_dist - current_dist)
+	player.ai_controller.reward += reward
+
+	# if pid == 0:
+	# 	print("[RewardManager] 距离差奖励 = ", reward, " (prev=", prev_dist, ", cur=", current_dist, ") for player ", pid)
+
+	_prev_ball_distances[pid] = current_dist
+
+
 # 计算玩家的总势能
 func calculate_total_potential(player: Player) -> float:
 	var cfg := _cfg(player.player_id)
-	var total_potential:float=0
+
+	var total_potential:float=0.0
 	var ball_potential: float = 0.0
 
 	# 根据模式计算球势能
@@ -317,10 +352,10 @@ func calculate_total_potential(player: Player) -> float:
 
 	total_potential+=ball_potential
 
-	# 添加墙壁势能（方案一和方案二）
-	# if cfg.wall_potential_mode in [RewardConfig.WallPotentialMode.LINEAR, RewardConfig.WallPotentialMode.INVERSE]:
-	# 	var wall_potential: float = calculate_wall_potential(player)
-	# 	total_potential += wall_potential
+	# 添加墙壁势能
+	if cfg.wall_potential_mode in [RewardConfig.WallPotentialMode.LINEAR, RewardConfig.WallPotentialMode.INVERSE]:
+		var wall_potential: float = calculate_wall_potential(player)
+		total_potential += wall_potential
 
 	return total_potential
 
@@ -450,21 +485,22 @@ func calculate_ball_potential_all(player: Player) -> float:
 			continue
 
 		var dist: float = player_pos.distance_to(ball.global_position)
-		# 只计算视野内的球
 		if dist > vision_radius:
 			continue
 
-		# 线性势函数
+		var ball_reward: float
 		if ball in ball_manager.type_a_balls:
-			var potential: float = cfg.ball_potential_scale * maxf(0.0, cfg.collect_ball_A - cfg.collect_ball_A / vision_radius * dist)
-			total_potential += potential
+			ball_reward = cfg.collect_ball_A
 		elif ball in ball_manager.type_b_balls:
-			var potential: float = cfg.ball_potential_scale * maxf(0.0, cfg.collect_ball_B - cfg.collect_ball_B / vision_radius * dist)
-			total_potential += potential
+			ball_reward = cfg.collect_ball_B
+		else:
+			continue
+
+		total_potential += _calculate_single_ball_potential(dist, ball_reward, vision_radius, cfg.ball_potential_scale, cfg.ball_potential_func)
 
 	return total_potential
 
-# 球吸引势能：距离最近活跃球越近，势能越高
+# 最近球势能
 func calculate_ball_potential(player: Player) -> float:
 	if _play_scene == null or _play_scene.reward_ball_manager == null:
 		return 0.0
@@ -488,13 +524,50 @@ func calculate_ball_potential(player: Player) -> float:
 	if nearest_ball == null:
 		return 0.0
 
-	#线性函数，终止非0
+	var ball_reward: float
 	if nearest_ball in ball_manager.type_a_balls:
-		return cfg.ball_potential_scale * maxf(0.0, cfg.collect_ball_A - cfg.collect_ball_A / vision_radius*min_dist)
+		ball_reward = cfg.collect_ball_A
 	elif nearest_ball in ball_manager.type_b_balls:
-		return cfg.ball_potential_scale * maxf(0.0, cfg.collect_ball_B - cfg.collect_ball_B / vision_radius*min_dist)
+		ball_reward = cfg.collect_ball_B
+	else:
+		return 0.0
 
+	return _calculate_single_ball_potential(min_dist, ball_reward, vision_radius, cfg.ball_potential_scale, cfg.ball_potential_func)
+
+
+# 根据配置的势能函数类型，计算单个球的势能值
+func _calculate_single_ball_potential(dist: float, ball_reward: float, vision_radius: float, scale: float, func_type: RewardConfig.BallPotentialFunc) -> float:
+	match func_type:
+		RewardConfig.BallPotentialFunc.LINEAR:
+			# Φ = R_ball - (R_ball / r_vision) * d
+			return scale * maxf(0.0, ball_reward - ball_reward / vision_radius * dist)
+		RewardConfig.BallPotentialFunc.EXPONENTIAL:
+			# Φ = R_ball * exp(-d / r_vision)
+			return scale * ball_reward * exp(-dist / vision_radius)
+		RewardConfig.BallPotentialFunc.INVERSE:
+			# Φ = R_ball * r_vision / (d + r_vision)
+			return scale * ball_reward * vision_radius / (dist + vision_radius)
 	return 0.0
+
+
+# 获取玩家到最近活跃球的距离（用于方案4距离差计算）
+func _get_nearest_ball_distance(player: Player) -> float:
+	if _play_scene == null or _play_scene.reward_ball_manager == null:
+		return INF
+
+	var player_pos := player.global_position
+	var ball_manager: RewardBallManager = _play_scene.reward_ball_manager
+	var vision_radius: float = _play_scene.vision_sensor.vision_radius if _play_scene.vision_sensor else 250.0
+
+	var min_dist: float = INF
+	for ball in ball_manager.reward_balls:
+		if not is_instance_valid(ball) or not ball.is_active:
+			continue
+		var dist: float = player_pos.distance_to(ball.global_position)
+		if dist <= vision_radius and dist < min_dist:
+			min_dist = dist
+
+	return min_dist
 
 ## 中央区域塑形奖励：鼓励智能体进入竞技场中心
 func _process_center_shaping(delta: float) -> void:
@@ -568,3 +641,4 @@ func reset() -> void:
 	_init_starvation_timers()
 	_init_potentials()
 	_pure_rewards.clear()
+	_prev_ball_distances.clear()
