@@ -4,7 +4,8 @@ class_name RewardConfig
 ## 奖励配置文件资源
 
 # 枚举定义
-enum WallPotentialMode { NONE, LINEAR, INVERSE, COLLISION }
+enum WallPotentialMode { NONE, LINEAR, INVERSE, COLLISION ,EXP}
+enum WallPotentialCalculateMode { MIN, WEIGHTED_AVERAGE, AVERAGE }
 enum BallPotentialMode { NEAREST, ALL }
 enum StarveFunc{LNEAR ,QUADRATIC,SQRT}
 
@@ -34,3 +35,4 @@ enum StarveFunc{LNEAR ,QUADRATIC,SQRT}
 # 撞墙惩罚
 @export var wall_collision_penalty: float = 0.5
 @export var wall_potential_mode: WallPotentialMode = WallPotentialMode.NONE
+@export var wall_potential_calculate_mode: WallPotentialCalculateMode = WallPotentialCalculateMode.MIN
