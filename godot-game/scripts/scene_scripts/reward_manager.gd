@@ -364,11 +364,16 @@ func _process_ball_potential_shaping(player: Player, pid: int, cfg: RewardConfig
 	player.ai_controller.reward += shaping
 	_prev_ball_potentials[pid] = current_potential
 
-
 func _process_wall_potential_shaping(player: Player, pid: int, cfg: RewardConfig) -> void:
+	# NONE 模式下无塑形；COLLISION 模式在 _process_wall_collision 中单独处理
+	if cfg.wall_potential_mode in [RewardConfig.WallPotentialMode.NONE, RewardConfig.WallPotentialMode.COLLISION]:
+		return
+
 	var current_potential := _calculate_wall_shaping_potential(player, cfg)
 	var prev_potential: float = _prev_wall_potentials.get(pid, current_potential)
 	var shaping: float = _shaping_gamma * current_potential - prev_potential
+	if pid==1:
+		print(shaping)
 	player.ai_controller.reward += shaping
 	_prev_wall_potentials[pid] = current_potential
 
@@ -402,7 +407,6 @@ func _process_distance_reward(player: Player, pid: int, cfg: RewardConfig) -> vo
 
 	_prev_ball_distances[pid] = current_dist
 
-
 # 奖励球势能
 func _calculate_ball_shaping_potential(player: Player, cfg: RewardConfig) -> float:
 	if cfg.ball_potential_func == RewardConfig.BallPotentialFunc.DISTANCE_REWARD:
@@ -412,73 +416,49 @@ func _calculate_ball_shaping_potential(player: Player, cfg: RewardConfig) -> flo
 	#否则计算最近奖励球势能
 	return calculate_ball_potential(player)
 
-func _calculate_wall_shaping_potential(player: Player, cfg: RewardConfig) -> float:
-	if cfg.wall_potential_mode in [RewardConfig.WallPotentialMode.LINEAR, RewardConfig.WallPotentialMode.INVERSE]:
-		return calculate_wall_potential(player)
-	return 0.0
-
-func calculate_total_potential(player: Player) -> float:
-	var cfg := _cfg(player.player_id)
-
-	var total_potential:float=0.0
-	var ball_potential: float = 0.0
-
-	# 根据模式计算球势能
-	if cfg.ball_potential_mode == RewardConfig.BallPotentialMode.ALL:
-		ball_potential = calculate_ball_potential_all(player)
-	else:
-		ball_potential = calculate_ball_potential(player)
-
-	total_potential+=ball_potential
-
-	# 添加墙壁势能
-	if cfg.wall_potential_mode in [RewardConfig.WallPotentialMode.LINEAR, RewardConfig.WallPotentialMode.INVERSE]:
-		var wall_potential: float = calculate_wall_potential(player)
-		total_potential += wall_potential
-
-	return total_potential
-
-# 障碍物势能计算
-func calculate_wall_potential(player: Player) -> float:
+# 获取玩家到障碍物的碰撞距离列表（已过滤非碰撞射线）
+func _get_collision_distances(player: Player, pid: int) -> Array[float]:
 	if _play_scene == null:
-		return 0.0
-
-	var cfg := _cfg(player.player_id)
-	var pid: int = player.player_id
+		return []
 
 	_play_scene.ensure_map_states_current()
-	var map_state:Array = _play_scene.map_states.get(pid, [])
+	var map_state: Array = _play_scene.map_states.get(pid, [])
 
 	if map_state.size() == 0:
-		# if player.player_id==0:
-		# 	print("map empty")
-		map_state=_play_scene._build_map_state(player)
-		if map_state.size()==0:
-			return 0.0
+		map_state = _play_scene._build_map_state(player)
+		if map_state.size() == 0:
+			return []
 
-	var vision_radius: float = _play_scene.vision_sensor.vision_radius if _play_scene.vision_sensor else 250.0
-	
-	# 过滤出有碰撞的距离值（归一化距离 < 1.0）
-	var collision_distances:Array[float] = []
+	var collision_distances: Array[float] = []
 	for distance in map_state:
 		if distance < 1.0:
 			collision_distances.append(distance)
-	
-	# 如果没有碰撞，返回0势能
+
+	return collision_distances
+
+func _calculate_wall_shaping_potential(player: Player, cfg: RewardConfig) -> float:
+	if cfg.wall_potential_mode in [RewardConfig.WallPotentialMode.LINEAR, RewardConfig.WallPotentialMode.INVERSE]:
+		return _calculate_wall_potential(player, cfg)
+	return 0.0
+
+# 障碍物势能计算
+func _calculate_wall_potential(player: Player, cfg: RewardConfig) -> float:
+	var pid: int = player.player_id
+	var collision_distances := _get_collision_distances(player, pid)
+
 	if collision_distances.is_empty():
 		return 0.0
 
-	# 根据计算模式处理
+	var vision_radius: float = _play_scene.vision_sensor.vision_radius if _play_scene.vision_sensor else 250.0
+
 	match cfg.wall_potential_calculate_mode:
 		RewardConfig.WallPotentialCalculateMode.MIN:
 			return _calculate_min_potential(collision_distances, cfg, vision_radius)
-		
 		RewardConfig.WallPotentialCalculateMode.WEIGHTED_AVERAGE:
 			return _calculate_weighted_average_potential(collision_distances, cfg, vision_radius)
-		
 		RewardConfig.WallPotentialCalculateMode.AVERAGE:
 			return _calculate_average_potential(collision_distances, cfg, vision_radius)
-	
+
 	return 0.0
 
 # 计算最小距离的势能
@@ -687,27 +667,16 @@ func _process_wall_collision(_delta: float) -> void:
 
 		# 方案三距离惩罚
 		if cfg.wall_potential_mode == RewardConfig.WallPotentialMode.COLLISION:
-			_play_scene.ensure_map_states_current()
-			var map_state:Array = _play_scene.map_states.get(pid, [])
-			if map_state.size()==0:
-				map_state=_play_scene._build_map_state(player)
-				if map_state.size()==0:
-					print("map_state empty")
-					return
-			# 找到最小的射线距离
-			var min_distance_normalized: float = 1.0
-			for distance in map_state:
-				if distance < min_distance_normalized:
-					min_distance_normalized = distance
+			var collision_distances := _get_collision_distances(player, pid)
+			if collision_distances.is_empty():
+				continue
 
-			if min_distance_normalized >= 1.0:
-				return
-			
+			var min_distance_normalized: float = collision_distances.reduce(func(a, b): return min(a, b), 1.0)
+			var vision_radius: float = _play_scene.vision_sensor.vision_radius if _play_scene.vision_sensor else 250.0
+			var d_min: float = min_distance_normalized * vision_radius
 			var epsilon: float = 1.0 / cfg.wall_collision_penalty
-			var d_min: float = min_distance_normalized * (_play_scene.vision_sensor.vision_radius if _play_scene.vision_sensor else 250.0)
 			var rd: float = -1.0 / (d_min + epsilon)
-			# add_reward(pid, rd, "wall_distance")
-			player.ai_controller.reward += rd
+			add_reward(pid, rd, "wall_distance")
 
 ## ── 重置 ──
 
