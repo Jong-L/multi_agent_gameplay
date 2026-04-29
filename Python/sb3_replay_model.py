@@ -12,7 +12,7 @@ def main():
     parser.add_argument(
         "--model_path",
         type=str,
-        default="savedmodels/no-wall-distance-rs-model.zip",
+        default="savedmodels\wall-average-model.zip",
         help="Path to the saved .zip model file."
     )
     parser.add_argument(

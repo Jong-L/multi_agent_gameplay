@@ -1,0 +1,4 @@
+scheme,player_0_ball_avg,player_0_wall_avg,player_1_ball_avg,player_1_wall_avg,player_2_ball_avg,player_2_wall_avg,player_3_ball_avg,player_3_wall_avg,all_ball_avg,all_total_avg,all_wall_avg
+Wall Min (Nearest),88.75,12.90,81.36,12.19,81.25,14.77,76.80,32.18,328.16,297.12,72.04
+Wall Average,92.08,13.02,83.25,12.01,84.99,14.26,78.88,36.89,339.20,285.15,76.17
+Wall Weighted Average,87.02,12.44,88.02,12.13,86.89,16.36,75.17,37.80,337.10,285.70,78.73

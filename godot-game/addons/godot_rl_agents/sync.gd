@@ -225,7 +225,7 @@ func _training_process():
 			var reply = {"type": "step", "obs": obs, "reward": reward, "done": done, "info": info}
 			#print(obs)
 			
-			print(reward)
+			#print(reward)
 			_send_dict_as_json_message(reply)
 
 		var handled = handle_message()
