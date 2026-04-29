@@ -5,7 +5,7 @@ extends Node
 ## 负责计算以指定玩家为圆心的视野范围内所有实体信息
 ## 将视野内实体信息编码为固定维度的字典观测数据
 
-@export var vision_radius: float = 250.0  ## 视野半径（像素）
+@export var vision_radius: float  ## 视野半径（像素）
 
 ## ---- 槽位常量 ----
 ## 与场景中实际实体数量对应，修改时需同步更新 controller.gd 的 get_obs_space()
