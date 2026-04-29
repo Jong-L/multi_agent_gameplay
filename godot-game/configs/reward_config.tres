@@ -4,6 +4,5 @@
 
 [resource]
 script = ExtResource("1_y2fv5")
-ball_potential_func = 3
-wall_potential_mode = 1
+wall_potential_mode = 2
 wall_potential_calculate_mode = 2

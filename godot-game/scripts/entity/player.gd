@@ -51,6 +51,12 @@ func _physics_process(delta: float) -> void:
 		return
 	
 	_handle_movement(delta)
+	#奖励标签（仅在 reward 值变化时更新）
+	if CameraManager.current_camera_id!=-1:
+		var current_reward: float = ai_controller.reward
+		if abs(current_reward - _last_displayed_reward) > 0.000001:
+			reward_label.text = String.num(current_reward, 6)
+			_last_displayed_reward = current_reward
 
 func _process(_delta: float) -> void:
 	if ai_controller.needs_reset:
@@ -62,13 +68,6 @@ func _process(_delta: float) -> void:
 	_handle_animation()
 	_execute_action()
 	
-	
-	#奖励标签（仅在 reward 值变化时更新）
-	if CameraManager.current_camera_id!=-1:
-		var current_reward: float = ai_controller.reward
-		if abs(current_reward - _last_displayed_reward) > 0.000001:
-			reward_label.text = String.num(current_reward, 6)
-			_last_displayed_reward = current_reward
 
 func _apply_skin_color() -> void:#根据skin_color设置使用的材质
 	if skin_color == "Blue":
