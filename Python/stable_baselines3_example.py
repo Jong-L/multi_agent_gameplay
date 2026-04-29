@@ -55,7 +55,7 @@ parser.add_argument(
 )
 parser.add_argument(
     "--save_model_path",
-    default="savedmodels/no-wall-distance-rs-model",
+    default="savedmodels/wall-weighted-average-model",
     # default=None,
     type=str,
     help="The path to use for saving the trained sb3 model after training is complete. Saved model can be used later "
