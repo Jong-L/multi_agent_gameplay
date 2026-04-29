@@ -53,7 +53,7 @@ parser.add_argument(
 )
 parser.add_argument(
     "--save_model_path",
-    default="savedmodels/wall-average-model",
+    default="savedmodels/long-train-wall-distance-penalty-model",
     # default=None,
     type=str,
     help="The path to use for saving the trained sb3 model after training is complete. Saved model can be used later "
@@ -77,7 +77,7 @@ parser.add_argument(
 )
 parser.add_argument(
     "--timesteps",
-    default=1000_000,
+    default=6000_000,
     type=int,
     help="The number of environment steps to train for, default is 1_000_000. If resuming from a saved model, "
     "it will continue training for this amount of steps from the saved state without counting previously trained "

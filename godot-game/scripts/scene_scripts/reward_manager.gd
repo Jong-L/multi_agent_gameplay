@@ -372,8 +372,8 @@ func _process_wall_potential_shaping(player: Player, pid: int, cfg: RewardConfig
 	var current_potential := _calculate_wall_shaping_potential(player, cfg)
 	var prev_potential: float = _prev_wall_potentials.get(pid, current_potential)
 	var shaping: float = _shaping_gamma * current_potential - prev_potential
-	if pid==1:
-		print(shaping)
+	#if pid==0:
+		#print(shaping)
 	player.ai_controller.reward += shaping
 	_prev_wall_potentials[pid] = current_potential
 
