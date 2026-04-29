@@ -1,36 +1,29 @@
-import gymnasium as gym
+from ray.rllib.algorithms.ppo import PPOConfig
+from ray.rllib.connectors.env_to_module import FlattenObservations
 
-from stable_baselines3 import DQN
-from stable_baselines3.common.evaluation import evaluate_policy
+# Configure the algorithm.
+config = (
+    PPOConfig()
+    .environment("Taxi-v3")
+    .env_runners(
+        num_env_runners=2,
+        # Observations are discrete (ints) -> We need to flatten (one-hot) them.
+        env_to_module_connector=lambda env: FlattenObservations(),
+    )
+    .evaluation(evaluation_num_env_runners=1)
+)
 
+from pprint import pprint
 
-# Create environment
-env = gym.make("LunarLander-v3", render_mode="rgb_array")
+# Build the algorithm.
+algo = config.build_algo()
 
-# Instantiate the agent
-model = DQN("MlpPolicy", env, verbose=1)
-# Train the agent and display a progress bar
-model.learn(total_timesteps=int(1e5), progress_bar=True)
-# Save the agent
-model.save("dqn_lunar")
-del model  # delete trained model to demonstrate loading
+# Train it for 5 iterations ...
+for _ in range(5):
+    pprint(algo.train())
 
-# Load the trained agent
-# NOTE: if you have loading issue, you can pass `print_system_info=True`
-# to compare the system on which the model was trained vs the current one
-# model = DQN.load("dqn_lunar", env=env, print_system_info=True)
-model = DQN.load("dqn_lunar", env=env)
+# ... and evaluate it.
+pprint(algo.evaluate())
 
-# Evaluate the agent
-# NOTE: If you use wrappers with your environment that modify rewards,
-#       this will be reflected here. To evaluate with original rewards,
-#       wrap the environment in a "Monitor" wrapper before other wrappers.
-mean_reward, std_reward = evaluate_policy(model, model.get_env(), n_eval_episodes=10)
-
-# Enjoy trained agent
-vec_env = model.get_env()
-obs = vec_env.reset()
-for i in range(1000):
-    action, _states = model.predict(obs, deterministic=True)
-    obs, rewards, dones, info = vec_env.step(action)
-    vec_env.render("human")
+# Release the algo's resources (remote actors, like EnvRunners and Learners).
+algo.stop()

@@ -1,0 +1,3 @@
+mask_type,mask_name,mean_total_total_score,mean_total_ball_score,max_episodes,player_0_mean_total_score,player_0_mean_ball_score,player_1_mean_total_score,player_1_mean_ball_score,player_2_mean_total_score,player_2_mean_ball_score,player_3_mean_total_score,player_3_mean_ball_score
+no_valid_mask,No Valid Mask,254.6615,313.66,200,75.23435,86.91,72.4941,81.605,65.92845,77.34,41.0046,67.805
+use_valid_mask,Use Valid Mask,279.83604999999994,300.885,200,77.5586,78.545,73.26610000000001,72.865,68.2179,73.005,60.79344999999999,76.47
