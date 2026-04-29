@@ -4,6 +4,5 @@
 
 [resource]
 script = ExtResource("1")
-reward_logger_enabled = false
 ray_count = 24
 use_observation_valid_mask = true

@@ -631,7 +631,7 @@ player_reward_configs = Array[ExtResource("24_54rql")]([ExtResource("25_eg0d4"),
 
 [node name="Sync" type="Node" parent="." unique_id=1321988269]
 script = ExtResource("16_r6opt")
-control_mode = 0
+deterministic_inference = false
 metadata/_custom_type_script = "uid://bmy6w68efk7bl"
 
 [connection signal="player_died" from="Player_Blue" to="." method="_on_player_player_died"]
