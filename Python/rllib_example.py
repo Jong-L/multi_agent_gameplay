@@ -7,7 +7,7 @@ import pathlib
 
 import ray
 import yaml
-from ray import tune
+from ray import train, tune
 from ray.rllib.algorithms.algorithm import Algorithm
 from ray.rllib.env.wrappers.pettingzoo_env import ParallelPettingZooEnv
 from ray.rllib.policy.policy import PolicySpec
@@ -29,7 +29,7 @@ if __name__ == "__main__":
     args, extras = parser.parse_known_args()
 
     # Get config from file
-    with open(args.config_file) as f:
+    with open(args.config_file,encoding="utf-8") as f:
         exp = yaml.safe_load(f)
 
     is_multiagent = exp["env_is_multiagent"]
@@ -39,7 +39,7 @@ if __name__ == "__main__":
     env_wrapper = None
 
     def env_creator(env_config):
-        index = env_config.worker_index * exp["config"]["num_envs_per_env_runner"] + env_config.vector_index
+        index = env_config.worker_index * exp["config"]["num_envs_per_worker"] + env_config.vector_index
         port = index + GodotEnv.DEFAULT_PORT
         seed = index
         if is_multiagent:
@@ -59,7 +59,7 @@ if __name__ == "__main__":
         policy_names = tmp_env.agent_policy_names
         print("Policy names for each Agent (AIController) set in the Godot Environment", policy_names)
     else:  # Make temp env to get info needed for setting num_workers training config
-        print("Starting a temporary env to get the number of envs and auto-set the num_envs_per_env_runner config value")
+        print("Starting a temporary env to get the number of envs and auto-set the num_envs_per_worker config value")
         tmp_env = GodotEnv(env_path=exp["config"]["env_config"]["env_path"], show_window=False)
         num_envs = tmp_env.num_envs
 
@@ -76,27 +76,18 @@ if __name__ == "__main__":
             "policy_mapping_fn": policy_mapping_fn,
         }
     else:
-        exp["config"]["num_envs_per_env_runner"] = num_envs
+        exp["config"]["num_envs_per_worker"] = num_envs
 
     tuner = None
     if not args.restore:
-        # Add stop condition to config instead of RunConfig
-        exp["config"]["stop"] = exp["stop"]
-        
-        # Debug: Check if verbose is in config
-        if "verbose" in exp["config"]:
-            print(f"WARNING: 'verbose' found in config with value: {exp['config']['verbose']} (type: {type(exp['config']['verbose'])})")
-            # Remove it to avoid conflicts
-            del exp["config"]["verbose"]
-        
         tuner = tune.Tuner(
             trainable=exp["algorithm"],
             param_space=exp["config"],
-            run_config=tune.RunConfig(
+            run_config=train.RunConfig(
                 storage_path=os.path.abspath(args.experiment_dir),
-                checkpoint_config=tune.CheckpointConfig(),
+                stop=exp["stop"],
+                checkpoint_config=train.CheckpointConfig(checkpoint_frequency=exp["checkpoint_frequency"]),
             ),
-            _tuner_kwargs={},  # Explicitly pass empty kwargs to avoid any unexpected parameters
         )
     else:
         tuner = tune.Tuner.restore(

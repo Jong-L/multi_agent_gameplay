@@ -29,6 +29,9 @@ var _pure_rewards: Dictionary = {}
 #累计游戏时间
 var _game_time: float = 0.0
 
+# ── 撞墙计数器 ──
+var _wall_collision_counters: Dictionary = {}  # {player_id: 连续撞墙物理帧数}
+
 # ── 势能塑形系统 ──
 var _shaping_gamma: float=0.99       # 塑形折扣因子
 var _skip_ball_potential_shaping_once: Dictionary = {}
@@ -661,9 +664,20 @@ func _process_wall_collision(_delta: float) -> void:
 		var cfg := _cfg(pid)
 
 		# 撞墙惩罚
+		var is_wall_collision := false
 		if player.last_collison_data and player.is_moving:
 			if player.last_collison_data.get_collider() is TileMapLayer:
 				add_reward(pid, -cfg.wall_collision_penalty, "wall_collision")
+				is_wall_collision = true
+
+		# 撞墙计数器与 reset_on_wall
+		if game_config != null and game_config.reset_on_wall:
+			if is_wall_collision:
+				_wall_collision_counters[pid] = _wall_collision_counters.get(pid, 0) + 1
+				if _wall_collision_counters[pid] >= game_config.wall_reset_threshold:
+					player.ai_controller.needs_reset = true
+			else:
+				_wall_collision_counters[pid] = 0
 
 		# 方案三距离惩罚
 		if cfg.wall_potential_mode == RewardConfig.WallPotentialMode.COLLISION:
@@ -692,3 +706,4 @@ func reset() -> void:
 	_init_potentials()
 	_pure_rewards.clear()
 	_prev_ball_distances.clear()
+	_wall_collision_counters.clear()

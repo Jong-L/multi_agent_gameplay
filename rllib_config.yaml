@@ -22,10 +22,10 @@ stop:
 config:
     env: godot
     env_config:
-        env_path: "godot-game/build/game.exe" # Set your env path here (exported executable from Godot) - e.g. env_path: 'env_path.exe' on Windows
+        env_path: "C:\\Users\\86180\\Downloads\\godot_rl_agents_examples-main\\examples\\MultiAgentSimple\\build\\MultiAgentSimple.exe" # Set your env path here (exported executable from Godot) - e.g. env_path: 'env_path.exe' on Windows
         action_repeat: null # Doesn't need to be set here, you can set this in sync node in Godot editor as well
         show_window: true # Displays game window while training. Might be faster when false in some cases, turning off also reduces GPU usage if you don't need rendering.
-        speedup: 30 # Speeds up Godot physics
+        speedup: 10 # Speeds up Godot physics
         # 添加以下配置项
         port: 11008  # 明确指定端口
         seed: 1      # 设置随机种子
@@ -39,7 +39,7 @@ config:
     vf_loss_coeff: 0.5
     vf_clip_param: .inf
     #clip_param: 0.2
-    entropy_coeff: 0.0001
+    entropy_coeff: 0.001
     entropy_coeff_schedule: null
     #grad_clip: 0.5
 
@@ -48,7 +48,7 @@ config:
 
     rollout_fragment_length: 32
     sgd_minibatch_size: 128
-    num_workers: 4
+    num_workers: 1
     num_envs_per_env_runner: 1 # This will be set automatically if not multi-agent. If multi-agent, changing this changes how many envs to launch per worker.
     # The value below needs changing per env
     # Basic calculation for this value can be rollout_fragment_length * num_workers * num_envs_per_env_runner (how many AIControllers you have if not multi_agent, otherwise the value you set)
