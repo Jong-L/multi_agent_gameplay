@@ -4,22 +4,23 @@ extends AIController2D
 var move_action:int
 var n_time_step:int=0
 
+func _ready():
+	super._ready()
+	# 根据 training_player_id 动态设置 policy_name
+	# 必须在 Sync._get_agents() 读取 policy_name 之前完成
+	if play_scene != null and play_scene.game_config != null:
+		var cfg := play_scene.game_config
+		if cfg.training_player_id >= 0:
+			if _player is Player and _player.player_id == cfg.training_player_id:
+				policy_name = "learning_policy"
+			else:
+				policy_name = "idle_policy"
+
 func _physics_process(delta):
 	super._physics_process(delta)
 	if needs_reset:
 		done=true
-	
-	#n_time_step=(n_time_step+1)%8
-	#if n_time_step==0:
-		#var obs=get_obs()
-		#if _player.player_id == 1:  
-			#print("=== Player %d Observations ===" % _player.player_id)
-			#print("  self_state: ", obs.self_state)
-			#print("  nearby_players: ", obs.nearby_players)
-			#print("  nearby_balls: ", obs.nearby_balls)
-			#print("  nearby_enemies: ", obs.nearby_enemies)
-			#print("  map_state: ", obs.map_state)
-	
+
 
 func reset():
 	super.reset()
@@ -32,7 +33,8 @@ func get_obs() -> Dictionary:
 	if play_scene == null:
 		return {}
 	var obs=play_scene.get_obs_for_player(_player)
-	
+	#if _player.player_id==0:
+		#print(obs)
 	return obs
 
 func get_reward() -> float:
@@ -42,20 +44,20 @@ func get_reward() -> float:
 
 func get_action_space() -> Dictionary:
 	return {
-		"move_action": {          
-			"size": 6,            
-			"action_type": "discrete",  
+		"move_action": {
+			"size": 6,
+			"action_type": "discrete",
 		},
 	}
 
-## 覆写 get_obs_space() 以支持多 key 字典观测空间
+## overide ,多 key 字典观测空间
 func get_obs_space() -> Dictionary:
 	var ray_count := 32
 	var use_valid_mask := false
 	if play_scene != null and play_scene.game_config != null:
 		ray_count = play_scene.game_config.ray_count
 		use_valid_mask = play_scene.game_config.use_observation_valid_mask
-	
+
 	var player_slot_dim := VisionSensor.PLAYER_SLOT_DIM + (1 if use_valid_mask else 0)
 	var ball_slot_dim := VisionSensor.BALL_SLOT_DIM + (1 if use_valid_mask else 0)
 	var enemy_slot_dim := VisionSensor.ENEMY_SLOT_DIM + (1 if use_valid_mask else 0)
@@ -69,6 +71,16 @@ func get_obs_space() -> Dictionary:
 	return obs_space
 
 func set_action(action) -> void:
+	# 如果启用了单智能体训练且当前玩家不是训练玩家，强制 IDLE
+	if play_scene != null and play_scene.game_config != null:
+		var cfg := play_scene.game_config
+		if cfg.training_player_id >= 0:
+			if _player is Player and _player.player_id != cfg.training_player_id:
+				move_action = Player.Action.IDLE
+				_player.pending_action = move_action as Player.Action
+				return
 	move_action = action["move_action"]
-	# 0=上, 1=下, 2=左, 3=右, 4=攻击，5=待机
+	#if _player is Player:
+		#if _player.player_id==0:
+			#print(move_action)
 	_player.pending_action = move_action as Player.Action

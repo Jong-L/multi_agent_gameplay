@@ -95,16 +95,16 @@ func _ready() -> void:
 
 	# 延迟一帧，确保所有子节点已就绪
 	await get_tree().process_frame
-	
+
 	_collect_enemis()
-	_collect_players()          
-	_setup_camera_system()      
-	_setup_camera_switch_ui()   
-	_setup_player_uis()         
+	_collect_players()
+	_setup_camera_system()
+	_setup_camera_switch_ui()
+	_setup_player_uis()
 	_setup_reward_ball_manager()
 	_setup_reward_manager()
 	_setup_scoreboard_drawer()
-	_setup_vision_circles()         
+	_setup_vision_circles()
 
 # 初始化地图数据：竞技场边界、巡逻区域、碰撞装饰物坐标
 func _init_map_data() -> void:

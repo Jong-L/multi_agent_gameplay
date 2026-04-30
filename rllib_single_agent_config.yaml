@@ -1,0 +1,53 @@
+algorithm: PPO
+
+# 单智能体吃球训练：仅 player3 使用 learning_policy，其余使用 idle_policy（Godot 端强制 IDLE）
+# 使用前请在 Godot 编辑器中修改 game_config.tres：
+#   training_player_id = 3
+#   reset_on_wall = true
+#   wall_reset_threshold =2
+env_is_multiagent: true
+
+stop:
+    training_iteration: 2000
+    time_total_s: 360000
+
+config:
+    env: godot
+
+    # 观测空间已在 Python 端通过 FlattenDictObsWrapper 展平为 Box
+    # 使用新 API stack（兼容 NumPy 2.x），无需手动关闭
+
+    env_config:
+        env_path: "debug"  # "debug" = 连接编辑器; 或设置为 game.exe 路径（需先导出）
+        show_window: true
+        action_repeat: null
+        speedup: 1.0
+        port: 11008
+        seed: 1
+
+    framework: torch
+
+    lr: 0.0003
+    lambda: 0.95
+    gamma: 0.99
+
+    vf_loss_coeff: 0.5
+    vf_clip_param: .inf
+    entropy_coeff: 0.01     # 吃球任务需要更多探索，提高熵系数
+
+    normalize_actions: False
+    clip_actions: True
+
+    rollout_fragment_length: 128
+    sgd_minibatch_size: 256
+    num_workers: 1
+    num_envs_per_env_runner: 1
+    train_batch_size: 4096
+
+    num_sgd_iter: 4
+    batch_mode: truncate_episodes
+
+    num_gpus: 0
+    model:
+        vf_share_layers: False
+        fcnet_hiddens: [128, 128]
