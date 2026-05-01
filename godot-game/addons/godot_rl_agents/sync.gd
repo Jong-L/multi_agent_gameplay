@@ -62,7 +62,6 @@ var _obs_space_training: Array[Dictionary] = []
 
 # Called when the node enters the scene tree for the first time.
 func _ready():
-	process_physics_priority=-100 #总是在一切物理过程之后收尾
 	await get_parent().ready
 	get_tree().set_pause(true)
 	_initialize()

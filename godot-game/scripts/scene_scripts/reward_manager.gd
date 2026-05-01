@@ -347,7 +347,7 @@ func _process_potential_shaping(_delta: float) -> void:
 		var cfg := _cfg(pid)
 
 		if cfg.ball_potential_func == RewardConfig.BallPotentialFunc.DISTANCE_REWARD:
-			_process_distance_reward(player, pid, cfg)
+			_process_ball_distance_reward(player, pid, cfg)
 		else:
 			_process_ball_potential_shaping(player, pid, cfg)
 			
@@ -361,9 +361,11 @@ func _process_ball_potential_shaping(player: Player, pid: int, cfg: RewardConfig
 		_prev_ball_potentials[pid] = current_potential
 		_skip_ball_potential_shaping_once.erase(pid)
 		return
-
+	
 	var prev_potential: float = _prev_ball_potentials.get(pid, current_potential)
 	var shaping: float = _shaping_gamma * current_potential - prev_potential
+	#if pid==0:
+		#print(shaping)
 	player.ai_controller.reward += shaping
 	_prev_ball_potentials[pid] = current_potential
 
@@ -381,7 +383,7 @@ func _process_wall_potential_shaping(player: Player, pid: int, cfg: RewardConfig
 	_prev_wall_potentials[pid] = current_potential
 
 #距离奖励
-func _process_distance_reward(player: Player, pid: int, cfg: RewardConfig) -> void:
+func _process_ball_distance_reward(player: Player, pid: int, cfg: RewardConfig) -> void:
 	var current_dist: float = _get_nearest_ball_distance(player)
 	#重置距离缓存并过奖励发放
 	if _skip_ball_potential_shaping_once.get(pid, false):

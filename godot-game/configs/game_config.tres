@@ -4,9 +4,5 @@
 
 [resource]
 script = ExtResource("1")
-reward_logger_enabled = false
-ray_count = 24
+ray_count = 36
 use_observation_valid_mask = true
-training_player_id = 3
-reset_on_wall = true
-wall_reset_threshold = 2

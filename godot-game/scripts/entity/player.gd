@@ -59,9 +59,6 @@ func _physics_process(delta: float) -> void:
 			_last_displayed_reward = current_reward
 
 func _process(_delta: float) -> void:
-	if ai_controller.needs_reset:
-		ai_controller.reset()
-		return
 	if is_dead:
 		return
 	
