@@ -16,10 +16,15 @@ func _ready():
 			else:
 				policy_name = "idle_policy"
 
-func _physics_process(delta):
-	super._physics_process(delta)
-	if needs_reset:
+func _physics_process(_delta):
+	n_steps += 1
+	if n_steps > reset_after:
+		needs_reset = true
 		done=true
+	if needs_reset:
+		needs_reset=false
+		reset()
+		
 
 
 func reset():

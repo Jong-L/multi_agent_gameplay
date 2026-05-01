@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>避障吃球任务 —— 观测空间与奖励设计诊断报告</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --card: #161b22;
+    --border: #30363d;
+    --text: #c9d1d9;
+    --text2: #8b949e;
+    --accent: #58a6ff;
+    --green: #3fb950;
+    --red: #f85149;
+    --yellow: #d2991d;
+    --purple: #bc8cff;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--bg); color:var(--text); font-family:system-ui,-apple-system,sans-serif; line-height:1.65; }
+  .container { max-width:1100px; margin:0 auto; padding:40px 24px; }
+  h1 { font-size:2em; color:#f0f6fc; border-bottom:2px solid var(--border); padding-bottom:16px; margin-bottom:24px; }
+  h2 { font-size:1.4em; color:#f0f6fc; margin:36px 0 16px; padding-left:12px; border-left:3px solid var(--accent); }
+  h3 { font-size:1.1em; color:var(--accent); margin:24px 0 12px; }
+  p, li { margin-bottom:10px; color:var(--text); }
+  ul, ol { padding-left:24px; margin-bottom:16px; }
+  .card { background:var(--card); border:1px solid var(--border); border-radius:8px; padding:20px; margin:16px 0; }
+  .card-title { font-weight:700; margin-bottom:8px; color:#f0f6fc; }
+  table { width:100%; border-collapse:collapse; margin:16px 0; font-size:0.92em; }
+  th { background:#21262d; color:var(--text); text-align:left; padding:8px 12px; border:1px solid var(--border); }
+  td { padding:8px 12px; border:1px solid var(--border); }
+  .tag { display:inline-block; padding:2px 8px; border-radius:4px; font-size:0.82em; font-weight:600; margin-right:4px; }
+  .tag-issue { background:#3a1b1b; color:var(--red); }
+  .tag-suggest { background:#1b2e1b; color:var(--green); }
+  .tag-warn { background:#2e2510; color:var(--yellow); }
+  .tag-info { background:#14253d; color:var(--accent); }
+  .severity { font-weight:700; }
+  .severity-high { color:var(--red); }
+  .severity-med { color:var(--yellow); }
+  .severity-low { color:var(--accent); }
+  .code-block { background:#0d1117; border:1px solid var(--border); border-radius:6px; padding:12px; margin:12px 0; font-family:'Cascadia Code',Consolas,monospace; font-size:0.88em; overflow-x:auto; white-space:pre; }
+  .highlight { background:#1c2541; padding:1px 4px; border-radius:3px; font-family:monospace; font-size:0.92em; }
+  .good { color:var(--green); }
+  .bad { color:var(--red); }
+  .summary-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:12px; margin:16px 0; }
+  .summary-item { background:var(--card); border:1px solid var(--border); border-radius:8px; padding:16px; text-align:center; }
+  .summary-item .num { font-size:2em; font-weight:700; color:var(--accent); }
+  .summary-item .label { color:var(--text2); font-size:0.88em; margin-top:4px; }
+  hr { border:none; border-top:1px solid var(--border); margin:32px 0; }
+  .toc { background:var(--card); border:1px solid var(--border); border-radius:8px; padding:16px 20px; margin-bottom:32px; }
+  .toc a { color:var(--accent); text-decoration:none; }
+  .toc a:hover { text-decoration:underline; }
+  .toc ol { padding-left:20px; }
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1>&#128270; 避障吃球任务 —— 观测空间与奖励设计诊断报告</h1>
+
+<div class="summary-grid">
+  <div class="summary-item"><div class="num">8</div><div class="label">观测空间问题</div></div>
+  <div class="summary-item"><div class="num">7</div><div class="label">奖励设计问题</div></div>
+  <div class="summary-item"><div class="num">108→64</div><div class="label">建议观测维度</div></div>
+  <div class="summary-item"><div class="num">全重构</div><div class="label">建议重构程度</div></div>
+</div>
+
+<div class="toc">
+  <strong>目录</strong>
+  <ol>
+    <li><a href="#sec1">当前设计概要</a></li>
+    <li><a href="#sec2">观测空间诊断</a></li>
+    <li><a href="#sec3">奖励设计诊断</a></li>
+    <li><a href="#sec4">重构方案：避障吃球纯化设计</a></li>
+    <li><a href="#sec5">推荐配置与消融实验清单</a></li>
+    <li><a href="#sec6">实施路线图</a></li>
+  </ol>
+</div>
+
+<!-- ====== SECTION 1 ====== -->
+<h2 id="sec1">1. 当前设计概要</h2>
+
+<div class="card">
+  <div class="card-title">&#128202; 环境参数</div>
+  <table>
+    <tr><td>竞技场尺寸</td><td>~960×960 px（Grass TileMap, tile=16px, scale=1.5, ~20×20 tiles）</td></tr>
+    <tr><td>视野半径</td><td><span class="highlight">200 px</span> / arena_half=480 → 视野覆盖约 41% 半径范围</td></tr>
+    <tr><td>射线数</td><td><span class="highlight">32 条</span>，均匀 360°，提供地图碰撞距离</td></tr>
+    <tr><td>玩家数</td><td>4 人（同质化，6 离散动作）</td></tr>
+    <tr><td>敌人</td><td>5 个 FSM 巡逻/追击/攻击敌人</td></tr>
+    <tr><td>奖励球</td><td>A 类 12 个（不重生），B 类 5 个（5s 重生）</td></tr>
+    <tr><td>障碍物</td><td>静态 CollisionDecoration + Water tiles</td></tr>
+  </table>
+</div>
+
+<div class="card">
+  <div class="card-title">&#128203; 观测空间：108 维</div>
+  <table>
+    <tr><th>模块</th><th>维度</th><th>内容</th><th>归一化</th></tr>
+    <tr><td>self_state</td><td>4</td><td>[pos_x, pos_y, hp_ratio, flip_h]</td><td>pos→[-1,1], hp→[0,1]</td></tr>
+    <tr><td>nearby_players</td><td>15</td><td>3×[rel_x, rel_y, hp, flip_h, dist]</td><td>rel→[-1,1], dist→[0,1]</td></tr>
+    <tr><td>nearby_balls</td><td>32</td><td>8×[rel_x, rel_y, type_flag, dist]</td><td>同上</td></tr>
+    <tr><td>nearby_enemies</td><td>25</td><td>5×[rel_x, rel_y, hp, flip_h, dist]</td><td>同上</td></tr>
+    <tr><td>map_state</td><td>32</td><td>32 条射线碰撞距离/vision_radius</td><td>[0,1]，1=无碰撞</td></tr>
+  </table>
+</div>
+
+<div class="card">
+  <div class="card-title">&#127873; 奖励设计总览</div>
+  <table>
+    <tr><th>奖励项</th><th>当前值</th><th>类型</th><th>说明</th></tr>
+    <tr><td>collect_ball_A</td><td>+10</td><td>稀疏</td><td>吃 A 球</td></tr>
+    <tr><td>collect_ball_B</td><td>+15</td><td>稀疏</td><td>吃 B 球</td></tr>
+    <tr><td>ball_potential_shaping</td><td>γΦ'−Φ</td><td>密集 (每帧)</td><td>势能塑形，Φ 最大=ball_reward</td></tr>
+    <tr><td>run</td><td>-0.0</td><td>密集</td><td><span class="bad">已禁用</span></td></tr>
+    <tr><td>attack</td><td>-0.05</td><td>稀疏</td><td>每次攻击惩罚</td></tr>
+    <tr><td>wall_collision</td><td>-0.05</td><td>密集</td><td>每帧撞墙</td></tr>
+    <tr><td>starvation</td><td>动态</td><td>密集</td><td>quadratic, 1500ms 触发</td></tr>
+    <tr><td>center_reward</td><td>0.0</td><td>密集</td><td><span class="bad">已禁用</span></td></tr>
+    <tr><td>bear_damage</td><td>-10</td><td>稀疏</td><td>受击惩罚</td></tr>
+    <tr><td>cause_damage_to_enemy</td><td>+10</td><td>稀疏</td><td>造成伤害</td></tr>
+    <tr><td>cause_damage_to_player</td><td>+15</td><td>稀疏</td><td>伤害玩家</td></tr>
+    <tr><td>kill_enemy</td><td>+30</td><td>稀疏</td><td>击杀敌人</td></tr>
+    <tr><td>kill_player</td><td>+45</td><td>稀疏</td><td>击杀玩家</td></tr>
+    <tr><td>died</td><td>-20</td><td>稀疏</td><td>死亡惩罚</td></tr>
+  </table>
+</div>
+
+<hr>
+
+<!-- ====== SECTION 2 ====== -->
+<h2 id="sec2">2. 观测空间诊断</h2>
+
+<h3>2.1 <span class="severity severity-high">&#128308; 高严重性</span> —— 坐标参考系混用</h3>
+<div class="card">
+  <p><strong>问题：</strong><span class="highlight">self_state</span> 的位置用的是 <strong>绝对竞技场坐标</strong>（归一化到 arena_half），而所有实体的位置是 <strong>以自我为中心的相对坐标</strong>（归一化到 vision_radius）。</p>
+  <p>这意味着网络需要同时理解两套不同的坐标参考系，增大了学习难度。在 ego-centric 观测中，自身绝对位置的价值非常有限——因为 <em>map_state 射线已经提供了周围障碍物信息</em>，而球/敌人已经在相对坐标中给出。</p>
+  <p><strong>理论依据：</strong> 在 POMDP 设置下，ego-centric 观测更符合马尔可夫性质（Mnih et al., 2016; OpenAI Five, 2019）。绝对坐标只在需要跨 episode 记忆地图时才必要。</p>
+</div>
+
+<h3>2.2 <span class="severity severity-high">&#128308; 高严重性</span> —— Slot 编码的排列敏感性问题</h3>
+<div class="card">
+  <p><strong>问题：</strong> 当前使用固定 slot + 按距离排序的编码方式。当实体进出视野时，slot 编号会跳变：</p>
+  <div class="code-block"># 场景：2个球在视野内
+slot_0 = [球A信息]   slot_1 = [球B信息]   slot_2..7 = [0*]
+# 球A被吃掉后：
+slot_0 = [球B信息]   slot_1..7 = [0*]
+# → 球B的信息从 slot_1 跳到了 slot_0！</div>
+  <p>网络必须额外学习"slot 编号无意义"这一不变性，引入了不必要的归纳偏置噪声。对 Transformer/MLP 这种无排列不变性的架构尤其有害。</p>
+  <p><strong>标准解决方案：</strong></p>
+  <ul>
+    <li><strong>方案 A：Self-Attention 池化</strong> —— 将所有实体编码为等长向量后，用 multi-head attention 做加权聚合（类似 Set Transformer, Lee et al. 2019）</li>
+    <li><strong>方案 B：网格化（Grid-based）</strong> —— 将视野区域划分为网格（如 7×7），每个网格单元编码该位置是否有实体/实体属性，天然具有空间排列不变性</li>
+    <li><strong>方案 C（最小改动）：</strong> 使用 <span class="highlight">Sum/Max Pooling</span> 替代 Slot —— 将所有视野内实体编码后做 sum/max 降维，丢失部分信息但消除排列敏感性</li>
+  </ul>
+</div>
+
+<h3>2.3 <span class="severity severity-med">&#128993; 中严重性</span> —— 缺失速度与时间信息</h3>
+<div class="card">
+  <p><strong>问题：</strong> 观测中完全没有自身速度、自身动作历史、或其他实体速度。在连续动作环境中（虽然是离散动作），速度是关键的动态信息。没有速度，智能体无法：</p>
+  <ul>
+    <li>判断自己是否在移动（需要从连续帧的 pos 变化推断）</li>
+    <li>预测其他实体的轨迹（躲避敌人）</li>
+    <li>做出精确的到达判断</li>
+  </ul>
+  <p><strong>建议：</strong> 自身速度添加到 self_state；对其他玩家/敌人添加速度向量。如果担心维度膨胀，可只添加自身速度。</p>
+</div>
+
+<h3>2.4 <span class="severity severity-med">&#128993; 中严重性</span> —— 冗余特征与不必要特征</h3>
+<div class="card">
+  <p><strong>冗余：</strong> 实体同时编码了 <span class="highlight">rel_x, rel_y</span> 和 <span class="highlight">dist/vision_radius</span>。由于 dist = sqrt(rel_x²+rel_y²)*vision_radius，这是完全确定的冗余。不如用 (rel_x, rel_y) 或 (dist, cos_theta, sin_theta) 二选一。</p>
+  <p><strong>不必要（对"避障吃球"任务）：</strong></p>
+  <ul>
+    <li><span class="highlight">flip_h</span> —— 只影响攻击方向，吃球任务不需要</li>
+    <li><span class="highlight">enemy hp_ratio</span> —— 如果策略是"避障吃球"而非"战斗"，敌人血量无关</li>
+    <li><span class="highlight">other_player hp_ratio</span> —— 同上，除非考虑 PvP 吃球竞争</li>
+  </ul>
+</div>
+
+<h3>2.5 <span class="severity severity-med">&#128993; 中严重性</span> —— 缺失帧堆叠/记忆</h3>
+<div class="card">
+  <p><strong>问题：</strong> 当前是单帧观测。对 POMDP 性质的游戏（部分可观测 + 需要推断速度/轨迹），帧堆叠（frame stacking, 通常 3-4 帧）或 LSTM 是标准做法（Mnih et al., 2015, DQN Nature paper）。</p>
+  <p><strong>影响：</strong> 没有帧堆叠时，智能体需要从 ray distance 的逐帧变化间接推断碰撞方向，这非常困难。</p>
+</div>
+
+<h3>2.6 <span class="severity severity-low">&#128994; 低严重性</span> —— 射线分辨率与表示</h3>
+<div class="card">
+  <p>32 条射线在 200px 视野半径下，角分辨率 11.25°，像素分辨率 ~39px（周长方向）。对于 960px 的竞技场，200px 半径覆盖了约 13.6% 面积。这个配置在 <strong>定性上是合理的</strong>，但在狭窄通道处可能不够。</p>
+  <p><strong>小优化：</strong> 考虑增加到 48 条（7.5°分辨率）或使用 CNN 处理 32 条射线的局部相关结构（类似 1D 卷积）。</p>
+</div>
+
+<h3>2.7 <span class="severity severity-low">&#128994; 低严重性</span> —— 目标信息不完整</h3>
+<div class="card">
+  <p>球类型用 0/1 二进制标记，但智能体不知道 A 球不重生、B 球会重生。如果目标是最优收集策略，这个信息很重要：A 球应该优先吃（一次性的），B 球可以稍后吃。</p>
+</div>
+
+<h3>2.8 <span class="severity severity-low">&#128994; 低严重性</span> —— 饥饿时间未入观测</h3>
+<div class="card">
+  <p>代码中被注释掉了（play_scene.gd:536-537）。饥饿是奖励函数的组成部分，如果智能体不知道自己的饥饿状态，就无法做出最优决策来避免饥饿惩罚。</p>
+</div>
+
+<hr>
+
+<!-- ====== SECTION 3 ====== -->
+<h2 id="sec3">3. 奖励设计诊断</h2>
+
+<h3>3.1 <span class="severity severity-high">&#128308; 高严重性</span> —— 目标冲突：吃球 vs 战斗</h3>
+<div class="card">
+  <p><strong>核心问题：</strong> 当前奖励同时激励吃球和战斗。但击杀玩家 (+45) 远大于吃球 (+10/+15)。这意味着：</p>
+  <ul>
+    <li>最优策略可能是 <strong>忽略球，优先击杀</strong></li>
+    <li>吃球只是"顺便的事"，不是主要学习信号</li>
+    <li>在"避障吃球"的论文叙事下，战斗奖励是 <strong>confounding factor（混杂因素）</strong></li>
+  </ul>
+  <p><strong>解决方向：</strong> 明确实验边界。如果论文定位是"避障吃球"任务，则应该移除 PvP 战斗奖励（或作为消融实验的变体）。战斗系统可以作为独立任务或扩展来评估。</p>
+</div>
+
+<h3>3.2 <span class="severity severity-high">&#128308; 高严重性</span> —— 势能塑形的数值不稳定风险</h3>
+<div class="card">
+  <p><strong>问题：</strong> 球势能塑形使用 <span class="highlight">scale=1.0, γ=0.99</span>，Φ 的最大值等于球奖励值（10 或 15）。</p>
+  <p>当 γ≈1 且 scale=1 时，<strong>塑形奖励 ≈ 稀疏奖励值本身</strong>：</p>
+  <div class="code-block"># 假设 agent 从视野边缘跑到球旁边：
+Φ_start = 1.0 × 10 × exp(-5×200/200) = 0.067   (在边缘)
+Φ_end   = 1.0 × 10 × exp(-5×0/200)   = 10       (在球旁)
+
+# Ng et al. 塑形：
+F = 0.99 × 10 - 0.067 = 9.833  （接近吃球的10点奖励！）</div>
+  <p>这意味着：<strong>塑形奖励的累计值可能超过实际吃球奖励</strong>，智能体可能学会"靠近球但不吃"来持续获取塑形奖励。虽然 Ng et al. 理论保证策略不变性，但在 <strong>函数近似 + 有限样本</strong> 条件下，过大的塑形奖励会主导梯度方向。</p>
+  <p><strong>建议：</strong> ball_potential_scale 降低到 0.1~0.3，或使用基于距离的归一化（如 Φ = scale × reward × φ(d/vision_radius) 其中 φ 是衰减函数且 φ(0)=φ_max ≪ 1）。</p>
+</div>
+
+<h3>3.3 <span class="severity severity-med">&#128993; 中严重性</span> —— 饥饿机制与执行时长不匹配</h3>
+<div class="card">
+  <p><strong>问题：</strong> 饥饿在 1500ms (1.5s) 后触发，最大惩罚持续 10s。在 200px 视野半径下，agent 从视野边缘跑到中心球需要约 200/100 = 2s（假设 run_speed=100）。这意味着：</p>
+  <ul>
+    <li>如果附近没有球，agent 在到达球之前就已经开始饥饿</li>
+    <li>quadratic 惩罚函数在后期增长很快，可能迫使 agent 采取激进（危险）行为</li>
+  </ul>
+  <p><strong>建议：</strong> starve_time 增加到 3000-5000ms，或改用 sqrt 增长函数使初期惩罚更温和、后期趋缓。</p>
+</div>
+
+<h3>3.4 <span class="severity severity-med">&#128993; 中严重性</span> —— 撞墙惩罚过小</h3>
+<div class="card">
+  <p>-0.05/帧 撞墙惩罚太小。在 60fps 下，连续贴墙 1 秒只有 -3 点，而吃一个球 +10。agent 可以在探索阶段学到"沿墙壁滑行"是可行的导航策略。这 <strong>不是 bug</strong>（滑墙确实是有效的），但过小的惩罚延迟了 agent 学习主动远离墙壁。</p>
+  <p><strong>建议：</strong> 增加到 -0.1 ~ -0.2/帧，配合 wall_potential_shaping 使用 LINEAR 模式。</p>
+</div>
+
+<h3>3.5 <span class="severity severity-med">&#128993; 中严重性</span> —— 缺失有效的探索引导</h3>
+<div class="card">
+  <p><strong>问题：</strong> center_reward_scale=0（已禁用），run 惩罚=0（已禁用）。agent 在初期没有任何密度奖励引导它离开出生角。四个出生角各有一些 A 球，agent 吃完自己角的球后可能停在那里不动。</p>
+  <p><strong>建议：</strong></p>
+  <ul>
+    <li>启用 center_shaping（小幅度，如 scale=0.05~0.1），引导 agent 向中心探索</li>
+    <li>或用少量的 <span class="highlight">curiosity-driven exploration</span>（Intrinsic Curiosity Module, Pathak et al. 2017）</li>
+    <li>或用 <span class="highlight">count-based exploration</span> 惩罚停留区域</li>
+  </ul>
+</div>
+
+<h3>3.6 <span class="severity severity-low">&#128994; 低严重性</span> —— 奖励量级跨类别不平衡</h3>
+<div class="card">
+  <p>稀疏奖励范围（-20 ~ +45）远大于密集奖励（-0.05 ~ +0.25/帧）。虽然有 VecNormalize 归一化，但原始量级的不平衡仍会影响早期训练。建议将稀疏奖励 scale down 或在归一化前做 clipping。</p>
+</div>
+
+<h3>3.7 <span class="severity severity-low">&#128994; 低严重性</span> —— run 惩罚完全禁用</h3>
+<div class="card">
+  <p>run=-0.0 意味着移动没有代价。消除所有移动惩罚可能导致 agent 学习无意义的往复运动。建议设为 -1e-5 ~ -1e-4 的小值，维持效率压力但不影响主要目标。</p>
+</div>
+
+<hr>
+
+<!-- ====== SECTION 4 ====== -->
+<h2 id="sec4">4. 重构方案：避障吃球纯化设计</h2>
+
+<div class="card" style="border-left:4px solid var(--purple);">
+  <div class="card-title">&#127775; 设计哲学</div>
+  <p>将任务重新定位为 <strong>纯"避障吃球"</strong>——让 RL agent 在静态障碍物 + 移动敌人环境中最大化球收集效率。剥离战斗系统对奖励的影响，使论文叙事与实验设计一致。</p>
+</div>
+
+<h3>4.1 重构后的观测空间 <span class="tag tag-suggest">64 维</span></h3>
+
+<div class="card">
+  <div class="card-title">核心设计原则</div>
+  <ol>
+    <li><strong>统一 ego-centric 坐标系</strong> —— 所有空间信息以 agent 为中心</li>
+    <li><strong>消除冗余</strong> —— 只保留 (rel_x, rel_y) 或 (dist, cosθ, sinθ)</li>
+    <li><strong>加入速度/时间信息</strong> —— 自身速度 + 球/敌人的距离变化率</li>
+    <li><strong>使用 Pooling 替代 Slot</strong> —— 消除排列敏感性</li>
+  </ol>
+</div>
+
+<table>
+<tr><th>模块</th><th>维度</th><th>内容</th><th>说明</th></tr>
+<tr>
+  <td>self_state</td>
+  <td><strong>7</strong></td>
+  <td>[vel_x, vel_y, hp_ratio, starve_ratio, has_ball_nearby, nearest_ball_dist, nearest_ball_angle]</td>
+  <td>不再包含绝对位置；用速度替代；加入饥饿状态；直接编码最近球的距离和方向</td>
+</tr>
+<tr>
+  <td>ball_embedding</td>
+  <td><strong>8</strong></td>
+  <td>所有视野内球的 pooled 表示：<br>[mean_rel_x, mean_rel_y, mean_dist, mean_type, max_dist, min_dist, count_weighted, typeA_count/total]</td>
+  <td>使用 mean/max/min pooling 聚合所有球信息，排列不变</td>
+</tr>
+<tr>
+  <td>enemy_embedding</td>
+  <td><strong>6</strong></td>
+  <td>[mean_rel_x, mean_rel_y, mean_dist, min_dist, min_dist_angle, enemy_count]</td>
+  <td>聚合所有敌人的空间分布信息。min_dist 和 min_dist_angle 提供最近威胁的方向</td>
+</tr>
+<tr>
+  <td>wall_embedding</td>
+  <td><strong>8</strong></td>
+  <td>[min_ray_dist, min_ray_angle, mean_ray_dist, 分4象限的平均射线距离]</td>
+  <td>压缩 32 条射线为 8 维统计特征，保留方向信息</td>
+</tr>
+<tr>
+  <td>frame_stack</td>
+  <td>×3</td>
+  <td>上述 29 维 × 3 帧堆叠 = <strong>87 维</strong>（或者用 LSTM 替代）</td>
+  <td>3 帧堆叠或 LSTM 捕捉时间动态</td>
+</tr>
+</table>
+
+<p><strong>如果不做帧堆叠，单帧 29 维 + 32 ray 原始 = 61 维（保留完整射线信息时可选的方案）。</strong></p>
+
+<p><strong style="color:var(--green)">推荐的最终观测维度：</strong>29 维（pooled 实体 + 7 维自身 + 8 维墙）+ 32 维原始射线 = <strong>61 维</strong>（保留射线原始信息）。如果加 3 帧堆叠 = <strong>183 维</strong>。</p>
+
+<h3>4.2 重构后的奖励设计</h3>
+
+<div class="card">
+  <div class="card-title">&#127919; 纯化奖励结构</div>
+  <table>
+    <tr><th>奖励项</th><th>值</th><th>类型</th><th>说明</th></tr>
+    <tr><td>collect_ball_A</td><td><strong>+1.0</strong></td><td>稀疏</td><td>归一化到单位奖励</td></tr>
+    <tr><td>collect_ball_B</td><td><strong>+1.5</strong></td><td>稀疏</td><td>略高（重生资源）</td></tr>
+    <tr><td>ball_approach_potential</td><td>γΦ' - Φ</td><td>密集</td><td>势能塑形，<strong>scale=0.15</strong>，Φ_max=0.15</td></tr>
+    <tr><td>wall_avoidance_potential</td><td>γΦ' - Φ</td><td>密集</td><td>LINEAR 模式，<strong>scale=0.1</strong></td></tr>
+    <tr><td>wall_collision</td><td><strong>-0.2/帧</strong></td><td>密集</td><td>增加到有意义的值</td></tr>
+    <tr><td>movement_efficiency</td><td><strong>-1e-5/帧</strong></td><td>密集</td><td>极小的效率压力</td></tr>
+    <tr><td>starvation</td><td>动态</td><td>密集</td><td>starve_time=4000ms, sqrt 增长</td></tr>
+    <tr><td>center_explore</td><td><strong>0.05/帧</strong></td><td>密集</td><td>弱引导向中心</td></tr>
+    <tr><td><s>bear_damage</s></td><td><span style="color:var(--red)">移除</span></td><td>—</td><td>"避障吃球"不应有受击奖励</td></tr>
+    <tr><td><s>cause_damage_*</s></td><td><span style="color:var(--red)">移除</span></td><td>—</td><td>同上</td></tr>
+    <tr><td><s>kill_*</s></td><td><span style="color:var(--red)">移除</span></td><td>—</td><td>同上</td></tr>
+    <tr><td><s>attack</s></td><td><span style="color:var(--red)">移除</span></td><td>—</td><td>同上</td></tr>
+    <tr><td>died</td><td><strong>-2.0</strong></td><td>稀疏</td><td>改为适中的死亡惩罚（与球奖励可比）</td></tr>
+  </table>
+</div>
+
+<h3>4.3 关键设计理由</h3>
+
+<div class="card">
+  <p><strong>1. 奖励量级归一化：</strong> 将球奖励从 10/15 改为 1.0/1.5，不是降低了重要性，而是让所有奖励在同一量级。配合势能塑形 scale=0.15 后，塑形奖励累计不会超过稀疏奖励。也避免了 VecNormalize 的长期统计漂移问题。</p>
+</div>
+
+<div class="card">
+  <p><strong>2. 势能塑形衰减函数改为 LINEAR：</strong> 当前 EXPONENTIAL 函数 <span class="highlight">exp(-5*d/r)</span> 中的 5 倍系数使势能在球附近剧烈变化。LINEAR 函数 Φ = scale * reward * (1 - d/vision_radius) 梯度恒定，更容易学习。这通过 reward_config.ball_potential_func 即可切换。</p>
+</div>
+
+<div class="card">
+  <p><strong>3. 移除战斗奖励：</strong> 这不是说战斗系统不好，而是 <em>论文任务需要明确边界</em>。可以在消融实验中对比"纯吃球 vs 吃球+战斗"两种奖励设置的效果。</p>
+</div>
+
+<div class="card">
+  <p><strong>4. Pooling 替代 Slot：</strong> 对于球和敌人的观测，使用 mean/max/min pooling 聚合后，agent 不再需要学习 slot 索引无关性。对于"避障吃球"任务，agent 只需要知道"最近球在哪"和"敌人在哪个大致方向"，不需要精确区分每个实体。</p>
+</div>
+
+<hr>
+
+<!-- ====== SECTION 5 ====== -->
+<h2 id="sec5">5. 推荐配置与消融实验清单</h2>
+
+<h3>5.1 推荐的基准配置</h3>
+
+<div class="code-block"># reward_config.tres 推荐值
+collect_ball_A = 1.0
+collect_ball_B = 1.5
+ball_potential_scale = 0.15
+ball_potential_mode = NEAREST       # 只对最近球塑形
+ball_potential_func = LINEAR        # 线性衰减（梯度恒定）
+wall_collision_penalty = 0.2
+wall_potential_mode = LINEAR        # 启用墙壁势能塑形
+wall_potential_calculate_mode = MIN  # 对最近墙壁塑形
+center_reward_scale = 0.03
+starve_time = 4000                  # ms
+max_starve_duration = 10.0
+starve_reward_decrease = 0.005
+starve_more_func = SQRT             # sqrt 增长，初期温和
+run = -0.00001
+attack = 0.0                        # 移除攻击惩罚
+died = -2.0
+bear_damage = 0.0                   # 移除（纯吃球）
+cause_damage_to_enemy = 0.0
+cause_damage_to_player = 0.0
+kill_enemy = 0.0
+kill_player = 0.0</div>
+
+<h3>5.2 消融实验清单（答辩用）</h3>
+
+<table>
+<tr><th>#</th><th>实验</th><th>变量</th><th>预测</th></tr>
+<tr>
+  <td>E1</td>
+  <td><strong>Baseline</strong></td>
+  <td>上述推荐配置</td>
+  <td>稳定收敛到高效吃球策略</td>
+</tr>
+<tr>
+  <td>E2</td>
+  <td><strong>No Shaping</strong></td>
+  <td>ball_potential_scale=0, wall_potential_mode=NONE</td>
+  <td>收敛慢 2-3x，但最终性能相近（势能塑形只影响速度）</td>
+</tr>
+<tr>
+  <td>E3</td>
+  <td><strong>Slot vs Pooled Obs</strong></td>
+  <td>对比当前 slot 编码 vs pooling 编码</td>
+  <td>Pooling 收敛更快、更稳定</td>
+</tr>
+<tr>
+  <td>E4</td>
+  <td><strong>Frame Stack=1 vs 3</strong></td>
+  <td>单帧 vs 3 帧堆叠观测</td>
+  <td>3 帧堆叠在动态避障中明显更好</td>
+</tr>
+<tr>
+  <td>E5</td>
+  <td><strong>With/Without Combat</strong></td>
+  <td>加入战斗奖励（原始值）vs 纯吃球</td>
+  <td>战斗奖励引入后球收集量下降，agent 偏好战斗</td>
+</tr>
+<tr>
+  <td>E6</td>
+  <td><strong>Starvation Ablation</strong></td>
+  <td>starve_reward_decrease=0 vs 0.005</td>
+  <td>无饥饿时 agent 可能不高效移动</td>
+</tr>
+<tr>
+  <td>E7</td>
+  <td><strong>Wall Shaping Modes</strong></td>
+  <td>NONE / LINEAR / INVERSE / COLLISION</td>
+  <td>LINEAR 最佳，NONE 最差</td>
+</tr>
+<tr>
+  <td>E8</td>
+  <td><strong>Ball Potential Scale</strong></td>
+  <td>0.05 / 0.15 / 0.5 / 1.0</td>
+  <td>0.15~0.3 最优，1.0 可能震荡</td>
+</tr>
+</table>
+
+<hr>
+
+<!-- ====== SECTION 6 ====== -->
+<h2 id="sec6">6. 实施路线图</h2>
+
+<div class="card">
+  <table>
+    <tr><th>阶段</th><th>工作</th><th>文件涉及</th><th>风险</th></tr>
+    <tr>
+      <td><strong>Phase 1</strong><br><span class="tag tag-info">可逆调整</span></td>
+      <td>
+        &bull; 修改 reward_config.tres 参数（使用上述推荐值）<br>
+        &bull; 切换 ball_potential_func 为 LINEAR<br>
+        &bull; 启用 wall_potential_mode=LINEAR<br>
+        &bull; 移除战斗奖励（先设 0.0 保留开关）
+      </td>
+      <td>reward_config.gd<br>reward_config.tres</td>
+      <td><span class="severity severity-low">低</span></td>
+    </tr>
+    <tr>
+      <td><strong>Phase 2</strong><br><span class="tag tag-warn">需要重训</span></td>
+      <td>
+        &bull; 在 VisionSensor 中添加 Pooling 模式（可开关）<br>
+        &bull; 添加自身速度到 self_state<br>
+        &bull; 添加饥饿比率到 self_state<br>
+        &bull; 更新 controller.gd 的 get_obs_space()
+      </td>
+      <td>vision_sensor.gd<br>controller.gd<br>play_scene.gd</td>
+      <td><span class="severity severity-med">中</span></td>
+    </tr>
+    <tr>
+      <td><strong>Phase 3</strong><br><span class="tag tag-warn">架构改动</span></td>
+      <td>
+        &bull; 实现 frame stacking（Python 端 Wrapper）<br>
+        &bull; 或使用 LSTM 策略网络（SB3 RecurrentPPO）
+      </td>
+      <td>Python 训练脚本</td>
+      <td><span class="severity severity-med">中</span></td>
+    </tr>
+    <tr>
+      <td><strong>Phase 4</strong><br><span class="tag tag-suggest">消融实验</span></td>
+      <td>
+        &bull; 按 5.2 清单跑 8 组消融实验<br>
+        &bull; 记录球收集率、存活时间、碰撞频率等指标
+      </td>
+      <td>训练脚本<br>日志分析</td>
+      <td><span class="severity severity-low">低</span></td>
+    </tr>
+  </table>
+</div>
+
+<h3>6.1 最小可行改动（先跑起来验证）</h3>
+
+<p>如果不想做大改动，<strong>最少改 3 个参数即可验证收益</strong>：</p>
+<ol>
+  <li><span class="highlight">ball_potential_scale: 1.0 → 0.15</span> —— 降低塑形量级</li>
+  <li><span class="highlight">ball_potential_func: EXPONENTIAL → LINEAR</span> —— 稳定梯度</li>
+  <li><span class="highlight">wall_potential_mode: NONE → LINEAR</span> —— 启用墙壁塑形</li>
+</ol>
+<p>先跑 500K steps 对比，如果球收集率提升 >20%，方向就对了。</p>
+
+<hr>
+
+<h2>总结</h2>
+
+<div class="card" style="border-left:4px solid var(--green);">
+  <p><strong>当前设计的核心矛盾：</strong></p>
+  <ol>
+    <li>观测空间混用了两种坐标参考系 + Slot 编码排列敏感，增加了不必要的学习难度</li>
+    <li>奖励设计混合了吃球和战斗两个目标，导致信号不纯净</li>
+    <li>塑形奖励量级过高（与稀疏奖励相当），在有限样本下可能误导梯度</li>
+  </ol>
+  <p><strong>推荐方向：</strong>纯化任务为"避障吃球"，采用 Pooling 观测 + 归一化奖励 + 温和塑形 + 帧堆叠。同时保留战斗系统作为消融实验的对照组，增强论文的实验丰富度。</p>
+</div>
+
+</div>
+</body>
+</html>
