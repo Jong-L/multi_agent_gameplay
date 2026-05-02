@@ -1,0 +1,32 @@
+[gd_scene format=3 uid="uid://khjuw4ll421p"]
+
+[ext_resource type="Script" uid="uid://b80lwjty8u0q2" path="res://scripts/ui/info_window.gd" id="1_c6oyu"]
+[ext_resource type="Resource" uid="uid://1hvro5md7hfv" path="res://configs/game_config.tres" id="2_357fl"]
+
+[node name="Window" type="Window" unique_id=819583406]
+transparent_bg = true
+oversampling_override = 1.0
+title = "Reward Debug"
+initial_position = 1
+size = Vector2i(640, 440)
+transparent = true
+script = ExtResource("1_c6oyu")
+game_config = ExtResource("2_357fl")
+
+[node name="Bg" type="ColorRect" parent="." unique_id=557504602]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.16078432)
+
+[node name="GridContainer" type="GridContainer" parent="." unique_id=2049437316]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+columns = 2
+
+[connection signal="close_requested" from="." to="." method="_on_close_requested"]

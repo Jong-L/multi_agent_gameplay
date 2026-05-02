@@ -17,3 +17,6 @@ class_name GameConfig
 @export var training_player_id: int = -1       # -1: 所有玩家训练; 0~3: 仅该玩家训练（其余强制 IDLE）
 @export var reset_on_wall: bool = false        # 撞墙是否触发环境重置
 @export var wall_reset_threshold: int = 2     # 连续撞墙多少8个物理帧才触发 reset（需 reset_on_wall=true）
+
+@export_category("debug")
+@export var enable_info_window:bool

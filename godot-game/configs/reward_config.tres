@@ -6,4 +6,3 @@
 script = ExtResource("1_y2fv5")
 ball_potential_func = 2
 wall_collision_penalty = 5.0
-wall_potential_mode = 2

@@ -1,3 +1,0 @@
-type,type_name,mean_total_ball_reward,max_episodes,player_0_mean_reward,player_1_mean_reward,player_2_mean_reward,player_3_mean_reward
-terminal_zero,Terminal = 0,214.3625,160,58.65,52.78125,48.1,54.83125
-terminal_not_zero,Terminal ≠ 0,273.09375,160,77.2375,70.9125,66.9625,57.98125

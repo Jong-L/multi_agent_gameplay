@@ -19,7 +19,7 @@ const BALL_SLOT_DIM: int = 4
 const ENEMY_SLOT_DIM: int = 5   #
 
 ## ---- 自身状态维度 ----
-const SELF_STATE_DIM: int = 4   ## [pos_x, pos_y, hp_ratio, flip_h]
+const SELF_STATE_DIM: int = 4   
 
 
 ## 扫描指定玩家视野内所有实体

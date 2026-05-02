@@ -33,6 +33,8 @@ var alive_players_cache: Array[Player] = []
 var _alive_cache_dirty: bool = true
 # 奖励球管理器
 var reward_ball_manager: RewardBallManager = null
+# 调试信息窗口（由 InfoWindow._ready 赋值，reparenting 之前）
+var info_window: InfoWindow = null
 var arena_tile_positions: Array[Vector2] = []
 
 # 相机切换按钮组
@@ -98,6 +100,8 @@ func _ready() -> void:
 
 	_collect_enemis()
 	_collect_players()
+	if info_window != null:
+		info_window.setup(self)
 	_setup_camera_system()
 	_setup_camera_switch_ui()
 	_setup_player_uis()
