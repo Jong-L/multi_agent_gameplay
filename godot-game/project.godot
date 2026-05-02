@@ -30,7 +30,8 @@ MathUtils="*res://scripts/autoload/math_utils.gd"
 
 window/size/viewport_width=1080
 window/size/viewport_height=750
-window/size/initial_position=Vector2i(800, 800)
+window/size/initial_position=Vector2i(100, 400)
+window/subwindows/embed_subwindows=false
 window/stretch/mode="canvas_items"
 mouse_cursor/custom_image="uid://drletjwa3f1cx"
 

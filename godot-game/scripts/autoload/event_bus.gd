@@ -9,13 +9,13 @@ extends Node
 @warning_ignore("unused_signal")
 ## 玩家释放技能
 ## @param skill: 被触发的技能实例
-## 连接：Player._handle_skill() (player.gd:39)
+## 连接：Player._handle_skill()
 signal player_cast_skill(skill: Skill)
 
 @warning_ignore("unused_signal")
 ## 游戏暂停状态切换
 ## @param paused: true=暂停, false=恢复
-## 连接：PlayScene._handle_pause() (play_scene.gd:48)
+## 连接：PlayScene._handle_pause() 
 signal game_paused(paused: bool)
 
 @warning_ignore("unused_signal")
@@ -23,8 +23,8 @@ signal game_paused(paused: bool)
 ## @param player_id: 拾取者的玩家 ID
 ## @param ball_type: RewardBall.BallType 枚举值
 ## @param ball: 被拾取的奖励球实例
-## 连接：RewardManager._on_reward_ball_collected() (reward_manager.gd:118)
-## 连接：RewardBallManager._on_reward_ball_collected() (reward_ball_manager.gd:43)
+## 连接：RewardManager._on_reward_ball_collected()
+## 连接：RewardBallManager._on_reward_ball_collected()
 signal reward_ball_collected(player_id: int, ball_type: int, ball: RewardBall)
 
 @warning_ignore("unused_signal")
@@ -37,25 +37,32 @@ signal player_died(player: Player)
 @warning_ignore("unused_signal")
 ## 敌人死亡
 ## @param enemy: 死亡的敌人实例
-## 连接：RewardManager._on_enemy_died() (reward_manager.gd:116)
+## 连接：RewardManager._on_enemy_died() 
 signal enemy_died(enemy: Enemy)
 
 @warning_ignore("unused_signal")
 ## 实体受到伤害
 ## @param entity: 受伤的实体
 ## @param source: 伤害来源
-## 连接：RewardManager._on_entity_damaged() (reward_manager.gd:115)
+## 连接：RewardManager._on_entity_damaged() 
 signal entity_damaged(entity: Entity, source: Entity)
 
 @warning_ignore("unused_signal")
 ## 相机切换
 ## @param camera_id: -1=主相机, 0-3=玩家相机
-## 连接：PlayScene._on_camera_switched() (play_scene.gd:156)
+## 连接：PlayScene._on_camera_switched() 
 signal camera_switched(camera_id: int)
 
 @warning_ignore("unused_signal")
 ## 纯奖励值变更（不含塑形奖励）
 ## @param player_id: 玩家 ID
 ## @param total_pure_reward: 累计纯奖励值
-## 连接：ScoreboardDrawer._on_pure_reward_changed() (scoreboard_drawer.gd)
+## 发射：RewardManager.add_reward()
 signal pure_reward_changed(player_id: int, total_pure_reward: float)
+
+@warning_ignore("unused_signal")
+## reward circle 完成（每个 Sync 周期结束时发射）
+## @param circle_data: Array[Dictionary] 每项: {player_id, total_reward, prev_circle_total, total_pure, prev_circle_pure, total_ball, prev_circle_ball, total_wall, prev_circle_wall}
+## 发射：RewardManager._snapshot_circle_rewards()
+## 连接：InfoWindow._on_circle_completed()
+signal reward_circle_completed(circle_data: Array)

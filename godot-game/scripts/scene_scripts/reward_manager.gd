@@ -23,8 +23,23 @@ var _reward_logger: RewardLogger = null
 #每个玩家的"上次获得正奖励"的游戏时间
 var _last_reward_time: Dictionary = {}
 
-#纯奖励累计值（不含塑形奖励
+#纯奖励累计值（不含塑形奖励）
 var _pure_rewards: Dictionary = {}
+
+# ── 调试窗口追踪 ──
+# episode 累计
+var _total_reward: Dictionary = {} #当前回合总奖励
+var _total_ball_shaping: Dictionary = {}# 当前回合奖励球塑形奖励
+var _total_wall_shaping: Dictionary = {}# 当前回合障碍物塑形奖励
+# 当前 circle 增量
+var _circle_pure: Dictionary = {} #下次发送给python端的奖励
+var _circle_ball_shaping: Dictionary = {}#下一次发送给python端的奖励球塑形励
+var _circle_wall_shaping: Dictionary = {}# 下一次发送给python端的障碍物塑形励
+# 上一个 circle 快照
+var _prev_circle_total: Dictionary = {}#上一次发送给python端的总奖励
+var _prev_circle_pure: Dictionary = {}#上一次发送给python端的事件奖励
+var _prev_circle_ball: Dictionary = {}#上一次发送给python端的奖励球塑形奖励
+var _prev_circle_wall: Dictionary = {}#上一次发送给python端的障碍物塑形奖励
 
 #累计游戏时间
 var _game_time: float = 0.0
@@ -37,10 +52,8 @@ var _shaping_gamma: float=0.99       # 塑形折扣因子
 var _skip_ball_potential_shaping_once: Dictionary = {}
 var _prev_ball_potentials: Dictionary = {}
 var _prev_wall_potentials: Dictionary = {}
-# 方案4需要缓存上帧距离
 var _prev_ball_distances: Dictionary = {}  # {player_id: 上帧最近球距离}
 var action_repeat_count:int=0
-var first_frame:bool=true  #第一帧
 
 # ── 配置路由 ──
 
@@ -67,7 +80,7 @@ func _physics_process(delta: float) -> void:
 	_game_time += delta
 
 	#Rewardmanager在同一个物理帧在sync之前执行，让sync获取最新的奖励，之前有一个物理帧的误差，实际获取的是上一个物理帧的奖励
-	if action_repeat_count==0 and first_frame==false:
+	if action_repeat_count==0:
 		_process_potential_shaping(delta)
 		_process_wall_collision(delta)
 		_process_starvation(delta)
@@ -75,9 +88,10 @@ func _physics_process(delta: float) -> void:
 		for player in _play_scene.players:
 			if player.is_moving:
 				on_player_moved(player)
+		# circle 结束：快照并发射信号（此时 ai_controller.reward 包含本 circle 全部奖励）
+		if game_config and game_config.enable_info_window:
+			_snapshot_circle_rewards()
 
-	if first_frame==true:
-		first_frame=false
 	action_repeat_count=(action_repeat_count+1)%_sync_node.action_repeat
 
 
@@ -136,7 +150,7 @@ func _disconnect_skill_signals() -> void:
 		if is_instance_valid(player) and player.skill_controller != null and player.skill_controller.skill_activated.is_connected(_on_player_skill_activated):
 			player.skill_controller.skill_activated.disconnect(_on_player_skill_activated)
 
-#给指定玩家增加奖励，更新上次正奖励时间
+#事件奖励，更新上次正奖励时间
 func add_reward(player_id: int, value: float, source: String = "") -> void:
 	if _play_scene == null:
 		return
@@ -150,6 +164,7 @@ func add_reward(player_id: int, value: float, source: String = "") -> void:
 	if not _pure_rewards.has(player_id):
 		_pure_rewards[player_id] = 0.0
 	_pure_rewards[player_id] += value
+	_circle_pure[player_id] = _circle_pure.get(player_id, 0.0) + value
 	EventBus.pure_reward_changed.emit(player_id, _pure_rewards[player_id])
 
 	# 正奖励时刷新饥饿计时器
@@ -364,10 +379,13 @@ func _process_ball_potential_shaping(player: Player, pid: int, cfg: RewardConfig
 	
 	var prev_potential: float = _prev_ball_potentials.get(pid, current_potential)
 	var shaping: float = _shaping_gamma * current_potential - prev_potential
+	
 	#if pid==0:
 		#print(shaping)
+	
 	player.ai_controller.reward += shaping
 	_prev_ball_potentials[pid] = current_potential
+	_circle_ball_shaping[pid] = _circle_ball_shaping.get(pid, 0.0) + shaping
 
 func _process_wall_potential_shaping(player: Player, pid: int, cfg: RewardConfig) -> void:
 	# NONE 模式下无塑形；COLLISION 模式在 _process_wall_collision 中单独处理
@@ -377,10 +395,11 @@ func _process_wall_potential_shaping(player: Player, pid: int, cfg: RewardConfig
 	var current_potential := _calculate_wall_shaping_potential(player, cfg)
 	var prev_potential: float = _prev_wall_potentials.get(pid, current_potential)
 	var shaping: float = _shaping_gamma * current_potential - prev_potential
-	#if pid==0:
+	#if pid==2:
 		#print(shaping)
 	player.ai_controller.reward += shaping
 	_prev_wall_potentials[pid] = current_potential
+	_circle_wall_shaping[pid] = _circle_wall_shaping.get(pid, 0.0) + shaping
 
 #距离奖励
 func _process_ball_distance_reward(player: Player, pid: int, cfg: RewardConfig) -> void:
@@ -406,6 +425,7 @@ func _process_ball_distance_reward(player: Player, pid: int, cfg: RewardConfig) 
 
 	var reward: float = cfg.distance_reward_scale * (prev_dist - current_dist)
 	player.ai_controller.reward += reward
+	_circle_ball_shaping[pid]=_circle_ball_shaping.get(pid,0.0)+reward
 
 	#if pid == 0:
 		#print("[RewardManager] 距离差奖励 = ", reward, " (prev=", prev_dist, ", cur=", current_dist, ") for player ", pid)
@@ -703,9 +723,80 @@ func reset() -> void:
 		_reward_logger.start_episode()
 
 	action_repeat_count=0
-	first_frame=true
 	_init_starvation_timers()
 	_init_potentials()
 	_pure_rewards.clear()
 	_prev_ball_distances.clear()
 	_wall_collision_counters.clear()
+	_total_reward.clear()
+	_total_ball_shaping.clear()
+	_total_wall_shaping.clear()
+	_circle_pure.clear()
+	_circle_ball_shaping.clear()
+	_circle_wall_shaping.clear()
+	_prev_circle_total.clear()
+	_prev_circle_pure.clear()
+	_prev_circle_ball.clear()
+	_prev_circle_wall.clear()
+
+## ── 调试窗口接口 ──
+
+# circle 结束时快照当前奖励值，累加 episode total，发射信号
+func _snapshot_circle_rewards() -> void:
+	if _play_scene == null:
+		return
+	var data: Array[Dictionary] = []
+	for player in _play_scene.players:
+		if not is_instance_valid(player):
+			continue
+		var pid: int = player.player_id
+
+		var circle_total: float = player.ai_controller.reward
+		var circle_pure: float = _circle_pure.get(pid, 0.0)
+		var circle_ball: float = _circle_ball_shaping.get(pid, 0.0)
+		var circle_wall: float = _circle_wall_shaping.get(pid, 0.0)
+
+		# 快照上一个 circle 值
+		_prev_circle_total[pid] = circle_total
+		_prev_circle_pure[pid] = circle_pure
+		_prev_circle_ball[pid] = circle_ball
+		_prev_circle_wall[pid] = circle_wall
+
+		# 累加到 episode total
+		_total_reward[pid] = _total_reward.get(pid, 0.0) + circle_total
+		_total_ball_shaping[pid] = _total_ball_shaping.get(pid, 0.0) + circle_ball
+		_total_wall_shaping[pid] = _total_wall_shaping.get(pid, 0.0) + circle_wall
+
+		data.append({
+			"player_id": pid,
+			"total_reward": _total_reward.get(pid, 0.0),#回合奖励
+			"prev_circle_total": circle_total,
+			"total_pure": _pure_rewards.get(pid, 0.0),
+			"prev_circle_pure": circle_pure,
+			"total_ball": _total_ball_shaping.get(pid, 0.0),
+			"prev_circle_ball": circle_ball,
+			"total_wall": _total_wall_shaping.get(pid, 0.0),
+			"prev_circle_wall": circle_wall,
+		})
+
+		# 重置 circle 累加器
+		_circle_pure[pid] = 0.0
+		_circle_ball_shaping[pid] = 0.0
+		_circle_wall_shaping[pid] = 0.0
+
+	if not data.is_empty():
+		EventBus.reward_circle_completed.emit(data)
+
+# 获取指定玩家的调试信息（供 InfoWindow 直接轮询）
+func get_player_debug_info(pid: int) -> Dictionary:
+	return {
+		"player_id": pid,
+		"total_reward": _total_reward.get(pid, 0.0),
+		"prev_circle_total": _prev_circle_total.get(pid, 0.0),
+		"total_pure": _pure_rewards.get(pid, 0.0),
+		"prev_circle_pure": _prev_circle_pure.get(pid, 0.0),
+		"total_ball": _total_ball_shaping.get(pid, 0.0),
+		"prev_circle_ball": _prev_circle_ball.get(pid, 0.0),
+		"total_wall": _total_wall_shaping.get(pid, 0.0),
+		"prev_circle_wall": _prev_circle_wall.get(pid, 0.0),
+	}

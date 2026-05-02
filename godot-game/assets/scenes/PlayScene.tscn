@@ -28,6 +28,7 @@
 [ext_resource type="Resource" path="res://configs/reward_config_p1.tres" id="26_4g37e"]
 [ext_resource type="Resource" path="res://configs/reward_config_p2.tres" id="27_s2mm6"]
 [ext_resource type="Resource" path="res://configs/reward_config_p3.tres" id="28_q3er0"]
+[ext_resource type="PackedScene" uid="uid://khjuw4ll421p" path="res://assets/scenes/InfoWindow.tscn" id="29_eg0d4"]
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_q2on3"]
 texture = ExtResource("2_lakq1")
@@ -148,7 +149,7 @@ texture = ExtResource("4_wxnc3")
 3:11/0 = 0
 
 [sub_resource type="TileSet" id="TileSet_c0hqu"]
-physics_layer_0/collision_layer = 4
+physics_layer_0/collision_layer = 0
 physics_layer_0/collision_mask = 3
 sources/0 = SubResource("TileSetAtlasSource_onnvd")
 
@@ -188,7 +189,7 @@ texture = ExtResource("6_oxvl8")
 3:3/0/physics_layer_0/polygon_0/points = PackedVector2Array(-8, -8, 8, -8, 8, 8, -8, 8)
 
 [sub_resource type="TileSet" id="TileSet_6lokm"]
-physics_layer_0/collision_layer = 4
+physics_layer_0/collision_layer = 0
 sources/0 = SubResource("TileSetAtlasSource_r6opt")
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_o2rb5"]
@@ -416,8 +417,15 @@ player_reward_configs = Array[ExtResource("24_54rql")]([ExtResource("25_eg0d4"),
 
 [node name="Sync" type="Node" parent="." unique_id=1321988269]
 script = ExtResource("16_r6opt")
+control_mode = 0
 deterministic_inference = false
 metadata/_custom_type_script = "uid://bmy6w68efk7bl"
+
+[node name="InfoWindow" parent="." unique_id=1598680286 instance=ExtResource("29_eg0d4")]
+initial_position = 0
+position = Vector2i(1200, 150)
+size = Vector2i(600, 800)
+visible = false
 
 [node name="VisionSensor" type="Node" parent="." unique_id=-1293732729]
 script = ExtResource("17_vsens")
