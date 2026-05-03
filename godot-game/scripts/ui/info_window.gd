@@ -35,7 +35,8 @@ var play_scene: PlayScene = null
 # {player_id: {"title": Label, "rows": {metric_key: Label}}}
 var _player_panels: Dictionary = {}
 var _initialized: bool = false
-var _info_font_size:float=15.0
+var _info_font_size:int=15
+var _title_font_size:int=20
 
 func _ready() -> void:
 	if game_config == null or not game_config.enable_info_window:
@@ -102,7 +103,7 @@ func _create_player_panel(pid: int, skin_color: String) -> void:
 	var title_label := Label.new()
 	title_label.name = "Title"
 	title_label.text = skin_color
-	title_label.add_theme_font_size_override("font_size", 20)
+	title_label.add_theme_font_size_override("font_size", _title_font_size)
 	title_label.add_theme_color_override("font_color", player_color)
 	title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vbox.add_child(title_label)
