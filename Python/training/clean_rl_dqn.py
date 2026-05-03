@@ -86,6 +86,8 @@ class Args:
     env_path: Optional[str] = None
     # env_path: Optional[str] = "godot-game\\build\\game.exe"
     """Godot 导出可执行文件路径。为 None 时连接 Godot 编辑器。"""
+    config_path: str = "godot-game/configs/game_config.tres"
+    """game_config.tres 路径, 用于读取 ray_count 和 use_observation_valid_mask 等动态参数"""
     n_parallel: int = 1
     """并行 Godot 进程数量"""
     seed: int = 1
@@ -100,8 +102,8 @@ class Args:
     """实验名称 """
     experiment_dir: str = "logs/cleanrl_dqn"
     """TensorBoard 日志目录"""
-    save_model_path: Optional[str] = None
-    """训练结束后保存模型的路径 (.zip)"""
+    save_model_path: Optional[str] = f"saved_models/cleanrl_dqn_{time.strftime('%m%d-%H%M')}"
+    """模型保存路径，不用后缀"""
     onnx_export_path: Optional[str] = None
     """导出 ONNX 模型的路径。"""
     track: bool = False
@@ -145,6 +147,75 @@ class Args:
     cuda: bool = True
     """是否启用 CUDA 加速。"""
 
+
+def parse_godot_tres(path: str) -> dict:
+    """解析 Godot .tres 文本配置文件, 提取键值对。"""
+    result = {}
+    with open(path) as f:
+        for line in f:
+            line = line.strip()
+            if "=" not in line or line.startswith("["):
+                continue
+            key, _, value = line.partition("=")
+            key = key.strip()
+            value = value.strip()
+            if value.lower() == "true":
+                value = True
+            elif value.lower() == "false":
+                value = False
+            elif value.isdigit():
+                value = int(value)
+            elif value.replace(".", "", 1).isdigit():
+                value = float(value)
+            result[key] = value
+    return result
+
+
+@dataclass
+class ObsSegmentDims:
+    """观测各段维度, 从 game_config.tres + VisionSensor 常量联合计算。
+    拼接顺序: self_state | nearby_players | nearby_balls | nearby_enemies | map_state
+    """
+    self_dim: int
+    player_dim: int
+    ball_dim: int
+    enemy_dim: int
+    map_dim: int
+    total: int = 0
+
+    def __post_init__(self):
+        self.total = (
+            self.self_dim + self.player_dim + self.ball_dim
+            + self.enemy_dim + self.map_dim
+        )
+
+    @classmethod
+    def from_config(cls, config_path: str = "godot-game/configs/game_config.tres"):
+        """从 Godot 配置文件 + VisionSensor 常量计算各段维度。"""
+        #  VisionSensor中的常量，需要和res://scripts/scene_scripts/vision_sensor.gd保持一致
+        SELF = 4
+        SLOT_DIMS = (5, 4, 5)     # player, ball, enemy 每槽维度
+        SLOT_COUNTS = (3, 8, 5)   # 每类实体槽位数
+
+        ray = 36
+        valid = 0
+        try:
+            cfg = parse_godot_tres(config_path)
+            ray = cfg.get("ray_count", 36)
+            if cfg.get("use_observation_valid_mask", True):
+                valid = 1
+        except (FileNotFoundError, OSError):
+            print(f"[Warning] 无法读取 {config_path}, 使用默认值 ray=32 valid=0")
+
+        # 观测数据各段维度
+        return cls(
+            self_dim=SELF,
+            player_dim=SLOT_COUNTS[0] * (SLOT_DIMS[0] + valid),
+            ball_dim=SLOT_COUNTS[1] * (SLOT_DIMS[1] + valid),
+            enemy_dim=SLOT_COUNTS[2] * (SLOT_DIMS[2] + valid),
+            map_dim=ray,
+        )
+
 def layer_init(layer: nn.Module, std: float = np.sqrt(2), bias_const: float = 0.0):
     """正交初始化"""
     torch.nn.init.orthogonal_(layer.weight, std)
@@ -156,40 +227,35 @@ class QNetwork(nn.Module):
     """DQN Q 值网络, 对观测各段分别提取特征后融合。
 
     输入: 观测向量 (obs_dim,) — Godot 端已按固定顺序拼接:
-          [self_state(4) | nearby_players(15/18) | nearby_balls(32/40) |
-           nearby_enemies(25/30) | map_state(36)]
+          [self_state | nearby_players | nearby_balls | nearby_enemies | map_state]
     输出: 每个动作的 Q 值 (n_actions,)
     """
-    def __init__(self, envs: DQNEnvWrapper):
+    def __init__(self, envs: DQNEnvWrapper, seg: ObsSegmentDims):
         super().__init__()
-        obs_dim = int(np.array(envs.single_observation_space.shape).prod())
         n_actions = int(envs.single_action_space.n)
 
-        self.self_dim = 4
-        self.map_dim = 36
-        # 视野内实体段维度
-        entity_total = obs_dim - self.self_dim - self.map_dim
-        ratio_sum = 3 + 8 + 5  # MAX_NEARBY_PLAYERS:BALLS:ENEMIES
-        self.player_dim = entity_total * 3 // ratio_sum
-        self.ball_dim = entity_total * 8 // ratio_sum
-        self.enemy_dim = entity_total - self.player_dim - self.ball_dim
+        self.seg_self = seg.self_dim
+        self.seg_player = seg.player_dim
+        self.seg_ball = seg.ball_dim
+        self.seg_enemy = seg.enemy_dim
+        self.seg_map = seg.map_dim
 
         # 各段独立特征提取
-        self.self_net = nn.Sequential(layer_init(nn.Linear(self.self_dim, 16)), nn.ReLU())
-        self.player_net = nn.Sequential(layer_init(nn.Linear(self.player_dim, 64)), nn.ReLU())
-        self.ball_net = nn.Sequential(layer_init(nn.Linear(self.ball_dim, 64)), nn.ReLU())
-        self.enemy_net = nn.Sequential(layer_init(nn.Linear(self.enemy_dim, 32)), nn.ReLU())
-        self.map_net = nn.Sequential(layer_init(nn.Linear(self.map_dim, 32)), nn.ReLU())
+        self.self_net = nn.Sequential(layer_init(nn.Linear(self.seg_self, 16)), nn.ReLU())
+        self.player_net = nn.Sequential(layer_init(nn.Linear(self.seg_player, 64)), nn.ReLU())
+        self.ball_net = nn.Sequential(layer_init(nn.Linear(self.seg_ball, 64)), nn.ReLU())
+        self.enemy_net = nn.Sequential(layer_init(nn.Linear(self.seg_enemy, 32)), nn.ReLU())
+        self.map_net = nn.Sequential(layer_init(nn.Linear(self.seg_map, 32)), nn.ReLU())
 
         self.output = layer_init(nn.Linear(16 + 64 + 64 + 32 + 32, n_actions), std=0.01)
 
     def forward(self, obs: torch.Tensor) -> torch.Tensor:
         i = 0
-        s = obs[:, i : i + self.self_dim];    i += self.self_dim
-        p = obs[:, i : i + self.player_dim];  i += self.player_dim
-        b = obs[:, i : i + self.ball_dim];    i += self.ball_dim
-        e = obs[:, i : i + self.enemy_dim];   i += self.enemy_dim
-        m = obs[:, i : i + self.map_dim]
+        s = obs[:, i : i + self.seg_self];    i += self.seg_self
+        p = obs[:, i : i + self.seg_player];  i += self.seg_player
+        b = obs[:, i : i + self.seg_ball];    i += self.seg_ball
+        e = obs[:, i : i + self.seg_enemy];   i += self.seg_enemy
+        m = obs[:, i : i + self.seg_map]
         fused = torch.cat([
             self.self_net(s), self.player_net(p), self.ball_net(b),
             self.enemy_net(e), self.map_net(m),
@@ -291,8 +357,13 @@ def main():
     print(f"[Env] obs_shape={envs.single_observation_space.shape}")
     print(f"[Env] n_actions={envs.single_action_space.n}")
 
-    q_network = QNetwork(envs).to(device)
-    target_network = QNetwork(envs).to(device)
+    # 从 Godot 配置文件 + VisionSensor 常量计算观测各段维度
+    seg = ObsSegmentDims.from_config(args.config_path)
+    print(f"[Obs] segments: self={seg.self_dim} player={seg.player_dim} "
+          f"ball={seg.ball_dim} enemy={seg.enemy_dim} map={seg.map_dim} total={seg.total}")
+
+    q_network = QNetwork(envs, seg).to(device)
+    target_network = QNetwork(envs, seg).to(device)
     target_network.load_state_dict(q_network.state_dict())  # 初始同步
     optimizer = optim.Adam(q_network.parameters(), lr=args.learning_rate)
 
