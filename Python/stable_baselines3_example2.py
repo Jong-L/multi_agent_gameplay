@@ -1,12 +1,18 @@
-import argparse
-from math import fabs
+"""
+Stable-Baselines3 PPO 训练脚本 (高并行度配置) — Godot RL 环境
+=============================================================
+
+配置方式: 直接修改下方 Config 数据类的默认值后运行
+  python Python/stable_baselines3_example2.py
+"""
 import os
 import pathlib
 import time
-from typing import Callable
+from dataclasses import dataclass
+from typing import Callable, Optional
 
 from stable_baselines3 import PPO
-from stable_baselines3.common.callbacks import CheckpointCallback, BaseCallback, CallbackList
+from stable_baselines3.common.callbacks import CheckpointCallback, BaseCallback
 from stable_baselines3.common.vec_env.vec_monitor import VecMonitor
 from stable_baselines3.common.vec_env.vec_normalize import VecNormalize
 
@@ -14,108 +20,58 @@ from godot_rl.core.utils import can_import
 from godot_rl.wrappers.onnx.stable_baselines_export import export_model_as_onnx
 from godot_rl.wrappers.stable_baselines_wrapper import StableBaselinesGodotEnv
 
-# To download the env source and binary:
-# 1.  gdrl.env_from_hub -r edbeeching/godot_rl_BallChase
-# 2.  chmod +x examples/godot_rl_BallChase/bin/BallChase.x86_64
-
 if can_import("ray"):
     print("WARNING, stable baselines and ray[rllib] are not compatible")
 
-parser = argparse.ArgumentParser(allow_abbrev=False)#全匹配
-parser.add_argument(
-    "--env_path",
-    default="godot-game/build2/game.exe",
-    # default=None,
-    type=str,
-    help="The Godot binary to use, do not include for in editor training",
-)
-parser.add_argument(
-    "--experiment_dir",
-    default="logs/sb3",
-    type=str,
-    help="The name of the experiment directory, in which the tensorboard logs and checkpoints (if enabled) are "
-    "getting stored.",
-)
-parser.add_argument(
-    "--experiment_name",
-    default="experiment",
-    type=str,
-    help="The name of the experiment, which will be displayed in tensorboard and "
-    "for checkpoint directory and name (if enabled).",
-)
-parser.add_argument("--seed", type=int, default=0, help="seed of the experiment")
-parser.add_argument(
-    "--resume_model_path",
-    default=None,
-    type=str,
-    help="The path to a model file previously saved using --save_model_path or a checkpoint saved using "
-    "--save_checkpoints_frequency. Use this to resume training or infer from a saved model.",
-)
-parser.add_argument(
-    "--save_model_path",
-    default="savedmodels/long-train-wall-distance-penalty-model",
-    # default=None,
-    type=str,
-    help="The path to use for saving the trained sb3 model after training is complete. Saved model can be used later "
-    "to resume training. Extension will be set to .zip",
-)
-parser.add_argument(
-    "--save_checkpoint_frequency",
-    default=None,
-    type=int,
-    help=(
-        "If set, will save checkpoints every 'frequency' environment steps. "
-        "Requires a unique --experiment_name or --experiment_dir for each run. "
-        "Does not need --save_model_path to be set. "
-    ),
-)
-parser.add_argument(
-    "--onnx_export_path",
-    default=None,
-    type=str,
-    help="If included, will export onnx file after training to the path specified.",
-)
-parser.add_argument(
-    "--timesteps",
-    default=6000_000,
-    type=int,
-    help="The number of environment steps to train for, default is 1_000_000. If resuming from a saved model, "
-    "it will continue training for this amount of steps from the saved state without counting previously trained "
-    "steps",
-)
-parser.add_argument(
-    "--inference",
-    default=False,
-    help="Instead of training, it will run inference on a loaded model for --timesteps steps. "
-    "Requires --resume_model_path to be set.",
-)
-parser.add_argument(
-    "--linear_lr_schedule",
-    default=False,
-    help="Use a linear LR schedule for training. If set, learning rate will decrease until it reaches 0 at "
-    "--timesteps"
-    "value. Note: On resuming training, the schedule will reset. If disabled, constant LR will be used.",
-)
-parser.add_argument(
-    "--viz",
-    help="If set true, the simulation will be displayed in a window during training. Otherwise "
-    "training will run without rendering the simulation. This setting does not apply to in-editor training.",
-    default=False,
-)
-parser.add_argument("--speedup", default=10, type=int, help="Whether to speed up the physics in the env")
-parser.add_argument(
-    "--n_parallel",
-    default=5,
-    type=int,
-    help="How many instances of the environment executable to " "launch - requires --env_path to be set if > 1.",
-)
-parser.add_argument(
-    "--reward_norm",
-    help="If set, apply VecNormalize to normalize rewards (and optionally observations).",
-    default=True,
-)
-parser.add_argument("--gamma", default=0.99, type=float, help="Discount factor")
-args, extras = parser.parse_known_args()
+
+@dataclass
+class Config:
+    """SB3 PPO 训练配置 (高并行度) — 修改默认值即可调整参数。"""
+
+    # ---- 环境 ----
+    env_path: Optional[str] = "godot-game/build2/game.exe"
+    """Godot 可执行文件路径。"""
+    seed: int = 0
+    """随机种子。"""
+    viz: bool = False
+    """显示游戏窗口。"""
+    speedup: int = 10
+    """物理引擎加速倍数。"""
+    n_parallel: int = 5
+    """并行 Godot 进程数量。"""
+    gamma: float = 0.99
+    """折扣因子 γ。"""
+
+    # ---- 实验 ----
+    experiment_dir: str = "logs/sb3"
+    """TensorBoard 日志目录。"""
+    experiment_name: str = "experiment"
+    """实验名称。"""
+
+    # ---- 训练 ----
+    timesteps: int = 6_000_000
+    """总训练步数。"""
+    linear_lr_schedule: bool = False
+    """使用线性 LR 退火。"""
+    reward_norm: bool = True
+    """启用 VecNormalize 奖励归一化。"""
+
+    # ---- 保存 / 恢复 ----
+    resume_model_path: Optional[str] = None
+    """恢复训练的模型路径 (.zip)。"""
+    save_model_path: Optional[str] = "savedmodels/long-train-wall-distance-penalty-model"
+    """训练结束后保存模型的路径。"""
+    save_checkpoint_frequency: Optional[int] = None
+    """每 N 步保存一次检查点 (None 禁用)。"""
+    onnx_export_path: Optional[str] = None
+    """导出 ONNX 模型的路径。"""
+
+    # ---- 推理 ----
+    inference: bool = False
+    """推理模式 (需设置 resume_model_path)。"""
+
+
+args = Config()
 
 def handle_onnx_export():
     # Enforce the extension of onnx and zip when saving model to avoid potential conflicts in case of same name
@@ -240,7 +196,7 @@ if args.save_checkpoint_frequency is not None and os.path.isdir(path_checkpoint)
     )
 
 if args.inference and args.resume_model_path is None:
-    raise parser.error("Using --inference requires --resume_model_path to be set.")
+    raise ValueError("推理模式 (inference=True) 需要设置 resume_model_path。")
 
 if args.env_path is None and args.viz:
     print("Info: Using --viz without --env_path set has no effect, in-editor training will always render.")

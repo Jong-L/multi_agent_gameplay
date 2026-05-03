@@ -1,8 +1,15 @@
-import argparse
+"""
+SB3 无限训练脚本 — 自动续训、定期保存、持续 LR 退火
+==================================================
+
+配置方式: 直接修改下方 Config 数据类的默认值后运行
+  python Python/sb3_infinite_resume_train.py
+"""
 import json
 import os
 import pathlib
 import time
+from dataclasses import dataclass
 from typing import Optional
 
 from stable_baselines3 import PPO
@@ -14,56 +21,49 @@ from stable_baselines3.common.vec_env.vec_normalize import VecNormalize
 from godot_rl.wrappers.stable_baselines_wrapper import StableBaselinesGodotEnv
 
 
-def str2bool(v):
-    if isinstance(v, bool):
-        return v
-    s = str(v).strip().lower()
-    if s in {"1", "true", "t", "yes", "y", "on"}:
-        return True
-    if s in {"0", "false", "f", "no", "n", "off"}:
-        return False
-    raise argparse.ArgumentTypeError(f"Invalid bool value: {v}")
+@dataclass
+class Config:
+    """SB3 无限训练配置 — 修改默认值即可调整参数。"""
 
+    # ---- 环境 ----
+    env_path: str = "godot-game/build/game.exe"
+    """Godot 可执行文件路径。"""
+    seed: int = 0
+    """随机种子。"""
+    n_parallel: int = 1
+    """并行环境数量。"""
+    viz: bool = False
+    """显示游戏窗口。"""
+    speedup: int = 10
+    """物理引擎加速倍数。"""
+    gamma: float = 0.99
+    """折扣因子。"""
+    reward_norm: bool = True
+    """启用奖励归一化。"""
 
-def parse_args():
-    parser = argparse.ArgumentParser(allow_abbrev=False)
-    parser.add_argument("--env_path", default="godot-game/build/game.exe", type=str)
-    parser.add_argument("--run_name", default="ppo_infinite_run", type=str)
-    parser.add_argument("--log_dir", default="logs/sb3_infinite", type=str)
-    parser.add_argument("--save_dir", default="savedmodels/infinite", type=str)
-    parser.add_argument("--resume_model_path", default=None, type=str)
-    parser.add_argument("--seed", type=int, default=0)
-    parser.add_argument("--n_parallel", default=1, type=int)
-    parser.add_argument("--viz", default=False, type=str2bool)
-    parser.add_argument("--speedup", default=10, type=int)
-    parser.add_argument("--gamma", default=0.99, type=float)
-    parser.add_argument("--reward_norm", default=True, type=str2bool)
-    parser.add_argument(
-        "--chunk_timesteps",
-        default=100_000,
-        type=int,
-        help="One learn() chunk. Script loops forever over chunks until interrupted.",
-    )
-    parser.add_argument(
-        "--checkpoint_freq",
-        default=50_000,
-        type=int,
-        help="Checkpoint frequency in env timesteps. Set <=0 to disable.",
-    )
-    parser.add_argument("--lr_initial", default=3e-4, type=float)
-    parser.add_argument(
-        "--lr_decay_steps",
-        default=20_000_000,
-        type=int,
-        help="Global steps for linear LR decay. LR continuity is based on model.num_timesteps.",
-    )
-    parser.add_argument(
-        "--lr_final_ratio",
-        default=0.1,
-        type=float,
-        help="Final LR = lr_initial * lr_final_ratio after lr_decay_steps.",
-    )
-    return parser.parse_args()
+    # ---- 训练循环 ----
+    run_name: str = "ppo_infinite_run"
+    """运行名称 (用于日志和保存路径)。"""
+    log_dir: str = "logs/sb3_infinite"
+    """TensorBoard 日志目录。"""
+    save_dir: str = "savedmodels/infinite"
+    """模型保存根目录。"""
+    chunk_timesteps: int = 100_000
+    """每个 learn() 块的时间步数 (脚本无限循环直到中断)。"""
+    checkpoint_freq: int = 50_000
+    """检查点保存频率 (env timesteps, ≤0 禁用)。"""
+
+    # ---- LR 调度 ----
+    lr_initial: float = 3e-4
+    """初始学习率。"""
+    lr_decay_steps: int = 20_000_000
+    """LR 线性衰减的总步数。"""
+    lr_final_ratio: float = 0.1
+    """最终 LR = lr_initial * lr_final_ratio。"""
+
+    # ---- 恢复 ----
+    resume_model_path: Optional[str] = None
+    """指定恢复训练的模型路径 (None 则自动检测)。"""
 
 
 class GlobalLinearLrCallback(BaseCallback):
@@ -152,7 +152,7 @@ def save_all(model: PPO, env, model_path: pathlib.Path, vecnorm_path: pathlib.Pa
 
 
 def main():
-    args = parse_args()
+    args = Config()
     run_root, latest_model_zip, latest_vecnorm, state_json, checkpoint_dir = resolve_paths(args)
     os.makedirs(args.log_dir, exist_ok=True)
 

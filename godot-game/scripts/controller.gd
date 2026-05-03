@@ -1,16 +1,18 @@
 extends AIController2D
 
 @onready var play_scene :PlayScene=$"../.."
+
+@export var cfg:GameConfig=null
 var move_action:int
 var n_time_step:int=0
 
 func _ready():
 	super._ready()
+	
 	# 根据 training_player_id 动态设置 policy_name
 	# 必须在 Sync._get_agents() 读取 policy_name 之前完成
 	if play_scene != null and play_scene.game_config != null:
-		var cfg := play_scene.game_config
-		if cfg.training_player_id >= 0:
+		if cfg.training_player_id != GameConfig.TrainingPlayer.ALL:
 			if _player is Player and _player.player_id == cfg.training_player_id:
 				policy_name = "learning_policy"
 			else:
@@ -24,7 +26,9 @@ func _physics_process(_delta):
 	if needs_reset:
 		needs_reset=false
 		reset()
-		
+
+	#if _player.player_id==0:
+		#print(get_obs())
 
 
 func reset():
@@ -38,8 +42,6 @@ func get_obs() -> Dictionary:
 	if play_scene == null:
 		return {}
 	var obs=play_scene.get_obs_for_player(_player)
-	#if _player.player_id==0:
-		#print(obs)
 	return obs
 
 func get_reward() -> float:
@@ -78,8 +80,7 @@ func get_obs_space() -> Dictionary:
 func set_action(action) -> void:
 	# 如果启用了单智能体训练且当前玩家不是训练玩家，强制 IDLE
 	if play_scene != null and play_scene.game_config != null:
-		var cfg := play_scene.game_config
-		if cfg.training_player_id >= 0:
+		if cfg.training_player_id != GameConfig.TrainingPlayer.ALL:
 			if _player is Player and _player.player_id != cfg.training_player_id:
 				move_action = Player.Action.IDLE
 				_player.pending_action = move_action as Player.Action

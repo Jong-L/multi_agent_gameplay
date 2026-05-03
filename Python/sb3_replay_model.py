@@ -1,103 +1,88 @@
-import argparse
-import os
+"""
+SB3 模型回放脚本 — 加载训练好的模型并可视化运行
+=============================================
+
+配置方式: 直接修改下方 Config 数据类的默认值后运行
+  python Python/sb3_replay_model.py
+"""
 import pathlib
+from dataclasses import dataclass
+from typing import Optional
 
 from stable_baselines3 import PPO
-from godot_rl.wrappers.stable_baselines_wrapper import StableBaselinesGodotEnv
 from stable_baselines3.common.vec_env.vec_monitor import VecMonitor
 from stable_baselines3.common.vec_env.vec_normalize import VecNormalize
 
-def main():
-    parser = argparse.ArgumentParser(description="Replay a trained model in the Godot environment.")
-    parser.add_argument(
-        "--model_path",
-        type=str,
-        default="savedmodels\wall-distance-penalty-model.zip",
-        help="Path to the saved .zip model file."
-    )
-    parser.add_argument(
-        "--env_path",
-        type=str,
-        default=None,
-        help="Path to the Godot executable. If not provided, it will try to connect to an open editor."
-    )
-    parser.add_argument(
-        "--speedup",
-        type=int,
-        default=1,
-        help="Speed up the physics simulation (e.g., 4 for 4x speed)."
-    )
-    parser.add_argument(
-        "--viz",
-        action="store_true",
-        default=True,
-        help="Show the game window during replay."
-    )
-    parser.add_argument(
-        "--reward_norm",
-        action="store_true",
-        default=True,
-        help="Use VecNormalize for reward normalization (should match training config)."
-    )
-    parser.add_argument(
-        "--obs_norm",
-        action="store_true",
-        default=False,
-        help="Also normalize observations via VecNormalize."
-    )
-    
-    args = parser.parse_args()
+from godot_rl.wrappers.stable_baselines_wrapper import StableBaselinesGodotEnv
 
-    # Resolve paths
+
+@dataclass
+class Config:
+    """模型回放配置 — 修改默认值即可调整参数。"""
+
+    model_path: str = r"savedmodels\wall-distance-penalty-model.zip"
+    """要加载的模型文件路径 (.zip)。"""
+    env_path: Optional[str] = None
+    """Godot 可执行文件路径 (None 连接编辑器)。"""
+    speedup: int = 1
+    """物理引擎加速倍数 (1=正常速度)。"""
+    viz: bool = True
+    """显示游戏窗口。"""
+    reward_norm: bool = True
+    """启用 VecNormalize 奖励归一化 (需与训练配置一致)。"""
+    obs_norm: bool = False
+    """同时归一化观测值。"""
+
+
+def main():
+    args = Config()
+
     model_path = pathlib.Path(args.model_path).resolve()
     if not model_path.exists():
-        raise FileNotFoundError(f"Model file not found at: {model_path}")
+        raise FileNotFoundError(f"模型文件不存在: {model_path}")
 
-    print(f"Loading model from: {model_path}")
-    
-    # Initialize Environment
-    print("Initializing Godot environment...")
+    print(f"加载模型: {model_path}")
+
+    print("初始化 Godot 环境...")
     env = StableBaselinesGodotEnv(
         env_path=args.env_path,
         show_window=args.viz,
         speedup=args.speedup,
-        n_parallel=1
+        n_parallel=1,
     )
     env = VecMonitor(env)
-    # Apply VecNormalize if enabled (must match training configuration)
+
     if args.reward_norm:
-        env = VecNormalize(env, norm_obs=args.obs_norm, norm_reward=True, clip_obs=10.0, clip_reward=10.0)
-        
-        # Try to load VecNormalize statistics if available
+        env = VecNormalize(
+            env,
+            norm_obs=args.obs_norm,
+            norm_reward=True,
+            clip_obs=10.0,
+            clip_reward=10.0,
+        )
         vecnorm_path = model_path.with_suffix(".vecnormalize.pkl")
         if vecnorm_path.exists():
-            print(f"Loading VecNormalize stats from: {vecnorm_path}")
+            print(f"加载 VecNormalize 统计: {vecnorm_path}")
             env = VecNormalize.load(vecnorm_path, env)
         else:
-            print(f"WARNING: VecNormalize stats file not found at {vecnorm_path}")
-            print("Using fresh normalization statistics (may affect performance)")
+            print(f"警告: VecNormalize 统计文件不存在 {vecnorm_path}")
+            print("使用全新的归一化统计 (可能影响效果)")
 
-    # Load Model
-    print("Loading PPO model...")
+    print("加载 PPO 模型...")
     model = PPO.load(model_path, env=env)
 
-    # Replay Loop
-    print("Starting replay... Press Ctrl+C to stop.")
+    print("开始回放... 按 Ctrl+C 停止。")
     obs = env.reset()
     try:
         while True:
-            # Predict action deterministically for best performance display
             action, _states = model.predict(obs, deterministic=True)
             obs, rewards, dones, infos = env.step(action)
-            
-            # Optional: Print info
-            # print(f"Reward: {rewards}, Done: {dones}")
-            
     except KeyboardInterrupt:
-        print("\nReplay stopped by user.")
+        print("\n回放被用户中断。")
     finally:
         env.close()
-        print("Environment closed.")
+        print("环境已关闭。")
+
 
 if __name__ == "__main__":
     main()
