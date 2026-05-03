@@ -30,6 +30,7 @@ from dataclasses import dataclass
 from token import OP
 from typing import Optional
 
+import gymnasium as gym
 import numpy as np
 import torch
 import torch.nn as nn
@@ -38,6 +39,44 @@ import torch.optim as optim
 from torch.utils.tensorboard import SummaryWriter
 
 from godot_rl.wrappers.clean_rl_wrapper import CleanRLGodotEnv
+
+
+class DQNEnvWrapper:
+    """仅处理 MultiDiscrete → Discrete 动作空间转换, 观测已由 Godot 端展平为单键 "obs"。"""
+
+    def __init__(self, env_path=None, n_parallel=1, seed=0, **kwargs):
+        self._env = CleanRLGodotEnv(
+            env_path=env_path, n_parallel=n_parallel, seed=seed, **kwargs
+        )
+        raw_act = self._env.envs[0].action_space
+        if isinstance(raw_act, gym.spaces.MultiDiscrete) and len(raw_act.nvec) == 1:# 如果单离散动作空间被包装为 MultiDiscrete
+            self._act_space = gym.spaces.Discrete(int(raw_act.nvec[0]))
+        else:
+            self._act_space = raw_act
+
+    @property
+    def single_observation_space(self):
+        return self._env.single_observation_space
+
+    @property
+    def single_action_space(self):
+        return self._act_space
+
+    @property
+    def num_envs(self):
+        return self._env.num_envs
+
+    def close(self):
+        self._env.close()
+
+    def reset(self, seed=None):
+        return self._env.reset(seed=seed)
+
+    def step(self, actions):
+        if isinstance(self._act_space, gym.spaces.Discrete):
+            if isinstance(self._env.envs[0].action_space, gym.spaces.MultiDiscrete):
+                actions = np.asarray(actions).reshape(-1, 1)
+        return self._env.step(actions)
 
 @dataclass
 class Args:
@@ -114,27 +153,48 @@ def layer_init(layer: nn.Module, std: float = np.sqrt(2), bias_const: float = 0.
 
 
 class QNetwork(nn.Module):
-    """DQN Q 值网络。
+    """DQN Q 值网络, 对观测各段分别提取特征后融合。
 
-    输入: 观测向量 (obs_dim,)
+    输入: 观测向量 (obs_dim,) — Godot 端已按固定顺序拼接:
+          [self_state(4) | nearby_players(15/18) | nearby_balls(32/40) |
+           nearby_enemies(25/30) | map_state(36)]
     输出: 每个动作的 Q 值 (n_actions,)
     """
-    def __init__(self, envs: CleanRLGodotEnv):
+    def __init__(self, envs: DQNEnvWrapper):
         super().__init__()
         obs_dim = int(np.array(envs.single_observation_space.shape).prod())
         n_actions = int(envs.single_action_space.n)
 
-        self.network = nn.Sequential(
-            layer_init(nn.Linear(obs_dim, 256)),
-            nn.ReLU(),
-            layer_init(nn.Linear(256, 256)),
-            nn.ReLU(),
-            layer_init(nn.Linear(256, n_actions), std=0.01),
-        )
+        self.self_dim = 4
+        self.map_dim = 36
+        # 视野内实体段维度
+        entity_total = obs_dim - self.self_dim - self.map_dim
+        ratio_sum = 3 + 8 + 5  # MAX_NEARBY_PLAYERS:BALLS:ENEMIES
+        self.player_dim = entity_total * 3 // ratio_sum
+        self.ball_dim = entity_total * 8 // ratio_sum
+        self.enemy_dim = entity_total - self.player_dim - self.ball_dim
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """返回所有动作的 Q 值向量。"""
-        return self.network(x)
+        # 各段独立特征提取
+        self.self_net = nn.Sequential(layer_init(nn.Linear(self.self_dim, 16)), nn.ReLU())
+        self.player_net = nn.Sequential(layer_init(nn.Linear(self.player_dim, 64)), nn.ReLU())
+        self.ball_net = nn.Sequential(layer_init(nn.Linear(self.ball_dim, 64)), nn.ReLU())
+        self.enemy_net = nn.Sequential(layer_init(nn.Linear(self.enemy_dim, 32)), nn.ReLU())
+        self.map_net = nn.Sequential(layer_init(nn.Linear(self.map_dim, 32)), nn.ReLU())
+
+        self.output = layer_init(nn.Linear(16 + 64 + 64 + 32 + 32, n_actions), std=0.01)
+
+    def forward(self, obs: torch.Tensor) -> torch.Tensor:
+        i = 0
+        s = obs[:, i : i + self.self_dim];    i += self.self_dim
+        p = obs[:, i : i + self.player_dim];  i += self.player_dim
+        b = obs[:, i : i + self.ball_dim];    i += self.ball_dim
+        e = obs[:, i : i + self.enemy_dim];   i += self.enemy_dim
+        m = obs[:, i : i + self.map_dim]
+        fused = torch.cat([
+            self.self_net(s), self.player_net(p), self.ball_net(b),
+            self.enemy_net(e), self.map_net(m),
+        ], dim=1)
+        return self.output(torch.relu(fused))
 
 class ReplayBuffer:
     """经验回放缓冲区。
@@ -216,7 +276,7 @@ def main():
     device = torch.device("cuda" if torch.cuda.is_available() and args.cuda else "cpu")
 
     # ---- 环境 ----
-    envs = CleanRLGodotEnv(
+    envs = DQNEnvWrapper(
         env_path=args.env_path,
         show_window=args.show_window,
         speedup=args.speedup,

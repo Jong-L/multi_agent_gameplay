@@ -181,7 +181,7 @@ def main():
         if args.reward_norm:
             env = VecNormalize(env, norm_obs=False, norm_reward=True, clip_reward=10.0)
         model = PPO(
-            "MultiInputPolicy",
+            "MlpPolicy",
             env,
             ent_coef=0.0001,
             verbose=1,

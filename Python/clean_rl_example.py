@@ -54,6 +54,7 @@ class Args:
 
     # ---- 算法超参数 ----
     env_path: Optional[str] = None
+    # env_path: str = ""
     """Godot 环境可执行文件路径 (None 连接编辑器)。"""
     speedup: int = 8
     """Godot 环境加速倍数。"""
