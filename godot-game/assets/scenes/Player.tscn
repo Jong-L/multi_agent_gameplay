@@ -9,6 +9,7 @@
 [ext_resource type="PackedScene" uid="uid://ubsuldtsvf4p" path="res://assets/scenes/skill_scene/slash.tscn" id="4_tdg3f"]
 [ext_resource type="Script" uid="uid://dirmui5fqjtt1" path="res://scripts/controller.gd" id="8_qu62d"]
 [ext_resource type="Texture2D" uid="uid://c4tdbx4y0l32e" path="res://assets/healthbarUnder.png" id="9_jc3ay"]
+[ext_resource type="Resource" uid="uid://1hvro5md7hfv" path="res://configs/game_config.tres" id="9_mc6or"]
 [ext_resource type="Script" uid="uid://b4a1530uw0150" path="res://scripts/entity/health_bar_on_player.gd" id="10_jc3ay"]
 [ext_resource type="Texture2D" uid="uid://ccfcowrmeakqg" path="res://assets/healthbarProgress.png" id="10_mc6or"]
 
@@ -239,6 +240,7 @@ shape = SubResource("CapsuleShape2D_4wvqw")
 
 [node name="AIController2D" type="Node2D" parent="." unique_id=720197141]
 script = ExtResource("8_qu62d")
+cfg = ExtResource("9_mc6or")
 reset_after = 2000
 metadata/_custom_type_script = "uid://ciecfcurp1n2n"
 

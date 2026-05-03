@@ -3,13 +3,16 @@
 #
 # 这个文件实现了PPO (Proximal Policy Optimization) 算法，用于训练Godot游戏中的智能体
 # 支持连续动作空间，使用CleanRL框架风格实现
-import argparse
+#
+# 配置方式: 直接修改下方 Args 数据类的默认值后运行
+#   python Python/clean_rl_example.py
 import os
 import pathlib
 import random
 import time
 from collections import deque
-from distutils.util import strtobool
+from dataclasses import dataclass
+from typing import Optional
 
 import numpy as np
 import torch
@@ -21,85 +24,78 @@ from torch.utils.tensorboard import SummaryWriter  # TensorBoard日志记录
 from godot_rl.wrappers.clean_rl_wrapper import CleanRLGodotEnv  # Godot环境包装器
 
 
-def parse_args():
-    """
-    解析命令行参数
-    包含训练配置、算法超参数、环境设置等所有可配置项
-    """
-    # fmt: off
-    parser = argparse.ArgumentParser()
-    
-    # ==================== 实验配置参数 ====================
-    parser.add_argument("--viz", action="store_true", default=False,
-                        help="是否可视化训练过程。如果设置，会在窗口中显示仿真；否则无渲染训练")
-    parser.add_argument("--experiment_dir", default="logs/cleanrl", type=str,
-                        help="实验目录名称，TensorBoard日志存储位置")
-    parser.add_argument("--experiment_name", default=os.path.basename(__file__).rstrip(".py"), type=str,
-                        help="实验名称，在TensorBoard中显示")
-    parser.add_argument("--seed", type=int, default=0,
-                        help="随机种子，保证实验可重复性")
-    parser.add_argument("--torch-deterministic", type=lambda x: bool(strtobool(x)), default=True, nargs="?", const=True,
-                        help="是否启用PyTorch确定性模式")
-    parser.add_argument("--cuda", type=lambda x: bool(strtobool(x)), default=True, nargs="?", const=True,
-                        help="是否启用CUDA加速")
-    
-    # ==================== 追踪与监控参数 ====================
-    parser.add_argument("--track", type=lambda x: bool(strtobool(x)), default=False, nargs="?", const=True,
-                        help="是否使用Weights & Biases追踪实验")
-    parser.add_argument("--wandb-project-name", type=str, default="cleanRL",
-                        help="W&B项目名称")
-    parser.add_argument("--wandb-entity", type=str, default=None,
-                        help="W&B团队/实体名称")
-    parser.add_argument("--capture-video", type=lambda x: bool(strtobool(x)), default=False, nargs="?", const=True,
-                        help="是否录制智能体表现视频")
-    parser.add_argument(
-        "--onnx_export_path",
-        default=None,
-        type=str,
-        help="训练结束后导出ONNX模型的路径（可选）"
-    )
+@dataclass
+class Args:
+    """PPO 训练配置 — 修改默认值即可调整训练参数。"""
 
-    # ==================== 算法特定参数 ====================
-    parser.add_argument("--env_path", type=str, default=None,
-                        help="Godot环境可执行文件路径")
-    parser.add_argument("--speedup", type=int, default=8,
-                        help="Godot环境加速倍数，提高训练速度")
-    parser.add_argument("--total-timesteps", type=int, default=100_0000,
-                        help="总训练步数")
-    parser.add_argument("--learning-rate", type=float, default=3e-4,
-                        help="优化器学习率")
-    parser.add_argument("--num-steps", type=int, default=32,
-                        help="每次策略 rollout 在每个环境中运行的步数")
-    parser.add_argument("--anneal-lr", type=lambda x: bool(strtobool(x)), default=True, nargs="?", const=True,
-                        help="是否对学习率进行退火（逐渐减小）")
-    parser.add_argument("--gamma", type=float, default=0.99,
-                        help="折扣因子γ，决定未来奖励的权重")
-    parser.add_argument("--gae-lambda", type=float, default=0.95,
-                        help="GAE(广义优势估计)的λ参数，平衡偏差和方差")
-    parser.add_argument("--num-minibatches", type=int, default=8,
-                        help="小批量数量，用于PPO更新")
-    parser.add_argument("--update-epochs", type=int, default=10,
-                        help="每次更新时遍历数据的轮数(K epochs)")
-    parser.add_argument("--norm-adv", type=lambda x: bool(strtobool(x)), default=True, nargs="?", const=True,
-                        help="是否对优势函数进行标准化")
-    parser.add_argument("--clip-coef", type=float, default=0.2,
-                        help="PPO裁剪系数ε，限制策略更新幅度")
-    parser.add_argument("--clip-vloss", type=lambda x: bool(strtobool(x)), default=True, nargs="?", const=True,
-                        help="是否对价值函数损失使用裁剪")
-    parser.add_argument("--ent-coef", type=float, default=0.0001,
-                        help="熵系数，鼓励探索")
-    parser.add_argument("--vf-coef", type=float, default=0.5,
-                        help="价值函数损失系数")
-    parser.add_argument("--max-grad-norm", type=float, default=0.5,
-                        help="梯度裁剪的最大范数，防止梯度爆炸")
-    parser.add_argument("--target-kl", type=float, default=None,
-                        help="目标KL散度阈值，用于早停")
-    parser.add_argument("--n_parallel", default=1, type=int, 
-                        help="并行环境实例数量 - 如果>1需要设置--env_path")
-    args = parser.parse_args()
+    # ---- 实验配置 ----
+    experiment_dir: str = "logs/cleanrl"
+    """TensorBoard 日志存储目录。"""
+    experiment_name: str = os.path.basename(__file__).rstrip(".py")
+    """实验名称，在 TensorBoard 中显示。"""
+    seed: int = 0
+    """随机种子，保证实验可重复性。"""
+    torch_deterministic: bool = True
+    """启用 PyTorch 确定性模式。"""
+    cuda: bool = True
+    """启用 CUDA 加速。"""
 
-    # fmt: on
-    return args
+    # ---- 追踪 ----
+    track: bool = False
+    """使用 Weights & Biases 追踪实验。"""
+    wandb_project_name: str = "cleanRL"
+    """W&B 项目名称。"""
+    wandb_entity: Optional[str] = None
+    """W&B 团队/实体名称。"""
+    capture_video: bool = False
+    """录制智能体表现视频。"""
+    onnx_export_path: Optional[str] = None
+    """训练结束后导出 ONNX 模型的路径。"""
+
+    # ---- 算法超参数 ----
+    env_path: Optional[str] = None
+    """Godot 环境可执行文件路径 (None 连接编辑器)。"""
+    speedup: int = 8
+    """Godot 环境加速倍数。"""
+    total_timesteps: int = 1_000_000
+    """总训练步数。"""
+    learning_rate: float = 3e-4
+    """优化器学习率。"""
+    num_steps: int = 32
+    """每次 rollout 在每个环境中运行的步数。"""
+    anneal_lr: bool = True
+    """对学习率进行线性退火。"""
+    gamma: float = 0.99
+    """折扣因子 γ。"""
+    gae_lambda: float = 0.95
+    """GAE 的 λ 参数，平衡偏差和方差。"""
+    num_minibatches: int = 8
+    """小批量数量。"""
+    update_epochs: int = 10
+    """每次更新遍历数据的轮数 (K epochs)。"""
+    norm_adv: bool = True
+    """对优势函数进行标准化。"""
+    clip_coef: float = 0.2
+    """PPO 裁剪系数 ε。"""
+    clip_vloss: bool = True
+    """对价值函数损失使用裁剪。"""
+    ent_coef: float = 0.0001
+    """熵系数，鼓励探索。"""
+    vf_coef: float = 0.5
+    """价值函数损失系数。"""
+    max_grad_norm: float = 0.5
+    """梯度裁剪最大范数。"""
+    target_kl: Optional[float] = None
+    """目标 KL 散度阈值，用于早停 (None 禁用)。"""
+    n_parallel: int = 1
+    """并行 Godot 环境实例数量。"""
+    viz: bool = False
+    """显示 Godot 游戏窗口。"""
+
+    # 运行时计算的衍生值 (不在 dataclass __init__ 中设置)
+    num_envs: int = 0
+    batch_size: int = 0
+    minibatch_size: int = 0
 
 
 
@@ -200,7 +196,7 @@ class Agent(nn.Module):
 
 if __name__ == "__main__":
     # ==================== 第1步：初始化配置 ====================
-    args = parse_args()
+    args = Args()
     run_name = f"{args.experiment_name}__{args.seed}__{int(time.time())}"  # 生成唯一运行名称
     
     # 可选：使用Weights & Biases进行实验追踪

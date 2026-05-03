@@ -15,7 +15,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-import tyro
 from torch.utils.tensorboard import SummaryWriter
 
 from godot_rl.wrappers.clean_rl_wrapper import CleanRLGodotEnv
@@ -121,7 +120,7 @@ def linear_schedule(start_e: float, end_e: float, duration: int, t: int):
 
 
 if __name__ == "__main__":
-    args = tyro.cli(Args)
+    args = Args()
 
     # env setup
     envs = env = CleanRLGodotEnv(
