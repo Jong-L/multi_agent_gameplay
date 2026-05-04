@@ -10,13 +10,10 @@ extends Node
 ##   - 提供触发接口（检查冷却 → 激活）
 ##
 ## 使用方式：
-##   - Player：通过 Action.ATTACK 触发 idx=0 的技能
+##   - Player：通过 Action.ATTACK 触发 idx的技能
 ##   - Enemy：AI 状态机中调用 trigger_skill_by_idx()
 ##   - UI：SpellButton 点击触发特定技能
 
-## 技能成功激活信号（冷却检查通过后发射）
-## @param entity: 激活技能的实体
-## @param skill: 被激活的技能
 signal skill_activated(entity: Entity, skill: Skill)
 
 var skills: Array[Skill] = []           ## 技能数组（自动收集）

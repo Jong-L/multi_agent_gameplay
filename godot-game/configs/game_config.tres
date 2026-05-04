@@ -4,7 +4,8 @@
 
 [resource]
 script = ExtResource("1")
-reward_logger_enabled = false
-ray_count = 36
+ray_count = 1
 use_observation_valid_mask = true
+use_velocity_obs = false
+training_player_id = -1
 enable_info_window = true

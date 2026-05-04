@@ -81,13 +81,18 @@ func _physics_process(delta: float) -> void:
 
 	#Rewardmanager在同一个物理帧在sync之前执行，让sync获取最新的奖励，之前有一个物理帧的误差，实际获取的是上一个物理帧的奖励
 	if action_repeat_count==0:
+		#奖励塑形
 		_process_potential_shaping(delta)
+		#撞墙惩罚
 		_process_wall_collision(delta)
+		#饥饿机制
 		_process_starvation(delta)
+		#中央区域引导
 		_process_center_shaping(delta)
+		#移动与待机
 		for player in _play_scene.players:
-			if player.is_moving:
-				on_player_moved(player)
+			on_player_moved(player)
+			idle_penalty(player)
 		# circle 结束：快照并发射信号（此时 ai_controller.reward 包含本 circle 全部奖励）
 		if game_config and game_config.enable_info_window:
 			_snapshot_circle_rewards()
@@ -241,7 +246,14 @@ func _on_player_skill_activated(entity: Entity, _skill: Skill) -> void:
 
 #移动惩罚
 func on_player_moved(player: Player) -> void:
-	add_reward(player.player_id, _cfg(player.player_id).run, "run")
+	if player.is_moving:
+		#add_reward(player.player_id, _cfg(player.player_id).run, "run")
+		player.ai_controller.reward+=_cfg(player.player_id).run
+
+#待机惩罚
+func idle_penalty(player:Player)->void:
+	if not player.is_moving:
+		player.ai_controller.reward+=_cfg(player.player_id).idle
 
 func _reset_ball_shaping_after_ball_removed(removed_ball: RewardBall) -> void:
 	if _play_scene == null:

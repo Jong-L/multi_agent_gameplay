@@ -32,6 +32,7 @@ func _activate(context: SkillContext) -> void:
 	if player_caster != null:
 		_apply_skin_to_manifest(player_caster)
 	
+	player_caster._is_playing_skill_anim=true
 	animated_sprite.play("slash")
 	
 	## 绑定动画完成回调
@@ -65,3 +66,6 @@ func _on_animated_sprite2D_animation_finished(caster: Entity) -> void:
 	caster.set_process(true)
 	caster.set_physics_process(true)
 	caster.get_node("AnimatedSprite2D").show()
+	var player_caster = caster as Player
+	if player_caster != null:
+		player_caster._is_playing_skill_anim = false

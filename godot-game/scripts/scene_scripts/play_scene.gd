@@ -509,6 +509,7 @@ func _draw_rays_debug() -> void:
 #为指定玩家生成观测数据
 func get_obs_for_player(player: Player) -> Dictionary:
 	var use_valid_mask := game_config.use_observation_valid_mask if game_config else false
+	var use_velocity_obs := game_config.use_velocity_obs if game_config else true
 	if vision_sensor == null or not is_instance_valid(vision_sensor):
 		# 无传感器时返回最小观测
 		var fallback_obs := {
@@ -530,6 +531,7 @@ func get_obs_for_player(player: Player) -> Dictionary:
 		all_balls,
 		arena_length,
 		use_valid_mask,
+		use_velocity_obs,
 	)
 	#添加饥饿时间
 	#var starve_duration:float=reward_manager.compute_starve_duration(player)

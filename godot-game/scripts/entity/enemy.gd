@@ -79,8 +79,8 @@ func _physics_process(delta: float) -> void:
 	if is_dead:
 		return
 	
-	if self.name=="Enemy1":
-		print(State.find_key(state))
+	#if self.name=="Enemy1":
+		#print(State.find_key(state))
 	##根据状态处理动画等逻辑
 	#目标死亡时
 	if target != null and target.is_dead:
@@ -506,6 +506,24 @@ func _on_animated_sprite_2d_animation_finished() -> void:
 ## 即时发射全局死亡信号，确保击杀奖励无延迟
 func _on_death() -> void:
 	EventBus.enemy_died.emit(self)
+
+## 是否正在播放攻击动画
+func is_attack_animating() -> bool:
+	return state == State.ATTACKING
+
+## 获取技能冷却比例
+func get_skill_cooldown_ratio(skill_idx: int = 0) -> float:
+	var skill = skill_controller.get_skill(skill_idx)
+	if skill == null or skill.cooldown <= 0.0:
+		return 0.0
+	return skill_controller.cooldowns.get(skill, 0.0) / skill.cooldown
+
+## 获取归一化速度，观测数据使用
+## 以追击速度 speed 为归一化基准
+func get_normalized_velocity() -> Vector2:
+	if speed <= 0.0:
+		return Vector2.ZERO
+	return velocity / speed
 
 #受击特效
 func _show_damage_taken_effect() -> void:

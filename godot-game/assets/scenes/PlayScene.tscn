@@ -404,9 +404,9 @@ events = [SubResource("InputEventKey_d8a02")]
 [node name="PlayScene" type="Node2D" unique_id=579760442 node_paths=PackedStringArray("screen_transition", "pause_menu")]
 z_index = 1
 script = ExtResource("1_716h6")
+game_config = ExtResource("22_v1hpo")
 screen_transition = NodePath("CanvasLayer/ColorRect")
 pause_menu = NodePath("CanvasLayer/PauseMenu")
-game_config = ExtResource("22_v1hpo")
 
 [node name="RewardManager" type="Node" parent="." unique_id=1836520612 node_paths=PackedStringArray("_sync_node")]
 script = ExtResource("20_2qkdh")
@@ -417,7 +417,6 @@ player_reward_configs = Array[ExtResource("24_54rql")]([ExtResource("25_eg0d4"),
 
 [node name="Sync" type="Node" parent="." unique_id=1321988269]
 script = ExtResource("16_r6opt")
-control_mode = 0
 deterministic_inference = false
 metadata/_custom_type_script = "uid://bmy6w68efk7bl"
 

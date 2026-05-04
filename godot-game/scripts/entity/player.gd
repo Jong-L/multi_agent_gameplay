@@ -16,7 +16,7 @@ enum Action {
 @export var skin_color: String
 @export var player_id: int = 0#玩家唯一标识（0-3）
 
-@onready var skill_controller: Node = $SkillController
+@onready var skill_controller: SkillController = $SkillController
 @onready var ai_controller:AIController2D=$AIController2D
 @onready var sync_node:Sync=$"../Sync"
 @onready var reward_label:Label=$RewardLabel
@@ -29,6 +29,7 @@ var pending_action: Action = Action.IDLE # 当前待执行动作
 var _anim_idle: AnimationWrapper
 var _anim_run: AnimationWrapper
 var _last_displayed_reward: float = 0.0  # 缓存上次显示的 reward 值
+var _is_playing_skill_anim: bool = false  # 技能 Manifest 播放动画时置 true（如 SlashManifest）
 
 signal player_died(player: Player)# 由PlayScene监听
 
@@ -51,6 +52,9 @@ func _physics_process(delta: float) -> void:
 		return
 	
 	_handle_movement(delta)
+	_execute_action()
+	#if player_id==0:
+		#print(velocity)
 	#奖励标签（仅在 reward 值变化时更新）
 	if CameraManager.current_camera_id!=-1:
 		var current_reward: float = ai_controller.reward
@@ -63,7 +67,6 @@ func _process(_delta: float) -> void:
 		return
 	
 	_handle_animation()
-	_execute_action()
 
 func _apply_skin_color() -> void:#根据skin_color设置使用的材质
 	if skin_color == "Blue":
@@ -115,7 +118,7 @@ func _handle_movement(delta:float) -> void:
 	
 	if velocity.length()>0:
 		is_moving=true
-	#move_and_slide()
+	
 	last_collison_data = move_and_collide(velocity * delta)
 
 func _execute_action() -> void:# 执行非移动动作（攻击/待机）
@@ -143,6 +146,28 @@ func _handle_skill(skill: Skill) -> void:#点击技能按钮触发
 func _on_death() -> void:
 	EventBus.player_died.emit(self)
 
+## 判断当前是否处于攻击动画中
+## 需同时检查两类来源：
+##   1. 技能 Manifest 动画（如 SlashManifest 在独立节点上播放"slash"）
+##   2. 玩家自身 AnimatedSprite2D 播放的攻击动画（通过 current_animation_wrapper 跟踪）
+func is_attack_animating() -> bool:
+	if _is_playing_skill_anim:
+		return true
+	return false
+
+## 获取技能冷却比例
+func get_skill_cooldown_ratio(skill_idx: int = 0) -> float:
+	var skill = skill_controller.get_skill(skill_idx)
+	if skill == null or skill.cooldown <= 0.0:
+		return 0.0
+	return skill_controller.cooldowns.get(skill, 0.0) / skill.cooldown
+
+## 获取归一化速度，观测数据使用
+func get_normalized_velocity() -> Vector2:
+	if run_speed <= 0.0:
+		return Vector2.ZERO
+	return velocity / run_speed
+
 func _get_die_anim() -> AnimationWrapper:
 	return AnimationWrapper.new("die", true)
 
@@ -157,6 +182,7 @@ func reset() -> void:
 	pending_action = Action.IDLE
 	last_collison_data = null
 	last_damage_source = null
+	_is_playing_skill_anim = false
 	for skill in skill_controller.skills:
 		skill_controller.cooldowns[skill] = 0.0
 		skill.current_cooldown=0.0
