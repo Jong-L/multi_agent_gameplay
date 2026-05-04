@@ -68,13 +68,16 @@ func get_action_space() -> Dictionary:
 func get_obs_space() -> Dictionary:
 	var ray_count := 32
 	var use_valid_mask := false
+	var use_velocity_obs := true
 	if play_scene != null and play_scene.game_config != null:
 		ray_count = play_scene.game_config.ray_count
 		use_valid_mask = play_scene.game_config.use_observation_valid_mask
+		use_velocity_obs = play_scene.game_config.use_velocity_obs
 
-	var player_slot_dim := VisionSensor.PLAYER_SLOT_DIM + (1 if use_valid_mask else 0)
-	var ball_slot_dim := VisionSensor.BALL_SLOT_DIM + (1 if use_valid_mask else 0)
-	var enemy_slot_dim := VisionSensor.ENEMY_SLOT_DIM + (1 if use_valid_mask else 0)
+	var valid_dims := 1 if use_valid_mask else 0
+	var player_slot_dim := VisionSensor.PLAYER_SLOT_DIM - (VisionSensor.VELOCITY_DIMS if not use_velocity_obs else 0) + valid_dims
+	var ball_slot_dim := VisionSensor.BALL_SLOT_DIM + valid_dims
+	var enemy_slot_dim := VisionSensor.ENEMY_SLOT_DIM - (VisionSensor.VELOCITY_DIMS if not use_velocity_obs else 0) + valid_dims
 	var total_dim := (
 		VisionSensor.SELF_STATE_DIM
 		+ VisionSensor.MAX_NEARBY_PLAYERS * player_slot_dim

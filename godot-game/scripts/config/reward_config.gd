@@ -19,6 +19,7 @@ enum StarveFunc{LNEAR ,QUADRATIC,SQRT}
 @export var kill_enemy: float = 30.0
 @export var kill_player: float = 45.0
 @export var run: float = 0.0
+@export var idle:float =-0.005
 @export var attack: float = -0.05
 @export var died: float = -20.0
 

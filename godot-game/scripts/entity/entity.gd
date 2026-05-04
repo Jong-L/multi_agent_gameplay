@@ -19,8 +19,8 @@ extends CharacterBody2D
 @export var atk:float=10.0  
 
 var current_animation_wrapper: AnimationWrapper  
-var current_health: float                       
-var is_dead: bool = false                        
+var current_health: float  
+var is_dead: bool = false               
 
 # 最后一次伤害来源（用于追踪击杀者）
 var last_damage_source: Entity = null
@@ -59,6 +59,19 @@ func _get_die_anim() -> AnimationWrapper:
 ## 用于即时发放奖励，避免动画延迟导致信用分配问题
 func _on_death() -> void:
 	pass
+
+## 是否正在播放攻击动画，用于观测数据
+func is_attack_animating() -> bool:
+	return false
+
+## 获取技能冷却比例 观测数据使用
+func get_skill_cooldown_ratio(_skill_idx: int = 0) -> float:
+	return 0.0
+
+## 获取归一化速度 [0, 1]，观测数据使用
+## @return: 速度向量归一化到最大速度，各分量 ∈ [-1, 1]
+func get_normalized_velocity() -> Vector2:
+	return Vector2.ZERO
 
 func play_animation(animation_wrapper: AnimationWrapper) -> void:# 用动画包装器播放动画
 	if current_animation_wrapper != null \
