@@ -149,16 +149,11 @@ func _collect_players() -> void:
 	
 	# 按 player_id 排序，确保动作数组顺序一致
 	players.sort_custom(func(a, b): return a.player_id < b.player_id)
-	
-	#print("[PlayScene] 找到 %d 个玩家" % players.size())
-	#for p in players:
-		#print("  Player %d (%s) at %s" % [p.player_id, p.skin_color, p.position])
 
 func _collect_enemis()->void:
 	for child in get_children():
 		if child is Enemy:
 			enemies.append(child)
-	#print(enemies)
 # 初始化相机系统，将玩家引用传给 CameraManager
 func _setup_camera_system() -> void:
 	CameraManager.players.clear()
@@ -579,6 +574,8 @@ func _reset_with_transition(player:Player)->void:
 	var tween = fade_in()
 	await tween.finished
 	player.reset()
+	#再次标记缓存脏
+	_alive_cache_dirty=true
 	tween = fade_out()
 	await tween.finished
 # 处理玩家死亡信号

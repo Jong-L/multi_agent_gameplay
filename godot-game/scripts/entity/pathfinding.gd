@@ -4,15 +4,9 @@ class_name Pathfinding
 ## 路径寻找组件（分离行为避障）
 ## 使用 Separation（分离）行为让敌人避免相互重叠
 ##
-## 算法原理：
-##   1. 检测周围邻居（其他 Enemy）
-##   2. 计算分离向量：Σ(自身位置 - 邻居位置).normalized() / 距离
-##   3. 分离向量 × 分离力 + 目标方向 = 最终移动方向
-##
-## 参考：Craig Reynolds 的 Steering Behaviors
 
-@export var neighbour_check_radius: float = 10    ## 邻居检测半径（像素）
-@export var separation_force: float = 300         ## 分离力强度（值越大避障越激进）
+@export var neighbour_check_radius: float = 10    ## 邻居检测半径
+@export var separation_force: float = 300         ## 分离力强
 
 ## 缓存的物理查询对象
 var _cached_shape: CircleShape2D

@@ -299,6 +299,6 @@ color_ramp = SubResource("Gradient_37lg7")
 
 [node name="Pathfinding" type="Node2D" parent="." unique_id=364397931]
 script = ExtResource("11_a7s2s")
-separation_force = 170.0
+separation_force = 0.0
 
 [connection signal="animation_finished" from="AnimatedSprite2D" to="." method="_on_animated_sprite_2d_animation_finished"]

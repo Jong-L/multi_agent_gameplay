@@ -31,8 +31,8 @@ class Config:
     """物理引擎加速倍数 (1=正常速度)。"""
     show_window: bool = True
     """显示游戏窗口。"""
-    cuda: bool = True
-    """是否启用 CUDA 加速 (回放推荐 CPU)。"""
+    cuda: bool = False
+    """回放使用CPU"""
 
 
 def main():
