@@ -417,6 +417,7 @@ player_reward_configs = Array[ExtResource("24_54rql")]([ExtResource("25_eg0d4"),
 
 [node name="Sync" type="Node" parent="." unique_id=1321988269]
 script = ExtResource("16_r6opt")
+control_mode = 0
 deterministic_inference = false
 metadata/_custom_type_script = "uid://bmy6w68efk7bl"
 
@@ -493,22 +494,36 @@ tile_set = SubResource("TileSet_wukub")
 [node name="Enemy1" parent="." unique_id=81891274 instance=ExtResource("5_fb4j2")]
 z_index = 5
 position = Vector2(-15, -22)
+collision_mask = 6
+sight_range = 105.0
 
 [node name="Enemy2" parent="." unique_id=1731494535 instance=ExtResource("5_fb4j2")]
+visible = false
 z_index = 5
 position = Vector2(-80, 80)
+collision_mask = 6
+sight_range = 105.0
 
 [node name="Enemy3" parent="." unique_id=885321562 instance=ExtResource("5_fb4j2")]
+visible = false
 z_index = 5
 position = Vector2(100, 60)
+collision_mask = 6
+sight_range = 105.0
 
 [node name="Enemy4" parent="." unique_id=54783004 instance=ExtResource("5_fb4j2")]
+visible = false
 z_index = 5
 position = Vector2(109, -120)
+collision_mask = 6
+sight_range = 105.0
 
 [node name="Enemy5" parent="." unique_id=1105827535 instance=ExtResource("5_fb4j2")]
+visible = false
 z_index = 5
 position = Vector2(-98, -132)
+collision_mask = 6
+sight_range = 105.0
 
 [node name="CanvasLayer" type="CanvasLayer" parent="." unique_id=2107324739]
 

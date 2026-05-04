@@ -72,6 +72,16 @@ func get_skill(idx: int) -> Skill:
 		return skills[idx]
 	return null
 
+## 检查技能是否可用（未在冷却中）
+## 只查询不触发，供状态机等逻辑做决策前检查
+## @param idx: 技能索引
+## @return: true 如果技能存在且冷却为 0
+func can_use_skill(idx: int) -> bool:
+	var skill = get_skill(idx)
+	if skill == null:
+		return false
+	return cooldowns.get(skill, 0.0) <= 0.0
+
 ## 获取技能数量
 func get_skill_count() -> int:
 	return skills.size()  ## 返回技能数组的长度，用于遍历或检查技能数量

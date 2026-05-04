@@ -71,7 +71,7 @@ func play_animation(animation_wrapper: AnimationWrapper) -> void:# 用动画包�
 
 func _show_damage_taken_effect() -> void:#受击特效
 	if animated_sprite.material != null:
-		for i in 2:
+		for i in 2: #闪烁两次
 			animated_sprite.material.set_shader_parameter("is_hurt", true)
 			await get_tree().create_timer(0.05).timeout
 			animated_sprite.material.set_shader_parameter("is_hurt", false)
