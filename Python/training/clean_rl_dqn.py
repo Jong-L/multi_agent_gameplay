@@ -35,14 +35,21 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-from torch.utils.tensorboard import SummaryWriter
 
 from godot_env_wrapper import (
     GodotDiscreteEnvWrapper,
-    parse_godot_tres,
     ObsSegmentDims,
+    RewardNormalizer,
+    init_training_setup,
     layer_init,
+    save_pt_model,
+    track_episode_returns,
 )
+
+
+# ═══════════════════════════════════════════════════════════════
+#  训练配置
+# ═══════════════════════════════════════════════════════════════
 
 @dataclass
 class Args:
@@ -112,7 +119,15 @@ class Args:
     """是否启用 PyTorch 确定性模式。"""
     cuda: bool = True
     """是否启用 CUDA 加速。"""
+    reward_norm: bool = True
+    """是否对奖励做 running z-score 归一化。"""
+    reward_clip: float = 10.0
+    """奖励归一化裁剪范围 (仅在 reward_norm=True 时生效)。"""
 
+
+# ═══════════════════════════════════════════════════════════════
+#  神经网络 & 经验回放
+# ═══════════════════════════════════════════════════════════════
 
 class QNetwork(nn.Module):
     """DQN Q 值网络, 对观测各段分别提取特征后融合。
@@ -197,173 +212,279 @@ class ReplayBuffer:
     def __len__(self) -> int:
         return len(self.buffer)
 
+
+# ═══════════════════════════════════════════════════════════════
+#  工具函数
+# ═══════════════════════════════════════════════════════════════
+
 def linear_schedule(start: float, end: float, duration: int, t: int) -> float:
     """线性衰减调度器。在duration的时间内从 start 线性衰减到 end，之后保持不变。"""
     slope = (end - start) / duration
     return max(slope * t + start, end)
 
+
+# ═══════════════════════════════════════════════════════════════
+#  探索 & 训练 & 目标网络更新
+# ═══════════════════════════════════════════════════════════════
+
+def select_actions_epsilon_greedy(
+    q_network: QNetwork,
+    obs_array: np.ndarray,
+    epsilon: float,
+    action_space: gym.spaces.Discrete,
+    device: torch.device,
+) -> list:
+    """ε-greedy 动作选择 (多并行环境)。
+
+    Args:
+        q_network:    Q 值网络
+        obs_array:    当前观测数组, 形状 (num_envs, obs_dim)
+        epsilon:      探索率
+        action_space: 离散动作空间
+        device:       计算设备
+
+    Returns:
+        list[int]: 每个环境的动作
+    """
+    num_envs = obs_array.shape[0]
+    actions = []
+
+    for i in range(num_envs):
+        if random.random() < epsilon:
+            actions.append(action_space.sample())
+        else:
+            with torch.no_grad():
+                obs_t = torch.tensor(obs_array[i], dtype=torch.float32).to(device)
+                q_values = q_network(obs_t.unsqueeze(0))
+                actions.append(int(q_values.argmax(dim=1).item()))
+
+    return actions
+
+
+def train_dqn_step(
+    q_network: QNetwork,
+    target_network: QNetwork,
+    rb: ReplayBuffer,
+    optimizer: optim.Optimizer,
+    batch_size: int,
+    gamma: float,
+    max_grad_norm: float,
+    device: torch.device,
+) -> tuple[float, float]:
+    """执行一次 DQN 梯度更新。
+
+    从经验回放缓冲区采样一个 batch, 计算 TD 目标,
+    使用 Huber loss 更新 Q 网络。
+
+    Returns:
+        (loss, current_q_mean): Huber loss 值, 当前 Q 值均值
+    """
+    # 采样
+    obses, acts, rews, nobses, dones_batch = rb.sample(batch_size, device)
+
+    # TD 目标
+    with torch.no_grad():
+        target_max, _ = target_network(nobses).max(dim=1)
+        td_target = rews + gamma * target_max * (1.0 - dones_batch)
+
+    # 当前 Q(s, a)
+    current_q = q_network(obses).gather(1, acts.unsqueeze(1)).squeeze()
+
+    # Huber loss
+    loss = F.smooth_l1_loss(current_q, td_target)
+
+    # 反向传播
+    optimizer.zero_grad()
+    loss.backward()
+    nn.utils.clip_grad_norm_(q_network.parameters(), max_grad_norm)
+    optimizer.step()
+
+    return loss.item(), current_q.mean().item()
+
+
+def update_target_network(
+    target_network: QNetwork,
+    q_network: QNetwork,
+    tau: float,
+) -> None:
+    """目标网络软更新: θ_target ← τ·θ + (1-τ)·θ_target。
+
+    Args:
+        target_network: 目标网络
+        q_network:      在线 Q 网络
+        tau:            更新系数 (1.0 = 硬更新)
+    """
+    for tp, p in zip(target_network.parameters(), q_network.parameters()):
+        tp.data.copy_(tau * p.data + (1.0 - tau) * tp.data)
+
+
+# ═══════════════════════════════════════════════════════════════
+#  日志 & 模型导出
+# ═══════════════════════════════════════════════════════════════
+
+def log_dqn(
+    writer,
+    global_step: int,
+    td_loss: float,
+    q_mean: float,
+    epsilon: float,
+    episode_returns: deque,
+    start_time: float,
+) -> None:
+    """将 DQN 训练指标写入 TensorBoard。
+
+    Args:
+        writer:          TensorBoard SummaryWriter
+        global_step:     全局步数
+        td_loss:         当前 TD 损失
+        q_mean:          当前 Q 值均值
+        epsilon:         探索率
+        episode_returns: 近 100 回合的奖励列表
+        start_time:      训练开始时间
+    """
+    writer.add_scalar("losses/td_loss", td_loss, global_step)
+    writer.add_scalar("losses/q_values", q_mean, global_step)
+    writer.add_scalar(
+        "charts/SPS",
+        int(global_step / (time.time() - start_time)),
+        global_step,
+    )
+    writer.add_scalar("charts/epsilon", epsilon, global_step)
+
+    if len(episode_returns) > 0:
+        mean_ret = np.mean(np.array(episode_returns))
+        writer.add_scalar("charts/episodic_return", mean_ret, global_step)
+
+
+def export_dqn_onnx(
+    q_network: QNetwork,
+    onnx_path: str,
+    obs_shape: tuple,
+) -> None:
+    """将 DQN Q 网络导出为 ONNX 模型。
+
+    Args:
+        q_network: 训练好的 QNetwork
+        onnx_path: 导出路径 (不加后缀, 自动追加 .onnx)
+        obs_shape: 观测空间形状, 如 (142,)
+    """
+    path_onnx = pathlib.Path(onnx_path).with_suffix(".onnx")
+    print(f"[Export] Exporting ONNX to {path_onnx}")
+
+    q_network.eval().to("cpu")
+    dummy_input = torch.randn(1, int(np.prod(obs_shape)))
+
+    torch.onnx.export(
+        q_network,
+        dummy_input,
+        str(path_onnx),
+        opset_version=15,
+        input_names=["obs"],
+        output_names=["q_values"],
+        dynamic_axes={"obs": {0: "batch_size"}, "q_values": {0: "batch_size"}},
+    )
+    print(f"[Export] Done: {path_onnx}")
+
+
+#  主训练入口
 def main():
+    # ── 共享初始化 ──
     args = Args()
-    # 初始化 
-    run_name = f"{args.exp_name}__{args.seed}__{int(time.time())}"
+    writer, device, envs, seg, run_name = init_training_setup(args)
 
-    if args.track:
-        import wandb
-        wandb.init(
-            project=args.wandb_project_name,
-            entity=args.wandb_entity,
-            sync_tensorboard=True,
-            config=vars(args),
-            name=run_name,
-            save_code=True,
-        )
-
-    writer = SummaryWriter(f"{args.experiment_dir}/{run_name}")
-    writer.add_text(
-        "hyperparameters",
-        "|param|value|\n|-|-|\n%s"
-        % ("\n".join([f"|{key}|{value}|" for key, value in vars(args).items()])),
-    )
-
-    random.seed(args.seed)
-    np.random.seed(args.seed)
-    torch.manual_seed(args.seed)
-    torch.backends.cudnn.deterministic = args.torch_deterministic
-    device = torch.device("cuda" if torch.cuda.is_available() and args.cuda else "cpu")
-
-    # 环境 
-    envs = GodotDiscreteEnvWrapper(
-        env_path=args.env_path,
-        show_window=args.show_window,
-        speedup=args.speedup,
-        seed=args.seed,
-        n_parallel=args.n_parallel,
-    )
-    assert isinstance(
-        envs.single_action_space, __import__("gymnasium").spaces.Discrete
-    ), "DQN 只支持离散动作空间"
-
-    # print(f"[Env] num_envs={envs.num_envs}")
-    # print(f"[Env] obs_shape={envs.single_observation_space.shape}")
-    # print(f"[Env] n_actions={envs.single_action_space.n}")
-
-    # 从 Godot 配置文件 + VisionSensor 常量计算观测各段维度
-    seg = ObsSegmentDims.from_config(args.config_path)
+    #DQN配置
+    n_actions = int(envs.single_action_space.n)
     print(f"[Obs] segments: self={seg.self_dim} player={seg.player_dim} "
           f"ball={seg.ball_dim} enemy={seg.enemy_dim} map={seg.map_dim} total={seg.total}")
 
+    # 网络，目标网络，缓冲区，优化器
     q_network = QNetwork(envs, seg).to(device)
     target_network = QNetwork(envs, seg).to(device)
-    target_network.load_state_dict(q_network.state_dict())  # 初始同步
+    target_network.load_state_dict(q_network.state_dict())
     optimizer = optim.Adam(q_network.parameters(), lr=args.learning_rate)
-
     rb = ReplayBuffer(args.buffer_size)
 
-    #训练状态
+    #训练状态 
     global_step = 0
     start_time = time.time()
-    episode_returns = deque(maxlen=100)  # 最近 100 个 episode 的回报
-    accum_rewards = np.zeros(envs.num_envs)  # 每回合所有ai_control节点的累计奖励
+    episode_returns = deque(maxlen=100)
+    accum_rewards = np.zeros(envs.num_envs)
 
-    # 初始观测
+    #奖励归一化器
+    reward_normalizer = None
+    if args.reward_norm:
+        reward_normalizer = RewardNormalizer(clip=args.reward_clip)
+        print(f"[RewardNorm] enabled, clip={args.reward_clip}")
+
+    #初始观测
     next_obs_array, _ = envs.reset(seed=args.seed)
     next_obs_array = np.array(next_obs_array, dtype=np.float32)
 
-    # 主训练循环
+    # ═══════════════════════════════════════════════════════
+    #  主训练循环
+    # ═══════════════════════════════════════════════════════
     while global_step < args.total_timesteps:
-        #收集一帧经验
         global_step += envs.num_envs
 
-        # ε-greedy 动作选择
+        # ── 1. ε-greedy 动作选择 ──
         epsilon = linear_schedule(
             args.start_e,
             args.end_e,
             int(args.exploration_fraction * args.total_timesteps),
             global_step,
         )
+        actions = select_actions_epsilon_greedy(
+            q_network, next_obs_array, epsilon,
+            envs.single_action_space, device,
+        )
 
-        actions = []
-        for i in range(envs.num_envs):# 遍历所有智能体（并行环境）
-            if random.random() < epsilon:
-                actions.append(envs.single_action_space.sample())
-            else:
-                with torch.no_grad():
-                    obs_t = torch.tensor(next_obs_array[i], dtype=torch.float32).to(device)#shape (obs_dim,)
-                    q_values = q_network(obs_t.unsqueeze(0))#shape (1, obs_dim)
-                    actions.append(int(q_values.argmax(dim=1).item()))
-
-        # 执行动作
+        #环境步进
         next_obs, rewards, terminations, truncations, infos = envs.step(
             np.array(actions)
         )
         dones = np.logical_or(terminations, truncations)
 
-        # 存入回放缓冲区
+        #奖励归一化 + 存入回放缓冲区
+        raw_rewards = np.asarray(rewards, dtype=np.float32)
+        if reward_normalizer is not None:
+            reward_normalizer.update_array(raw_rewards)
+            norm_rewards = reward_normalizer.normalize_array(raw_rewards)
+        else:
+            norm_rewards = raw_rewards
+
         for i in range(envs.num_envs):
             rb.push(
                 next_obs_array[i].copy(),
                 actions[i],
-                float(rewards[i]),
+                float(norm_rewards[i]),
                 np.array(next_obs[i], dtype=np.float32),
                 bool(dones[i]),
             )
 
         next_obs_array = np.array(next_obs, dtype=np.float32)
 
-        # Episode 回报统计
-        accum_rewards += np.array(rewards)
-        for i, d in enumerate(dones):# 遍历所有智能体
-            if d:
-                episode_returns.append(accum_rewards[i])
-                accum_rewards[i] = 0.0
+        #回合奖励追踪 (使用原始奖励)
+        track_episode_returns(dones, accum_rewards, episode_returns, raw_rewards)
 
-        #训练步骤 
-        if len(rb) >= args.learning_starts:
-            if global_step % args.train_frequency == 0:
-                # 采样一个 batch
-                obses, acts, rews, nobses, dones_batch = rb.sample(
-                    args.batch_size, device
+        #DQN梯度更新
+        if len(rb) >= args.learning_starts and global_step % args.train_frequency == 0:
+            td_loss, q_mean = train_dqn_step(
+                q_network, target_network, rb, optimizer,
+                args.batch_size, args.gamma, args.max_grad_norm, device,
+            )
+
+            # TensorBoard 日志 (每 100 步)
+            if global_step % 100 == 0:
+                log_dqn(
+                    writer, global_step, td_loss, q_mean,
+                    epsilon, episode_returns, start_time,
                 )
-
-                with torch.no_grad():
-                    # TD target
-                    target_max, _ = target_network(nobses).max(dim=1)
-                    td_target = rews + args.gamma * target_max * (1.0 - dones_batch)
-
-                # 当前 Q(s, a)
-                current_q = q_network(obses).gather(
-                    1, acts.unsqueeze(1)#shape (batch_size, 1)
-                ).squeeze()
-
-                # Huber loss 
-                loss = F.smooth_l1_loss(current_q, td_target)
-
-                optimizer.zero_grad()# 清空梯度
-                loss.backward()
-                nn.utils.clip_grad_norm_(q_network.parameters(), args.max_grad_norm)# 梯度裁剪
-                optimizer.step()
-
-                # 日志
-                if global_step % 100 == 0:
-                    writer.add_scalar("losses/td_loss", loss.item(), global_step)
-                    writer.add_scalar(
-                        "losses/q_values", current_q.mean().item(), global_step
-                    )
-                    writer.add_scalar(
-                        "charts/SPS",
-                        int(global_step / (time.time() - start_time)),
-                        global_step,
-                    )
-                    writer.add_scalar("charts/epsilon", epsilon, global_step)
 
         #目标网络更新
         if global_step % args.target_network_frequency == 0:
-            for tp, p in zip(
-                target_network.parameters(), q_network.parameters()
-            ):
-                tp.data.copy_(args.tau * p.data + (1.0 - args.tau) * tp.data)
+            update_target_network(target_network, q_network, args.tau)
 
-        # 终端打印
+        #终端打印
         if len(episode_returns) > 0 and global_step % 1000 == 0:
             mean_ret = np.mean(np.array(episode_returns))
             sps = int(global_step / (time.time() - start_time))
@@ -373,42 +494,24 @@ def main():
                 f"mean_return: {mean_ret:8.2f}  "
                 f"epsilon: {epsilon:.3f}"
             )
-            writer.add_scalar("charts/episodic_return", mean_ret, global_step)
 
-    # 保存+清理
+    # ═══════════════════════════════════════════════════════
+    #  清理 + 保存
+    # ═══════════════════════════════════════════════════════
     envs.close()
     writer.close()
 
-    # 保存模型
     if args.save_model_path is not None:
-        save_path = pathlib.Path(args.save_model_path).with_suffix(".pt")
-        torch.save(
-            {
-                "q_network_state_dict": q_network.state_dict(),
-                "args": vars(args),
-            },
-            str(save_path),
-        )
-        print(f"[Save] Model saved to {save_path}")
+        save_dict = {"q_network_state_dict": q_network.state_dict()}
+        if reward_normalizer is not None:
+            save_dict["reward_normalizer"] = reward_normalizer.state_dict()
+        save_pt_model(args.save_model_path, save_dict, args)
 
-    # 导出 ONNX (可选)
     if args.onnx_export_path is not None:
-        path_onnx = pathlib.Path(args.onnx_export_path).with_suffix(".onnx")
-        print(f"[Export] Exporting ONNX to {path_onnx}")
-        q_network.eval().to("cpu")
-        dummy_input = torch.randn(
-            1, int(np.prod(envs.single_observation_space.shape))
+        export_dqn_onnx(
+            q_network, args.onnx_export_path,
+            envs.single_observation_space.shape,
         )
-        torch.onnx.export(
-            q_network,
-            dummy_input,
-            str(path_onnx),
-            opset_version=15,
-            input_names=["obs"],
-            output_names=["q_values"],
-            dynamic_axes={"obs": {0: "batch_size"}, "q_values": {0: "batch_size"}},
-        )
-        print(f"[Export] Done: {path_onnx}")
 
 
 if __name__ == "__main__":

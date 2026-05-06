@@ -30,8 +30,6 @@ RLlib PPO 多智能体训练入口脚本
     - nearby_enemies: 45维 (5个敌人 × 9维/敌人)
     - map_state: 32维 (射线检测)
 
-作者: Tiny Swords 项目组
-日期: 2026-05
 """
 
 from __future__ import annotations

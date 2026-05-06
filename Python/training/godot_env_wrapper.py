@@ -7,6 +7,10 @@ Godot 强化学习环境包装器 & 共享工具
   - parse_godot_tres       : Godot .tres 配置文件解析
   - layer_init             : 正交权重初始化
 """
+import pathlib
+import random
+import time
+from collections import deque
 from dataclasses import dataclass
 from typing import Optional
 
@@ -14,6 +18,7 @@ import gymnasium as gym
 import numpy as np
 import torch
 import torch.nn as nn
+from torch.utils.tensorboard import SummaryWriter
 
 from godot_rl.wrappers.clean_rl_wrapper import CleanRLGodotEnv
 
@@ -140,11 +145,192 @@ class ObsSegmentDims:
 
 def layer_init(layer: nn.Module, std: float = np.sqrt(2),
                bias_const: float = 0.0) -> nn.Module:
-    """正交初始化 (Orthogonal initialization)。
-
-    权重使用正交矩阵初始化 (gain=std), 偏置初始化为常数。
-    适用于 ReLU / Tanh 激活的隐藏层; 输出层建议使用较小的 std。
+    """正交初始化
     """
     torch.nn.init.orthogonal_(layer.weight, std)
     torch.nn.init.constant_(layer.bias, bias_const)
     return layer
+
+
+
+#  奖励归一化器 (Welford 算法
+class RewardNormalizer:
+    """Running reward normalizer — 将奖励近似归一化到零均值单位方差。
+
+    使用 Welford 在线算法维护 running mean/variance，
+    避免 per-batch 归一化导致的跨 batch 不一致。
+
+    用法:
+        norm = RewardNormalizer(clip=10.0)
+        r_norm = norm.normalize(r)   # 归一化 (clip optional)
+        norm.update(r)               # 更新统计量
+    """
+
+    def __init__(self, clip: Optional[float] = 10.0):
+        self.mean = 0.0
+        self.var = 1.0
+        self.count = 1e-4             # 小初始值, 避免前期方差为 0
+        self.clip = clip
+
+    def normalize(self, reward: float) -> float:
+        """对单个奖励值做 z-score 归一化 (可选裁剪)。"""
+        r = (reward - self.mean) / (np.sqrt(self.var) + 1e-8)
+        if self.clip is not None:
+            r = np.clip(r, -self.clip, self.clip)
+        return float(r)
+
+    def normalize_array(self, rewards: np.ndarray) -> np.ndarray:
+        """对奖励数组做批量 z-score 归一化 (可选裁剪)。"""
+        r = (rewards - self.mean) / (np.sqrt(self.var) + 1e-8)
+        if self.clip is not None:
+            r = np.clip(r, -self.clip, self.clip)
+        return r.astype(np.float32)
+
+    def update(self, reward: float):
+        """用单个奖励值更新 running statistics (Welford 单步)。"""
+        self.count += 1
+        delta = reward - self.mean
+        self.mean += delta / self.count
+        delta2 = reward - self.mean
+        self.var = ((self.count - 1) * self.var + delta * delta2) / max(self.count, 1.0)
+
+    def update_array(self, rewards: np.ndarray):
+        """用批量奖励更新 running statistics (Welford 并行)。"""
+        batch_mean = np.mean(rewards)
+        batch_var = np.var(rewards)
+        batch_count = len(rewards)
+        self._update_from_moments(batch_mean, batch_var, batch_count)
+
+    def _update_from_moments(self, batch_mean, batch_var, batch_count):
+        """Chan et al. (1979) 并行合并公式。"""
+        delta = batch_mean - self.mean
+        tot_count = self.count + batch_count
+        new_mean = self.mean + delta * batch_count / tot_count
+        m_a = self.var * self.count
+        m_b = batch_var * batch_count
+        M2 = m_a + m_b + delta * delta * self.count * batch_count / tot_count
+        self.mean = float(new_mean)
+        self.count = float(tot_count)
+        self.var = float(M2 / tot_count) if tot_count > 0 else 1.0
+
+    def state_dict(self) -> dict:
+        return {"mean": self.mean, "var": self.var, "count": self.count}
+
+    def load_state_dict(self, d: dict):
+        self.mean = d["mean"]
+        self.var = d["var"]
+        self.count = d["count"]
+
+
+#  训练初始化工具
+def init_training_setup(args):
+    """初始化 wandb、TensorBoard、随机种子、设备、环境和观测分段。
+
+    这是 PPO 和 DQN 训练脚本的公共初始化入口。
+    完成以下步骤:
+      1. 生成 run_name
+      2. 初始化 Weights & Biases (可选)
+      3. 创建 TensorBoard SummaryWriter
+      4. 设置 Python / NumPy / PyTorch 随机种子
+      5. 选择计算设备 (CUDA / CPU)
+      6. 创建 Godot 环境包装器
+      7. 从配置文件解析观测维度分段
+
+    Args:
+        args: 训练配置数据类 (PPO.Args 或 DQN.Args), 需包含以下字段:
+              exp_name, seed, track, wandb_project_name, wandb_entity,
+              experiment_dir, torch_deterministic, cuda, env_path,
+              show_window, speedup, n_parallel, config_path
+
+    Returns:
+        tuple: (writer, device, envs, seg, run_name)
+    """
+    run_name = f"{args.exp_name}__{args.seed}__{int(time.time())}"
+
+    # Weights & Biases
+    if args.track:
+        import wandb
+        wandb.init(
+            project=args.wandb_project_name,
+            entity=args.wandb_entity,
+            sync_tensorboard=True,
+            config=vars(args),
+            name=run_name,
+            save_code=True,
+        )
+
+    # TensorBoard
+    writer = SummaryWriter(f"{args.experiment_dir}/{run_name}")
+    writer.add_text(
+        "hyperparameters",
+        "|param|value|\n|-|-|\n%s"
+        % ("\n".join([f"|{key}|{value}|" for key, value in vars(args).items()])),
+    )
+
+    # 随机种子
+    random.seed(args.seed)
+    np.random.seed(args.seed)
+    torch.manual_seed(args.seed)
+    torch.backends.cudnn.deterministic = args.torch_deterministic
+
+    # 计算设备
+    device = torch.device(
+        "cuda" if torch.cuda.is_available() and args.cuda else "cpu"
+    )
+
+    # Godot 环境
+    envs = GodotDiscreteEnvWrapper(
+        env_path=args.env_path,
+        show_window=args.show_window,
+        speedup=args.speedup,
+        seed=args.seed,
+        n_parallel=args.n_parallel,
+    )
+    assert isinstance(
+        envs.single_action_space, gym.spaces.Discrete
+    ), "只支持 Discrete 动作空间"
+
+    # 观测维度分段
+    seg = ObsSegmentDims.from_config(args.config_path)
+
+    return writer, device, envs, seg, run_name
+
+
+def save_pt_model(save_path: str, state_dicts: dict, args) -> None:
+    """保存 PyTorch 模型检查点。
+
+    Args:
+        save_path: 保存路径 (不加后缀, 自动追加 .pt)
+        state_dicts: 状态字典映射, 如 {"agent_state_dict": agent.state_dict()}
+        args: 训练配置, 将 vars(args) 一并保存以便恢复
+    """
+    save_path = pathlib.Path(save_path).with_suffix(".pt")
+    torch.save(
+        {"args": vars(args), **state_dicts},
+        str(save_path),
+    )
+    print(f"[Save] Model saved to {save_path}")
+
+
+def track_episode_returns(
+    dones: np.ndarray,
+    accum_rewards: np.ndarray,
+    episode_returns: deque,
+    rewards: np.ndarray,
+) -> None:
+    """追踪各并行环境的回合累计奖励。
+
+    每步调用, 当某个环境 done==True 时将其累计奖励存入 episode_returns
+    并清零该环境的累加器。
+
+    Args:
+        dones: bool 数组, 各环境是否回合结束
+        accum_rewards: 累计奖励数组 (原地修改)
+        episode_returns: 已完成回合的奖励列表 (原地修改, 最大长度 100)
+        rewards: 当前步各环境的奖励数组
+    """
+    accum_rewards += np.asarray(rewards)
+    for i, d in enumerate(np.asarray(dones)):
+        if d:
+            episode_returns.append(accum_rewards[i])
+            accum_rewards[i] = 0.0

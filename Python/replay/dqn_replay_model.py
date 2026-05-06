@@ -10,8 +10,11 @@ import torch
 
 import sys
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
+from training.godot_env_wrapper import (
+    GodotDiscreteEnvWrapper, ObsSegmentDims, parse_godot_tres, layer_init,
+)
 from training.clean_rl_dqn import (
-    DQNEnvWrapper, QNetwork, ObsSegmentDims, parse_godot_tres, layer_init,
+    QNetwork,
 )
 
 @dataclass
@@ -52,7 +55,7 @@ def main():
 
     # 初始化环境
     print("初始化 Godot 环境...")
-    envs = DQNEnvWrapper(
+    envs = GodotDiscreteEnvWrapper(
         env_path=args.env_path,
         show_window=args.show_window,
         speedup=args.speedup,
