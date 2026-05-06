@@ -8,4 +8,6 @@
 - Deep Reinforcement Learning-Based Mobile Robot Navigation in Unknown Environments：智能体避障方法，射线检测障碍物
 - R. S. Sutton and A. G. Barto, Reinforcement Learning: An Introduction. Cambridge, MA, USA: MIT Press, 2018.：强化学习介绍，说明奖励设计有多么重要
 - Reward Design via Online Gradient Ascent：在线奖励调整
-- 
+- High-Dimensional Continuous Control Using Generalized Advantage Estimation：广义优势估计
+-  Proximal Policy Optimization Algorithms：PPO原论文
+- Trust Region Policy Optimization：PPO前身TRPO

@@ -27,7 +27,6 @@ import random
 import time
 from collections import deque
 from dataclasses import dataclass
-from token import OP
 from typing import Optional
 
 import gymnasium as gym
@@ -38,51 +37,18 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torch.utils.tensorboard import SummaryWriter
 
-from godot_rl.wrappers.clean_rl_wrapper import CleanRLGodotEnv
-
-
-class DQNEnvWrapper:
-    """仅处理 MultiDiscrete → Discrete 动作空间转换, 观测已由 Godot 端展平为单键 "obs"。"""
-
-    def __init__(self, env_path=None, n_parallel=1, seed=0, **kwargs):
-        self._env = CleanRLGodotEnv(
-            env_path=env_path, n_parallel=n_parallel, seed=seed, **kwargs
-        )
-        raw_act = self._env.envs[0].action_space
-        if isinstance(raw_act, gym.spaces.MultiDiscrete) and len(raw_act.nvec) == 1:# 如果单离散动作空间被包装为 MultiDiscrete
-            self._act_space = gym.spaces.Discrete(int(raw_act.nvec[0]))
-        else:
-            self._act_space = raw_act
-
-    @property
-    def single_observation_space(self):
-        return self._env.single_observation_space
-
-    @property
-    def single_action_space(self):
-        return self._act_space
-
-    @property
-    def num_envs(self):
-        return self._env.num_envs
-
-    def close(self):
-        self._env.close()
-
-    def reset(self, seed=None):
-        return self._env.reset(seed=seed)
-
-    def step(self, actions):
-        if isinstance(self._act_space, gym.spaces.Discrete):
-            if isinstance(self._env.envs[0].action_space, gym.spaces.MultiDiscrete):
-                actions = np.asarray(actions).reshape(-1, 1)
-        return self._env.step(actions)
+from godot_env_wrapper import (
+    GodotDiscreteEnvWrapper,
+    parse_godot_tres,
+    ObsSegmentDims,
+    layer_init,
+)
 
 @dataclass
 class Args:
     """DQN 训练配置 (dataclass 风格，兼容 CleanRL 惯例)"""
 
-    # ---- 环境 ----
+    #环境
     env_path: Optional[str] = None
     # env_path: Optional[str] = "godot-game\\build\\game.exe"
     """Godot 导出可执行文件路径。为 None 时连接 Godot 编辑器。"""
@@ -97,7 +63,7 @@ class Args:
     speedup: int = 8
     """物理引擎加速倍数"""
 
-    # ---- 记录----
+    #记录
     exp_name: str = os.path.basename(__file__)[: -len(".py")]
     """实验名称 """
     experiment_dir: str = "logs/cleanrl_dqn"
@@ -115,7 +81,7 @@ class Args:
     capture_video: bool = False
     """是否录制视频"""
 
-    # ---- 训练 ----
+    #训练
     total_timesteps: int = 100_0000
     """总训练步数 (env steps)。"""
     learning_rate: float = 2.5e-4
@@ -129,7 +95,7 @@ class Args:
     target_network_frequency: int = 500
     """每隔多少步更新一次目标网络。"""
     batch_size: int = 128
-    """从 replay buffer 采样的批量大小。"""
+    """从 replay buffer 采样的批量大小"""
     start_e: float = 1.0
     """ε-greedy 起始探索率。"""
     end_e: float = 0.05
@@ -148,84 +114,6 @@ class Args:
     """是否启用 CUDA 加速。"""
 
 
-def parse_godot_tres(path: str) -> dict:
-    """解析 Godot .tres 文本配置文件, 提取键值对。"""
-    result = {}
-    with open(path) as f:
-        for line in f:
-            line = line.strip()
-            if "=" not in line or line.startswith("["):
-                continue
-            key, _, value = line.partition("=")
-            key = key.strip()
-            value = value.strip()
-            if value.lower() == "true":
-                value = True
-            elif value.lower() == "false":
-                value = False
-            elif value.isdigit():
-                value = int(value)
-            elif value.replace(".", "", 1).isdigit():
-                value = float(value)
-            result[key] = value
-    return result
-
-
-@dataclass
-class ObsSegmentDims:
-    """观测各段维度, 从 game_config.tres + VisionSensor 常量联合计算。
-    拼接顺序: self_state | nearby_players | nearby_balls | nearby_enemies | map_state
-    """
-    self_dim: int
-    player_dim: int
-    ball_dim: int
-    enemy_dim: int
-    map_dim: int
-    total: int = 0
-
-    def __post_init__(self):
-        self.total = (
-            self.self_dim + self.player_dim + self.ball_dim
-            + self.enemy_dim + self.map_dim
-        )
-
-    @classmethod
-    def from_config(cls, config_path: str = "godot-game/configs/game_config.tres"):
-        """从 Godot 配置文件 + VisionSensor 常量计算各段维度。"""
-        #  VisionSensor中的常量，需要和res://scripts/scene_scripts/vision_sensor.gd保持一致
-        SELF = 6
-        SLOT_DIMS = (9, 4, 9)     # player, ball, enemy 每槽维度 (full, 含速度)
-        SLOT_COUNTS = (3, 8, 5)   # 每类实体槽位数
-        VELOCITY_DIMS = 2          # 与 vision_sensor.gd 保持一致
-
-        ray = 36
-        valid = 0
-        use_vel = True
-        try:
-            cfg = parse_godot_tres(config_path)
-            ray = cfg.get("ray_count", 36)
-            if cfg.get("use_observation_valid_mask", True):
-                valid = 1
-            use_vel = cfg.get("use_velocity_obs", True)
-        except (FileNotFoundError, OSError):
-            print(f"[Warning] 无法读取 {config_path}, 使用默认值 ray=32 valid=0")
-
-        vel_sub = VELOCITY_DIMS if not use_vel else 0
-        return cls(
-            self_dim=SELF,
-            player_dim=SLOT_COUNTS[0] * (SLOT_DIMS[0] - vel_sub + valid),
-            ball_dim=SLOT_COUNTS[1] * (SLOT_DIMS[1] + valid),
-            enemy_dim=SLOT_COUNTS[2] * (SLOT_DIMS[2] - vel_sub + valid),
-            map_dim=ray,
-        )
-
-def layer_init(layer: nn.Module, std: float = np.sqrt(2), bias_const: float = 0.0):
-    """正交初始化"""
-    torch.nn.init.orthogonal_(layer.weight, std)
-    torch.nn.init.constant_(layer.bias, bias_const)
-    return layer
-
-
 class QNetwork(nn.Module):
     """DQN Q 值网络, 对观测各段分别提取特征后融合。
 
@@ -233,7 +121,7 @@ class QNetwork(nn.Module):
           [self_state | nearby_players | nearby_balls | nearby_enemies | map_state]
     输出: 每个动作的 Q 值 (n_actions,)
     """
-    def __init__(self, envs: DQNEnvWrapper, seg: ObsSegmentDims):
+    def __init__(self, envs: GodotDiscreteEnvWrapper, seg: ObsSegmentDims):
         super().__init__()
         n_actions = int(envs.single_action_space.n)
 
@@ -263,6 +151,7 @@ class QNetwork(nn.Module):
             self.self_net(s), self.player_net(p), self.ball_net(b),
             self.enemy_net(e), self.map_net(m),
         ], dim=1)
+
         return self.output(torch.relu(fused))
 
 class ReplayBuffer:
@@ -315,8 +204,7 @@ def linear_schedule(start: float, end: float, duration: int, t: int) -> float:
 
 def main():
     args = Args()
-
-    # ---- 初始化 ----
+    # 初始化 
     run_name = f"{args.exp_name}__{args.seed}__{int(time.time())}"
 
     if args.track:
@@ -337,15 +225,14 @@ def main():
         % ("\n".join([f"|{key}|{value}|" for key, value in vars(args).items()])),
     )
 
-    # 种子
     random.seed(args.seed)
     np.random.seed(args.seed)
     torch.manual_seed(args.seed)
     torch.backends.cudnn.deterministic = args.torch_deterministic
     device = torch.device("cuda" if torch.cuda.is_available() and args.cuda else "cpu")
 
-    # ---- 环境 ----
-    envs = DQNEnvWrapper(
+    # 环境 
+    envs = GodotDiscreteEnvWrapper(
         env_path=args.env_path,
         show_window=args.show_window,
         speedup=args.speedup,
@@ -356,9 +243,9 @@ def main():
         envs.single_action_space, __import__("gymnasium").spaces.Discrete
     ), "DQN 只支持离散动作空间"
 
-    print(f"[Env] num_envs={envs.num_envs}")
-    print(f"[Env] obs_shape={envs.single_observation_space.shape}")
-    print(f"[Env] n_actions={envs.single_action_space.n}")
+    # print(f"[Env] num_envs={envs.num_envs}")
+    # print(f"[Env] obs_shape={envs.single_observation_space.shape}")
+    # print(f"[Env] n_actions={envs.single_action_space.n}")
 
     # 从 Godot 配置文件 + VisionSensor 常量计算观测各段维度
     seg = ObsSegmentDims.from_config(args.config_path)
@@ -396,7 +283,7 @@ def main():
         )
 
         actions = []
-        for i in range(envs.num_envs):# 遍历所有智能体
+        for i in range(envs.num_envs):# 遍历所有智能体（并行环境）
             if random.random() < epsilon:
                 actions.append(envs.single_action_space.sample())
             else:
