@@ -205,12 +205,7 @@ env = StableBaselinesGodotEnv(
 )
 env = VecMonitor(env)
 
-# ============ 奖励归一化（可选） ============
-# VecNormalize 用 running mean/std 对奖励做 z-score 归一化，稳定训练。
-# 用法：
-#   --reward_norm          仅归一化奖励
-#   --reward_norm --obs_norm  同时归一化奖励和观测
-# 不传这两个 flag 则不启用，完全不影响现有行为。
+
 if args.reward_norm:
     env = VecNormalize(env, norm_obs=False, norm_reward=True, clip_reward=10.0)
     print(f"[VecNormalize] Enabled: reward_norm=True")

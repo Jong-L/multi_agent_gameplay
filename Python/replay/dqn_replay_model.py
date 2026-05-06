@@ -1,9 +1,5 @@
 """
-DQN 模型回放脚本 — 加载训练好的 .pt 模型并可视化运行
-===================================================
-
-配置方式: 直接修改下方 Config 数据类的默认值后运行
-  python Python/dqn_replay_model.py
+DQN 模型回放脚本
 """
 import pathlib
 from dataclasses import dataclass
@@ -12,7 +8,6 @@ from typing import Optional
 import numpy as np
 import torch
 
-# 复用 DQN 训练脚本中的组件
 import sys
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
 from training.clean_rl_dqn import (
@@ -55,7 +50,7 @@ def main():
     print(f"[Obs] segments: self={seg.self_dim} player={seg.player_dim} "
           f"ball={seg.ball_dim} enemy={seg.enemy_dim} map={seg.map_dim}")
 
-    # 初始化环境 — 必须用 DQNEnvWrapper 处理 MultiDiscrete 动作
+    # 初始化环境
     print("初始化 Godot 环境...")
     envs = DQNEnvWrapper(
         env_path=args.env_path,
