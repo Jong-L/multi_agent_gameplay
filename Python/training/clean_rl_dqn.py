@@ -43,14 +43,9 @@ from godot_env_wrapper import (
     init_training_setup,
     layer_init,
     save_pt_model,
-    track_episode_returns,
 )
 
-
-# ═══════════════════════════════════════════════════════════════
 #  训练配置
-# ═══════════════════════════════════════════════════════════════
-
 @dataclass
 class Args:
     """DQN 训练配置 (dataclass 风格，兼容 CleanRL 惯例)"""
@@ -124,10 +119,6 @@ class Args:
     reward_clip: float = 10.0
     """奖励归一化裁剪范围 (仅在 reward_norm=True 时生效)。"""
 
-
-# ═══════════════════════════════════════════════════════════════
-#  神经网络 & 经验回放
-# ═══════════════════════════════════════════════════════════════
 
 class QNetwork(nn.Module):
     """DQN Q 值网络, 对观测各段分别提取特征后融合。
@@ -213,19 +204,10 @@ class ReplayBuffer:
         return len(self.buffer)
 
 
-# ═══════════════════════════════════════════════════════════════
-#  工具函数
-# ═══════════════════════════════════════════════════════════════
-
 def linear_schedule(start: float, end: float, duration: int, t: int) -> float:
     """线性衰减调度器。在duration的时间内从 start 线性衰减到 end，之后保持不变。"""
     slope = (end - start) / duration
     return max(slope * t + start, end)
-
-
-# ═══════════════════════════════════════════════════════════════
-#  探索 & 训练 & 目标网络更新
-# ═══════════════════════════════════════════════════════════════
 
 def select_actions_epsilon_greedy(
     q_network: QNetwork,
@@ -318,10 +300,6 @@ def update_target_network(
         tp.data.copy_(tau * p.data + (1.0 - tau) * tp.data)
 
 
-# ═══════════════════════════════════════════════════════════════
-#  日志 & 模型导出
-# ═══════════════════════════════════════════════════════════════
-
 def log_dqn(
     writer,
     global_step: int,
@@ -388,7 +366,7 @@ def export_dqn_onnx(
 
 #  主训练入口
 def main():
-    # ── 共享初始化 ──
+    #共享初始化
     args = Args()
     writer, device, envs, seg, run_name = init_training_setup(args)
 
@@ -426,7 +404,7 @@ def main():
     while global_step < args.total_timesteps:
         global_step += envs.num_envs
 
-        # ── 1. ε-greedy 动作选择 ──
+        # epsilon-greedy 动作选择
         epsilon = linear_schedule(
             args.start_e,
             args.end_e,
@@ -463,8 +441,12 @@ def main():
 
         next_obs_array = np.array(next_obs, dtype=np.float32)
 
-        #回合奖励追踪 (使用原始奖励)
-        track_episode_returns(dones, accum_rewards, episode_returns, raw_rewards)
+        # 回合奖励追踪 (使用原始奖励)
+        accum_rewards += raw_rewards
+        for i, d in enumerate(dones):
+            if d:
+                episode_returns.append(accum_rewards[i])
+                accum_rewards[i] = 0.0
 
         #DQN梯度更新
         if len(rb) >= args.learning_starts and global_step % args.train_frequency == 0:
@@ -495,9 +477,7 @@ def main():
                 f"epsilon: {epsilon:.3f}"
             )
 
-    # ═══════════════════════════════════════════════════════
     #  清理 + 保存
-    # ═══════════════════════════════════════════════════════
     envs.close()
     writer.close()
 
