@@ -1,7 +1,5 @@
 """
-Godot 强化学习环境包装器 & 共享工具
-====================================
-提供 DQN / PPO / PQN 等训练脚本共用的基础设施:
+Godot 强化学习环境包装器
   - GodotDiscreteEnvWrapper : MultiDiscrete → Discrete 动作空间转换
   - ObsSegmentDims         : 从 game_config.tres + VisionSensor 常量计算观测各段维度
   - parse_godot_tres       : Godot .tres 配置文件解析
@@ -18,6 +16,7 @@ import gymnasium as gym
 import numpy as np
 import torch
 import torch.nn as nn
+from torch.distributions.categorical import Categorical
 from torch.utils.tensorboard import SummaryWriter
 
 from godot_rl.wrappers.clean_rl_wrapper import CleanRLGodotEnv
@@ -69,9 +68,6 @@ class GodotDiscreteEnvWrapper:
 #godot tres 配置解析
 def parse_godot_tres(path: str) -> dict:
     """解析 Godot .tres 文本配置文件, 提取键值对。
-
-    仅解析顶层 [resource] 段的 key=value 行, 自动推断 bool/int/float 类型。
-    跳过 section header ([...]) 和不含 '=' 的行。
     """
     result = {}
     with open(path, encoding="utf-8") as f:
@@ -112,7 +108,6 @@ class ObsSegmentDims:
     @classmethod
     def from_config(cls, config_path: str = "godot-game/configs/game_config.tres"):
         """从 Godot 配置文件 + VisionSensor 常量计算各段维度。
-
         常量与 res://scripts/scene_scripts/vision_sensor.gd 保持同步。
         """
         # VisionSensor 常量 — 与 vision_sensor.gd 保持一致
@@ -225,25 +220,6 @@ class RewardNormalizer:
 #  训练初始化工具
 def init_training_setup(args):
     """初始化 wandb、TensorBoard、随机种子、设备、环境和观测分段。
-
-    这是 PPO 和 DQN 训练脚本的公共初始化入口。
-    完成以下步骤:
-      1. 生成 run_name
-      2. 初始化 Weights & Biases (可选)
-      3. 创建 TensorBoard SummaryWriter
-      4. 设置 Python / NumPy / PyTorch 随机种子
-      5. 选择计算设备 (CUDA / CPU)
-      6. 创建 Godot 环境包装器
-      7. 从配置文件解析观测维度分段
-
-    Args:
-        args: 训练配置数据类 (PPO.Args 或 DQN.Args), 需包含以下字段:
-              exp_name, seed, track, wandb_project_name, wandb_entity,
-              experiment_dir, torch_deterministic, cuda, env_path,
-              show_window, speedup, n_parallel, config_path
-
-    Returns:
-        tuple: (writer, device, envs, seg, run_name)
     """
     run_name = f"{args.exp_name}__{args.seed}__{int(time.time())}"
 
@@ -300,7 +276,7 @@ def save_pt_model(save_path: str, state_dicts: dict, args) -> None:
     """保存 PyTorch 模型检查点。
 
     Args:
-        save_path: 保存路径 (不加后缀, 自动追加 .pt)
+        save_path: 保存路径
         state_dicts: 状态字典映射, 如 {"agent_state_dict": agent.state_dict()}
         args: 训练配置, 将 vars(args) 一并保存以便恢复
     """
@@ -311,26 +287,3 @@ def save_pt_model(save_path: str, state_dicts: dict, args) -> None:
     )
     print(f"[Save] Model saved to {save_path}")
 
-
-def track_episode_returns(
-    dones: np.ndarray,
-    accum_rewards: np.ndarray,
-    episode_returns: deque,
-    rewards: np.ndarray,
-) -> None:
-    """追踪各并行环境的回合累计奖励。
-
-    每步调用, 当某个环境 done==True 时将其累计奖励存入 episode_returns
-    并清零该环境的累加器。
-
-    Args:
-        dones: bool 数组, 各环境是否回合结束
-        accum_rewards: 累计奖励数组 (原地修改)
-        episode_returns: 已完成回合的奖励列表 (原地修改, 最大长度 100)
-        rewards: 当前步各环境的奖励数组
-    """
-    accum_rewards += np.asarray(rewards)
-    for i, d in enumerate(np.asarray(dones)):
-        if d:
-            episode_returns.append(accum_rewards[i])
-            accum_rewards[i] = 0.0

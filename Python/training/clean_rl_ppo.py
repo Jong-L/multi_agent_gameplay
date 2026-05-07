@@ -23,7 +23,6 @@ from godot_env_wrapper import (
     init_training_setup,
     layer_init,
     save_pt_model,
-    track_episode_returns,
 )
 
 #  训练配置
@@ -66,23 +65,23 @@ class Args:
     """总训练步数 (环境步数)。"""
     learning_rate: float = 3e-4
     """Adam 优化器学习率。"""
-    num_steps: int = 128
+    num_steps: int = 512
     """每个智能体（环境）每个 rollout 的步数"""
     gamma: float = 0.99
     """折扣因子"""
     gae_lambda: float = 0.95
     """GAE 的 λ 参数"""
-    num_minibatches: int = 4
+    num_minibatches: int = 10
     """小批量数量"""
     update_epochs: int = 4
     """每次更新遍历数据的轮数，即同一批经验的使用次数"""
     clip_coef: float = 0.2
     """PPO 裁剪系数 ε。"""
-    ent_coef: float = 0.01
+    ent_coef: float = 0.001
     """熵系数, 鼓励探索。"""
     vf_coef: float = 0.5
     """价值函数损失系数。"""
-    max_grad_norm: float = 0.5
+    max_grad_norm: float = 4.0
     """梯度裁剪最大范数。"""
     norm_adv: bool = True
     """对优势函数进行标准化。"""
@@ -91,7 +90,7 @@ class Args:
     anneal_lr: bool = False
     """对学习率进行线性退火。"""
     target_kl: Optional[float] = None
-    """目标 KL 散度阈值, 用于早停 (None = 不启用)。"""
+    """目标 KL 散度阈值, 用于早停 (None = 不启用)"""
     torch_deterministic: bool = True
     """启用 PyTorch 确定性模式。"""
     cuda: bool = True
@@ -234,11 +233,7 @@ def collect_rollout(
     reward_normalizer: Optional[RewardNormalizer] = None,
 ) -> tuple[RolloutData, int]:
     """使用当前策略收集 num_steps 步经验。
-    同时追踪各并行环境的回合累计奖励, 写入 episode_returns。
-
-    Args:
-        reward_normalizer: 若提供, 在存入 rewards 前做 running z-score 归一化。
-                           episode_returns 仍用原始 reward 追踪, 便于人类阅读。
+    加上最后一步，实际包括num_steps+1步
     """
     num_envs = envs.num_envs
     obs_dim = envs.single_observation_space.shape
@@ -254,7 +249,7 @@ def collect_rollout(
     for step in range(num_steps):
         global_step += num_envs
         obs[step] = next_obs
-        dones[step] = next_done
+        dones[step] = next_done #dones[t]表示s_t是否终止，dones[0]为初始值0
 
         # 用当前策略采样动作并用旧网络计算状态值
         with torch.no_grad():
@@ -264,10 +259,8 @@ def collect_rollout(
         actions[step] = action
         logprobs[step] = logprob
 
-        # 执行动作
-        next_obs_raw, reward, terminations, truncations, infos = envs.step(
-            action.cpu().numpy()
-        )
+        # 执行动作.next_obs_raw形状为(num_envs, obs_dim)
+        next_obs_raw, reward, terminations, truncations, infos = envs.step(action.cpu().numpy())
         done = np.logical_or(terminations, truncations)
 
         # 奖励归一化
@@ -277,18 +270,18 @@ def collect_rollout(
             reward_arr = reward_normalizer.normalize_array(reward_arr)
 
         rewards[step] = torch.tensor(reward_arr, dtype=torch.float32).to(device)
-        next_obs = torch.tensor(
-            np.array(next_obs_raw, dtype=np.float32)
-        ).to(device)
+        next_obs = torch.tensor(np.array(next_obs_raw, dtype=np.float32)).to(device)
         next_done = torch.tensor(done, dtype=torch.float32).to(device)
 
-        # 追踪回合奖励 (使用原始奖励, 便于人类解读)
-        track_episode_returns(done, accum_rewards, episode_returns,
-                              np.asarray(reward, dtype=np.float64))
+        # 追踪回合奖励 (使用原始奖励)
+        accum_rewards += np.asarray(reward, dtype=np.float64)
+        for i, d in enumerate(np.asarray(done)):
+            if d:
+                episode_returns.append(accum_rewards[i])
+                accum_rewards[i] = 0.0
 
     return (
-        RolloutData(obs, actions, logprobs, rewards, dones, values,
-                     next_obs, next_done),
+        RolloutData(obs, actions, logprobs, rewards, dones, values,next_obs, next_done),
         global_step,
     )
 
@@ -478,8 +471,8 @@ def main():
     writer, device, envs, seg, run_name = init_training_setup(args)
 
     # PPO配置 
-    args.num_envs = envs.num_envs
-    args.batch_size = args.num_envs * args.num_steps
+    args.num_envs = envs.num_envs #智能体（并行环境）的数量
+    args.batch_size = args.num_envs * args.num_steps # 每个rollout总采样步数
     args.minibatch_size = args.batch_size // args.num_minibatches
     n_actions = int(envs.single_action_space.n)
 
@@ -491,8 +484,8 @@ def main():
     global_step = 0
     start_time = time.time()
     num_updates = args.total_timesteps // args.batch_size
-    episode_returns = deque(maxlen=100)
-    accum_rewards = np.zeros(args.num_envs)
+    episode_returns = deque(maxlen=100) # 最近100个回合奖励
+    accum_rewards: np.ndarray = np.zeros(args.num_envs) # 每个环境每回合的累计奖励
 
     # 奖励归一化器
     reward_normalizer = None
@@ -502,8 +495,8 @@ def main():
 
     # 初始观测
     next_obs_array, _ = envs.reset(seed=args.seed)
-    next_obs = torch.tensor(np.array(next_obs_array, dtype=np.float32)).to(device)
-    next_done = torch.zeros(args.num_envs).to(device)
+    next_obs = torch.tensor(np.array(next_obs_array, dtype=np.float32)).to(device)#shape(args.num_envs, obs_dim)
+    next_done = torch.zeros(args.num_envs).to(device)#shape(args.num_envs,)
 
     # 训练循环
     for update in range(1, num_updates + 1):
@@ -532,11 +525,9 @@ def main():
             args.gamma, args.gae_lambda,
         )
 
-        # 展平 rollout 数据
-        b_obs = rollout.obs.reshape(
-            (-1,) + envs.single_observation_space.shape
-        )
-        b_actions = rollout.actions.reshape(-1)
+        # 展平 rollout 数据,统一形状为(batch_size, *)
+        b_obs = rollout.obs.reshape((-1,) + envs.single_observation_space.shape)#shape (num_steps * num_envs, obs_dim)
+        b_actions = rollout.actions.reshape(-1) #shape (num_steps * num_envs,)
         b_logprobs = rollout.logprobs.reshape(-1)
         b_advantages = advantages.reshape(-1)
         b_target_values = target_values.reshape(-1)
@@ -589,7 +580,7 @@ def main():
             if args.target_kl is not None and approx_kl > args.target_kl:
                 break
 
-        # 计算解释方差 
+        # 计算解释方差
         y_pred = b_values.cpu().numpy() #旧网络估计状态值
         y_true = b_target_values.cpu().numpy() #目标状态值
         var_y = np.var(y_true)

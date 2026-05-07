@@ -84,29 +84,6 @@ def str_to_optional_path(value: Optional[str]) -> Optional[str]:
 
 
 def parse_godot_tres(path: str) -> Dict[str, Any]:
-    """
-    解析 Godot 的 .tres 配置文件（资源文件）
-    
-    设计目的：
-        Godot 的 .tres 文件存储了游戏配置（如观测空间参数、奖励参数等）。
-        此函数将其解析为 Python 字典，供训练脚本读取配置。
-        
-    文件格式示例：
-        [section]
-        ray_count = 32
-        use_velocity_obs = true
-        collect_ball_A = 10.0
-    
-    参数：
-        path: .tres 文件路径（如 "godot-game/configs/game_config.tres"）
-    
-    返回：
-        Dict[str, Any]: 配置键值对，自动进行类型转换：
-            - "true"/"false" → bool
-            - 可解析为整数 → int
-            - 可解析为浮点数 → float
-            - 其他 → str（自动去除引号）
-    """
     result: Dict[str, Any] = {}
     config_path = pathlib.Path(path)
     if not config_path.exists():
@@ -751,20 +728,6 @@ class GodotMultiAgentEnv(MultiAgentEnv):
 def build_arg_parser() -> argparse.ArgumentParser:
     """
     构建命令行参数解析器
-    
-    参数分类：
-        1. 环境相关参数：控制 Godot 环境的行为
-        2. 多智能体参数：控制多智能体训练模式
-        3. 环境运行参数：控制 Godot 进程的行为
-        4. 训练参数：控制训练过程
-        5. 环境运行器参数：控制 RLlib 的并行环境
-        6. 超参数：PPO 算法的超参数
-        
-    使用方式：
-        python rllib_multiagent_ppo.py --shared-policy --iterations 100
-        
-    返回：
-        argparse.ArgumentParser: 配置好的参数解析器
     """
     parser = argparse.ArgumentParser(
         description="Train independent multi-agent PPO policies with RLlib and Godot RL Agents."
@@ -1162,20 +1125,6 @@ def print_iteration(iteration: int, result: Mapping[str, Any]) -> None:
 def main() -> None:
     """
     训练脚本的主入口点
-    
-    工作流程：
-        1. 解析命令行参数
-        2. 验证和修正参数（如确保 num_env_runners >= 1）
-        3. 打印配置摘要
-        4. 初始化 Ray
-        5. 构建 PPO 配置
-        6. 创建训练算法实例
-        7. （可选）从检查点恢复
-        8. 训练循环（迭代训练）
-        9. 定期保存检查点
-        10. 保存最终检查点
-        11. 清理资源
-        
     错误处理：
         - KeyboardInterrupt: 用户按 Ctrl+C，保存当前检查点后退出
         - 其他异常: 由 Python 默认异常处理
