@@ -47,7 +47,7 @@ if __name__ == "__main__":
         port = index + GodotEnv.DEFAULT_PORT
         seed = index
         if is_multiagent:
-            return ParallelPettingZooEnv(GDRLPettingZooEnv(config=env_config, port=port, seed=seed))
+            return ParallelPettingZooEnv(GDRLPettingZooEnv(config=env_config, port=port, seed=seed)) #同时发出动作
         else:
             return RayVectorGodotEnv(config=env_config, port=port, seed=seed)
 

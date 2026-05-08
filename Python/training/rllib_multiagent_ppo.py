@@ -35,6 +35,7 @@ RLlib PPO 多智能体训练入口脚本
 from __future__ import annotations
 
 import argparse
+import dataclasses
 import math
 import os
 import pathlib
@@ -56,32 +57,94 @@ from godot_rl.core.godot_env import GodotEnv
 AGENT_PREFIX = "player_"  # 智能体ID前缀，用于生成 player_0, player_1, ...
 ENV_NAME = "godot_multiagent_independent"  # 在 RLlib 注册表中注册的环境名称
 
-
-def str_to_optional_path(value: Optional[str]) -> Optional[str]:
+@dataclasses.dataclass
+class Args:
     """
-    将命令行参数中的路径字符串转换为可选路径对象
-    
-    设计目的：
-        Godot 环境路径可能是可执行文件路径、编辑器模式标识或 None。
-        此函数统一处理各种输入格式，返回 None（编辑器模式）或有效路径。
-    
-    参数：
-        value: 用户输入的路径字符串，可能值包括：
-            - None: 未指定
-            - "": 空字符串
-            - "none"/"null": 明确表示使用编辑器
-            - "editor": 使用 Godot 编辑器
-            - 实际路径: 如 "godot-game/build/game.exe"
-    
-    返回：
-        Optional[str]: None 表示使用 Godot 编辑器，否则返回路径字符串
+    训练配置数据类
     """
-    if value is None:
-        return None
-    if value.lower() in {"", "none", "null", "editor"}:
-        return None
-    return value
+    # ===== 环境相关参数 =====
+    # Godot 可执行文件路径
+    env_path: Optional[str] = "godot-game/build/game.exe"
+    # Godot 配置文件路径
+    config_path: str = "godot-game/configs/game_config.tres"
+    # 实验输出目录
+    experiment_dir: str = "logs/rllib_multiagent_ppo"
+    # 实验名称
+    experiment_name: str = f"ppo_ma_{time.strftime('%m%d-%H%M')}"
+    # 从哪个检查点恢复训练
+    restore: Optional[str] = None
 
+    # ===== 多智能体相关参数 =====
+    # 智能体数量（对应 Godot 场景中的 AIController 数量）
+    num_agents: int = 4
+    # 是否使用共享策略（所有智能体共享同一个策略网络）
+    shared_policy: bool = False
+    # 回合结束模式
+    episode_done_mode: str = "any"
+    # 每个回合的最大步数
+    max_episode_steps: int = 512
+
+    # ===== 环境运行参数 =====
+    # 随机种子
+    seed: int = 1
+    # Godot 通信基础端口
+    base_port: int = GodotEnv.DEFAULT_PORT
+    # 端口步长,并行训练时分配不同端口
+    port_stride: int = 100
+    # 是否显示 Godot 窗口
+    show_window: bool = True
+    # 加速
+    speedup: int = 8
+    # 帧率限制
+    framerate: Optional[int] = None
+    # 每个动作执行多少物理帧
+    action_repeat: Optional[int] = None
+
+    # ===== 训练参数 =====
+    # 训练迭代次数
+    iterations: int = 200
+    # 停止训练的总步数
+    stop_timesteps: Optional[int] = None
+    # 检查点保存频率
+    checkpoint_freq: int = 10
+
+    # ===== 环境运行器参数 =====
+    # 环境运行器数量
+    num_env_runners: int = 1
+    # 每个运行器的环境数量
+    num_envs_per_env_runner: int = 1
+    # GPU 使用数量,0 表示使用 CPU
+    num_gpus: float = 1
+    # 深度学习框架
+    framework: str = "torch"
+
+    # ===== PPO 超参数 =====
+    # 学习率
+    lr: float = 3e-4
+    # 折扣因子
+    gamma: float = 0.99
+    # GAE lambda 参数
+    gae_lambda: float = 0.95
+    # PPO 裁剪参数
+    clip_param: float = 0.2
+    # 熵系数
+    entropy_coeff: float = 0.001
+    # 价值函数损失系数
+    vf_loss_coeff: float = 0.5
+    # 训练批次大小
+    train_batch_size: int = 4096
+    # 小批次大小,BGD更新
+    minibatch_size: int = 256
+    # 每个更新的训练轮数
+    num_epochs: int = 10
+
+    rollout_fragment_length: int = 128
+    # 全连接隐藏层维度
+    fcnet_hiddens: List[int] = dataclasses.field(default_factory=lambda: [256, 256])
+    # 禁用环境检查（在同时显示窗口和使用godot编辑器时启用）
+    disable_env_checking: bool = False
+    # 是否使用新的 API 栈（RLlib 2.0+）
+    use_new_api_stack: bool = False
 
 def parse_godot_tres(path: str) -> Dict[str, Any]:
     result: Dict[str, Any] = {}
@@ -446,7 +509,7 @@ class GodotMultiAgentEnv(MultiAgentEnv):
         # GodotEnv 是 godot-rl 库提供的环境接口，负责与 Godot 进程通信
         # convert_action_space=False: 保留原始动作空间，后续手动处理格式转换
         self._env = GodotEnv(
-            env_path=str_to_optional_path(config.get("env_path")),
+            env_path=config.get("env_path"),
             port=port,
             seed=seed,
             show_window=bool(config.get("show_window", False)),
@@ -725,106 +788,12 @@ class GodotMultiAgentEnv(MultiAgentEnv):
         }
 
 
-def build_arg_parser() -> argparse.ArgumentParser:
-    """
-    构建命令行参数解析器
-    """
-    parser = argparse.ArgumentParser(
-        description="Train independent multi-agent PPO policies with RLlib and Godot RL Agents."
-    )
-    # ===== 环境相关参数 =====
-    # Godot 可执行文件路径（None 表示使用编辑器模式）
-    parser.add_argument("--env-path", type=str_to_optional_path, default="godot-game/build/game.exe")
-    # Godot 配置文件路径（用于推断观测空间维度）
-    parser.add_argument("--config-path", type=str, default="godot-game/configs/game_config.tres")
-    # 实验输出目录
-    parser.add_argument("--experiment-dir", type=str, default="logs/rllib_multiagent_ppo")
-    # 实验名称（用于区分不同的训练运行）
-    parser.add_argument("--experiment-name", type=str, default=f"ppo_ma_{time.strftime('%m%d-%H%M')}")
-    # 从哪个检查点恢复训练（用于继续之前的训练）
-    parser.add_argument("--restore", type=str, default=None)
-
-    # ===== 多智能体相关参数 =====
-    # 智能体数量（对应 Godot 场景中的 AIController 数量）
-    parser.add_argument("--num-agents", type=int, default=4)
-    # 是否使用共享策略（所有智能体共享同一个策略网络）
-    parser.add_argument("--shared-policy", action="store_true")
-    # 回合结束模式（any/all/individual）
-    parser.add_argument("--episode-done-mode", choices=["any", "all", "individual"], default="any")
-    # 每个回合的最大步数（防止无限循环）
-    parser.add_argument("--max-episode-steps", type=int, default=512)
-
-    # ===== 环境运行参数 =====
-    # 随机种子（用于复现实验结果）
-    parser.add_argument("--seed", type=int, default=1)
-    # Godot 通信基础端口
-    parser.add_argument("--base-port", type=int, default=GodotEnv.DEFAULT_PORT)
-    # 端口步长（用于并行训练时分配不同端口）
-    parser.add_argument("--port-stride", type=int, default=100)
-    # 是否显示 Godot 窗口（调试时有用，训练时建议关闭）
-    parser.add_argument("--show-window", action="store_true", default=True)
-    # 游戏速度倍数（加速训练）
-    parser.add_argument("--speedup", type=int, default=8)
-    # 帧率限制（None 表示不限制）
-    parser.add_argument("--framerate", type=int, default=None)
-    # 动作重复次数（每个动作执行多少步）
-    parser.add_argument("--action-repeat", type=int, default=None)
-
-    # ===== 训练参数 =====
-    # 训练迭代次数
-    parser.add_argument("--iterations", type=int, default=200)
-    # 停止训练的总步数（None 表示不限制）
-    parser.add_argument("--stop-timesteps", type=int, default=None)
-    # 检查点保存频率（每 N 次迭代保存一次）
-    parser.add_argument("--checkpoint-freq", type=int, default=10)
-
-    # ===== 环境运行器参数 =====
-    # 环境运行器数量（并行环境数量）
-    parser.add_argument("--num-env-runners", type=int, default=1)
-    # 每个运行器的环境数量
-    parser.add_argument("--num-envs-per-env-runner", type=int, default=1)
-    # GPU 使用数量（0 表示使用 CPU）
-    parser.add_argument("--num-gpus", type=float, default=0.0)
-    # 深度学习框架（torch 或 tf2）
-    parser.add_argument("--framework", choices=["torch", "tf2"], default="torch")
-
-    # ===== PPO 超参数 =====
-    # 学习率
-    parser.add_argument("--lr", type=float, default=3e-4)
-    # 折扣因子（gamma）
-    parser.add_argument("--gamma", type=float, default=0.99)
-    # GAE lambda 参数
-    parser.add_argument("--gae-lambda", type=float, default=0.95)
-    # PPO 裁剪参数（epsilon）
-    parser.add_argument("--clip-param", type=float, default=0.2)
-    # 熵系数（鼓励探索）
-    parser.add_argument("--entropy-coeff", type=float, default=0.001)
-    # 价值函数损失系数
-    parser.add_argument("--vf-loss-coeff", type=float, default=0.5)
-    # 训练批次大小
-    parser.add_argument("--train-batch-size", type=int, default=4096)
-    # 小批次大小（用于 SGD 更新）
-    parser.add_argument("--minibatch-size", type=int, default=256)
-    # 每个更新的训练轮数（epoch）
-    parser.add_argument("--num-epochs", type=int, default=10)
-    # 收集片段长度
-    parser.add_argument("--rollout-fragment-length", type=int, default=128)
-    # 全连接隐藏层维度
-    parser.add_argument("--fcnet-hiddens", type=int, nargs="+", default=[256, 256])
-    # 禁用环境检查（在使用 Godot 时建议启用）
-    parser.add_argument("--disable-env-checking", action="store_true")
-    # 是否使用新的 API 栈（RLlib 2.0+）
-    parser.add_argument("--use-new-api-stack", action="store_true")
-
-    return parser
-
-
-def make_policy_specs(args: argparse.Namespace) -> Dict[str, PolicySpec]:
+def make_policy_specs(config: Args) -> Dict[str, PolicySpec]:
     """
     创建策略规格字典（PolicySpec）
     
     功能：
-        根据命令行参数创建策略规格，定义每个策略的：
+        根据训练配置创建策略规格，定义每个策略的：
         - policy_class: 策略类（None 表示使用默认 PPO 策略）
         - observation_space: 观测空间
         - action_space: 动作空间
@@ -837,7 +806,7 @@ def make_policy_specs(args: argparse.Namespace) -> Dict[str, PolicySpec]:
             {"shared_policy": PolicySpec(...)}
             
     参数：
-        args: 命令行参数（包含 num_agents, shared_policy, config_path 等）
+        config: 训练配置（包含 num_agents, shared_policy, config_path 等）
         
     返回：
         Dict[str, PolicySpec]: 策略 ID → 策略规格的映射
@@ -846,13 +815,13 @@ def make_policy_specs(args: argparse.Namespace) -> Dict[str, PolicySpec]:
         所有策略共享相同的观测空间和动作空间（因为所有智能体是同质的）。
     """
     # 推断观测空间和动作空间（基于配置文件）
-    observation_space, action_space = default_policy_spaces(args.config_path)
+    observation_space, action_space = default_policy_spaces(config.config_path)
     
     # 根据策略模式决定策略 ID 列表
     policy_ids = (
         ["shared_policy"]
-        if args.shared_policy
-        else [f"{AGENT_PREFIX}{idx}_policy" for idx in range(args.num_agents)]
+        if config.shared_policy
+        else [f"{AGENT_PREFIX}{idx}_policy" for idx in range(config.num_agents)]
     )
     
     # 创建策略规格字典
@@ -914,12 +883,12 @@ def make_policy_mapping_fn(shared_policy: bool):
     return policy_mapping_fn
 
 
-def build_config(args: argparse.Namespace) -> PPOConfig:
+def build_config(config: Args) -> PPOConfig:
     """
     构建 RLlib PPO 训练配置
     
     功能：
-        根据命令行参数构建完整的 PPO 训练配置，包括：
+        根据训练配置构建完整的 PPO 训练配置，包括：
         1. 环境配置（Godot 环境）
         2. 框架配置（PyTorch/TensorFlow）
         3. 资源配置（GPU 分配）
@@ -930,10 +899,10 @@ def build_config(args: argparse.Namespace) -> PPOConfig:
     配置流程：
         1. 注册环境（将 ENV_NAME 映射到 GodotMultiAgentEnv）
         2. 使用 PPOConfig() 流式 API 构建配置
-        3. 根据 args.use_new_api_stack 决定是否使用新 API 栈
+        3. 根据 config.use_new_api_stack 决定是否使用新 API 栈
         
     参数：
-        args: 命令行参数（包含所有训练配置）
+        config: 训练配置（包含所有训练配置）
         
     返回：
         PPOConfig: 配置好的 PPO 训练配置
@@ -949,62 +918,62 @@ def build_config(args: argparse.Namespace) -> PPOConfig:
     register_env(ENV_NAME, lambda env_config: GodotMultiAgentEnv(env_config))
 
     # ===== 构建 PPO 配置（流式 API）=====
-    config = (
+    ppo_config = (
         PPOConfig()
         
         # --- 环境配置 ---
         .environment(
             env=ENV_NAME,  # 使用注册的环境名称
             env_config={  # 传递给 GodotMultiAgentEnv 的配置
-                "env_path": args.env_path,  # Godot 可执行文件路径
-                "seed": args.seed,  # 随机种子
-                "base_port": args.base_port,  # 基础端口
-                "port_stride": args.port_stride,  # 端口步长
-                "show_window": args.show_window,  # 是否显示窗口
-                "speedup": args.speedup,  # 游戏速度倍数
-                "framerate": args.framerate,  # 帧率限制
-                "action_repeat": args.action_repeat,  # 动作重复次数
-                "episode_done_mode": args.episode_done_mode,  # 回合结束模式
-                "max_episode_steps": args.max_episode_steps,  # 最大回合步数
+                "env_path": config.env_path,  # Godot 可执行文件路径
+                "seed": config.seed,  # 随机种子
+                "base_port": config.base_port,  # 基础端口
+                "port_stride": config.port_stride,  # 端口步长
+                "show_window": config.show_window,  # 是否显示窗口
+                "speedup": config.speedup,  # 游戏速度倍数
+                "framerate": config.framerate,  # 帧率限制
+                "action_repeat": config.action_repeat,  # 动作重复次数
+                "episode_done_mode": config.episode_done_mode,  # 回合结束模式
+                "max_episode_steps": config.max_episode_steps,  # 最大回合步数
             },
-            disable_env_checking=args.disable_env_checking,  # 禁用环境检查（Godot 需要）
+            disable_env_checking=config.disable_env_checking,  # 禁用环境检查（Godot 需要）
         )
         
         # --- 框架配置 ---
-        .framework(args.framework)  # "torch" 或 "tf2"
+        .framework(config.framework)  # "torch" 或 "tf2"
         
         # --- 资源配置 ---
-        .resources(num_gpus=args.num_gpus)  # GPU 数量（0 表示使用 CPU）
+        .resources(num_gpus=config.num_gpus)  # GPU 数量（0 表示使用 CPU）
         
         # --- 环境运行器配置 ---
         .env_runners(
-            num_env_runners=args.num_env_runners,  # 环境运行器数量
-            num_envs_per_env_runner=args.num_envs_per_env_runner,  # 每个运行器的环境数量
-            rollout_fragment_length=args.rollout_fragment_length,  # 收集片段长度
+            num_env_runners=config.num_env_runners,  # 环境运行器数量
+            num_envs_per_env_runner=config.num_envs_per_env_runner,  # 每个运行器的环境数量
+            rollout_fragment_length=config.rollout_fragment_length,  # 收集片段长度
             batch_mode="truncate_episodes",  # 批次模式：截断 episode
         )
         
         # --- 训练超参数 ---
         .training(
-            lr=args.lr,  # 学习率
-            gamma=args.gamma,  # 折扣因子
-            lambda_=args.gae_lambda,  # GAE lambda
-            clip_param=args.clip_param,  # PPO 裁剪参数
-            entropy_coeff=args.entropy_coeff,  # 熵系数
-            vf_loss_coeff=args.vf_loss_coeff,  # 价值函数损失系数
-            train_batch_size=args.train_batch_size,  # 训练批次大小
-            minibatch_size=args.minibatch_size,  # 小批次大小
-            num_epochs=args.num_epochs,  # 每个更新的训练轮数
+            lr=config.lr,  # 学习率
+            gamma=config.gamma,  # 折扣因子
+            lambda_=config.gae_lambda,  # GAE lambda
+            clip_param=config.clip_param,  # PPO 裁剪参数
+            entropy_coeff=config.entropy_coeff,  # 熵系数
+            vf_loss_coeff=config.vf_loss_coeff,  # 价值函数损失系数
+            train_batch_size=config.train_batch_size,  # 训练批次大小
+            minibatch_size=config.minibatch_size,  # 小批次大小
+            num_epochs=config.num_epochs,  # 每个更新的训练轮数
             model={  # 策略网络模型配置
-                "fcnet_hiddens": args.fcnet_hiddens,  # 隐藏层维度
+                "fcnet_hiddens": config.fcnet_hiddens,  # 隐藏层维度
                 "fcnet_activation": "tanh",  # 激活函数
             },
         )
         
         # --- 多智能体配置 ---
         .multi_agent(
-            policies=make_policy_specs(args),  # 策略规格字典
-            policy_mapping_fn=make_policy_mapping_fn(args.shared_policy),  # 策略映射函数
+            policies=make_policy_specs(config),  # 策略规格字典
+            policy_mapping_fn=make_policy_mapping_fn(config.shared_policy),  # 策略映射函数
             count_steps_by="agent_steps",  # 步数统计方式（按智能体步数）
         )
     )
@@ -1012,13 +981,13 @@ def build_config(args: argparse.Namespace) -> PPOConfig:
     # ===== 新/旧 API 栈切换 =====
     # RLlib 2.0 引入了新 API 栈（RL Module + Learner）
     # 如果不需要新特性，可以禁用以兼容旧代码
-    if not args.use_new_api_stack:
-        config = config.api_stack(
+    if not config.use_new_api_stack:
+        ppo_config = ppo_config.api_stack(
             enable_rl_module_and_learner=False,  # 禁用 RL Module
             enable_env_runner_and_connector_v2=False,  # 禁用新环境运行器
         )
 
-    return config
+    return ppo_config
 
 
 def result_metric(result: Mapping[str, Any], *keys: str, default: Any = None) -> Any:
@@ -1135,50 +1104,40 @@ def main() -> None:
         - show_window → 自动启用 disable_env_checking（避免额外验证环境）
         
     检查点策略：
-        - 每 N 次迭代保存一次（由 --checkpoint-freq 控制）
+        - 每 checkpoint-freq 次迭代保存一次
         - 训练结束后保存最终检查点
         - 支持从检查点恢复（--restore）
-        
-    示例用法：
-        # 基本训练
-        python rllib_multiagent_ppo.py --iterations 100
-        
-        # 从检查点恢复
-        python rllib_multiagent_ppo.py --restore logs/checkpoint_000100
-        
-        # 使用共享策略
-        python rllib_multiagent_ppo.py --shared-policy
     """
-    # ===== 1. 解析命令行参数 =====
-    args = build_arg_parser().parse_args()
+    # ===== 创建默认配置 =====
+    config = Args()
     
-    # ===== 2. 验证和修正参数 =====
-    if args.num_env_runners <= 0:
+    # ===== 验证和修正参数 =====
+    if config.num_env_runners <= 0:
         print("[Config] --num-env-runners must be >= 1 for this Godot/RLlib setup; using 1.")
-        args.num_env_runners = 1
-        
+        config.num_env_runners = 1
+
     # Godot 不支持同时显示多个窗口，强制单环境
-    if args.show_window and args.num_env_runners > 1:
+    if config.show_window and config.num_env_runners > 1:
         print(
             "[Config] --show-window is limited to one Godot instance; "
             "forcing --num-env-runners=1 to avoid duplicate windows."
         )
-        args.num_env_runners = 1
+        config.num_env_runners = 1
         
     # 显示窗口时，禁用环境检查（避免 RLlib 创建额外的验证环境）
-    if args.show_window and not args.disable_env_checking:
+    if config.show_window and not config.disable_env_checking:
         print("[Config] --show-window enables --disable-env-checking to avoid extra validation envs.")
-        args.disable_env_checking = True
+        config.disable_env_checking = True
     
     # 创建实验目录（如果不存在）
-    pathlib.Path(args.experiment_dir).mkdir(parents=True, exist_ok=True)
+    pathlib.Path(config.experiment_dir).mkdir(parents=True, exist_ok=True)
 
-    # ===== 3. 打印配置摘要 =====
-    print("[Config] independent policies:", not args.shared_policy)
-    print("[Config] inferred obs dim:", infer_flat_obs_dim(args.config_path))
-    print("[Config] env path:", args.env_path or "Godot editor")
+    # ===== 打印配置摘要 =====
+    print("[Config] independent policies:", not config.shared_policy)
+    print("[Config] inferred obs dim:", infer_flat_obs_dim(config.config_path))
+    print("[Config] env path:", config.env_path or "Godot editor")
 
-    # ===== 4. 初始化 Ray =====
+    # ===== 初始化 Ray =====
     # ignore_reinit_error=True: 如果 Ray 已初始化，不报错
     # include_dashboard=False: 不启动 Ray Dashboard（节省资源）
     ray.init(ignore_reinit_error=True, include_dashboard=False)
@@ -1187,19 +1146,19 @@ def main() -> None:
     last_checkpoint: Optional[str] = None
     
     try:
-        # ===== 5. 构建 PPO 配置 =====
-        config = build_config(args)
+        # ===== 构建 PPO 配置 =====
+        ppo_config = build_config(config)
         
-        # ===== 6. 创建训练算法实例 =====
-        algorithm = config.build()
+        # ===== 创建训练算法实例 =====
+        algorithm = ppo_config.build()
 
-        # ===== 7. （可选）从检查点恢复 =====
-        if args.restore:
-            print("[Restore]", os.path.abspath(args.restore))
-            algorithm.restore(args.restore)
+        # ===== （可选）从检查点恢复 =====
+        if config.restore:
+            print("[Restore]", os.path.abspath(config.restore))
+            algorithm.restore(config.restore)
 
-        # ===== 8. 训练循环 =====
-        for iteration in range(1, args.iterations + 1):
+        # ===== 训练循环 =====
+        for iteration in range(1, config.iterations + 1):
             # 执行一次训练迭代
             result = algorithm.train()
             
@@ -1213,22 +1172,22 @@ def main() -> None:
                 or 0
             )
             
-            # ===== 9. 定期保存检查点 =====
+            # ===== 定期保存检查点 =====
             should_checkpoint = (
-                args.checkpoint_freq > 0
-                and iteration % args.checkpoint_freq == 0
+                config.checkpoint_freq > 0
+                and iteration % config.checkpoint_freq == 0
             )
             if should_checkpoint:
-                last_checkpoint = algorithm.save(args.experiment_dir)
+                last_checkpoint = algorithm.save(config.experiment_dir)
                 print("[Checkpoint]", last_checkpoint)
 
-            # ===== 10. 检查是否达到停止条件 =====
-            if args.stop_timesteps is not None and timesteps_total >= args.stop_timesteps:
-                print(f"[Stop] reached --stop-timesteps={args.stop_timesteps}")
+            # ===== 检查是否达到停止条件 =====
+            if config.stop_timesteps is not None and timesteps_total >= config.stop_timesteps:
+                print(f"[Stop] reached --stop-timesteps={config.stop_timesteps}")
                 break
 
-        # ===== 11. 保存最终检查点 =====
-        final_checkpoint = algorithm.save(args.experiment_dir)
+        # ===== 保存最终检查点 =====
+        final_checkpoint = algorithm.save(config.experiment_dir)
         print("[Final checkpoint]", final_checkpoint)
         if last_checkpoint and last_checkpoint != final_checkpoint:
             print("[Previous checkpoint]", last_checkpoint)
@@ -1237,7 +1196,7 @@ def main() -> None:
         # ===== 用户中断处理（Ctrl+C）=====
         print("[Interrupted] Saving checkpoint before shutdown.")
         if algorithm is not None:
-            checkpoint = algorithm.save(args.experiment_dir)
+            checkpoint = algorithm.save(config.experiment_dir)
             print("[Interrupted checkpoint]", checkpoint)
     finally:
         # ===== 清理资源 =====

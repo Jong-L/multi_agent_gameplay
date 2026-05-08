@@ -418,7 +418,7 @@ def main():
 
         #环境步进
         next_obs, rewards, terminations, truncations, infos = envs.step(
-            np.array(actions)
+            np.array(actions,dtype=np.int64)
         )
         dones = np.logical_or(terminations, truncations)
 

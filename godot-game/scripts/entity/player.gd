@@ -147,9 +147,6 @@ func _on_death() -> void:
 	EventBus.player_died.emit(self)
 
 ## 判断当前是否处于攻击动画中
-## 需同时检查两类来源：
-##   1. 技能 Manifest 动画（如 SlashManifest 在独立节点上播放"slash"）
-##   2. 玩家自身 AnimatedSprite2D 播放的攻击动画（通过 current_animation_wrapper 跟踪）
 func is_attack_animating() -> bool:
 	if _is_playing_skill_anim:
 		return true
@@ -172,6 +169,9 @@ func _get_die_anim() -> AnimationWrapper:
 	return AnimationWrapper.new("die", true)
 
 func reset() -> void:
+	#set_process(true)
+	#set_physics_process(true)
+	#animated_sprite.visible=true
 	current_animation_wrapper = null
 	is_dead = false
 	position = spawn_position

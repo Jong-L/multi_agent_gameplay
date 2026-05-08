@@ -1,19 +1,9 @@
 class_name SlashManifest
 extends SkillManifest
 "
- 斩击 Manifest（近战攻击特效）
- 表现：暂停施法者，播放全屏斩击动画，结束后恢复
-
- 视觉效果：
-   - 施法者隐身，由斩击动画代替
-   - 支持皮肤颜色切换（Blue/Red/Yellow/Purple/Black）
-   - 动画结束后自动销毁"
+ 斩击 Manifest（近战攻击特效）"
 
 @onready var animated_sprite: AnimatedSprite2D = $AnimatedSprite2D
-
-func _process(_delta: float) -> void:
-	if animated_sprite.frame_progress >= 1.0:
-		queue_free()
 
 func activate(context: SkillContext) -> void:
 	_activate(context)
@@ -69,3 +59,4 @@ func _on_animated_sprite2D_animation_finished(caster: Entity) -> void:
 	var player_caster = caster as Player
 	if player_caster != null:
 		player_caster._is_playing_skill_anim = false
+	queue_free()
