@@ -364,43 +364,26 @@ def export_dqn_onnx(
     print(f"[Export] Done: {path_onnx}")
 
 
-#  主训练入口
-def main():
-    #共享初始化
-    args = Args()
-    writer, device, envs, seg, run_name = init_training_setup(args)
+#  主训练循环
 
-    #DQN配置
-    n_actions = int(envs.single_action_space.n)
-    print(f"[Obs] segments: self={seg.self_dim} player={seg.player_dim} "
-          f"ball={seg.ball_dim} enemy={seg.enemy_dim} map={seg.map_dim} total={seg.total}")
-
-    # 网络，目标网络，缓冲区，优化器
-    q_network = QNetwork(envs, seg).to(device)
-    target_network = QNetwork(envs, seg).to(device)
-    target_network.load_state_dict(q_network.state_dict())
-    optimizer = optim.Adam(q_network.parameters(), lr=args.learning_rate)
-    rb = ReplayBuffer(args.buffer_size)
-
-    #训练状态 
+def train(
+    args: Args,
+    q_network: QNetwork,
+    target_network: QNetwork,
+    envs: GodotDiscreteEnvWrapper,
+    optimizer: optim.Optimizer,
+    rb: ReplayBuffer,
+    device: torch.device,
+    writer,
+    reward_normalizer: Optional[RewardNormalizer],
+    next_obs_array: np.ndarray,
+) -> None:
+    """DQN 主训练循环。"""
     global_step = 0
     start_time = time.time()
     episode_returns = deque(maxlen=100)
     accum_rewards = np.zeros(envs.num_envs)
 
-    #奖励归一化器
-    reward_normalizer = None
-    if args.reward_norm:
-        reward_normalizer = RewardNormalizer(clip=args.reward_clip)
-        print(f"[RewardNorm] enabled, clip={args.reward_clip}")
-
-    #初始观测
-    next_obs_array, _ = envs.reset(seed=args.seed)
-    next_obs_array = np.array(next_obs_array, dtype=np.float32)
-
-    # ═══════════════════════════════════════════════════════
-    #  主训练循环
-    # ═══════════════════════════════════════════════════════
     while global_step < args.total_timesteps:
         global_step += envs.num_envs
 
@@ -416,13 +399,13 @@ def main():
             envs.single_action_space, device,
         )
 
-        #环境步进
+        # 环境步进
         next_obs, rewards, terminations, truncations, infos = envs.step(
-            np.array(actions,dtype=np.int64)
+            np.array(actions, dtype=np.int64)
         )
         dones = np.logical_or(terminations, truncations)
 
-        #奖励归一化 + 存入回放缓冲区
+        # 奖励归一化 + 存入回放缓冲区
         raw_rewards = np.asarray(rewards, dtype=np.float32)
         if reward_normalizer is not None:
             reward_normalizer.update_array(raw_rewards)
@@ -448,7 +431,7 @@ def main():
                 episode_returns.append(accum_rewards[i])
                 accum_rewards[i] = 0.0
 
-        #DQN梯度更新
+        # DQN 梯度更新
         if len(rb) >= args.learning_starts and global_step % args.train_frequency == 0:
             td_loss, q_mean = train_dqn_step(
                 q_network, target_network, rb, optimizer,
@@ -462,11 +445,11 @@ def main():
                     epsilon, episode_returns, start_time,
                 )
 
-        #目标网络更新
+        # 目标网络更新
         if global_step % args.target_network_frequency == 0:
             update_target_network(target_network, q_network, args.tau)
 
-        #终端打印
+        # 终端打印
         if len(episode_returns) > 0 and global_step % 1000 == 0:
             mean_ret = np.mean(np.array(episode_returns))
             sps = int(global_step / (time.time() - start_time))
@@ -477,15 +460,56 @@ def main():
                 f"epsilon: {epsilon:.3f}"
             )
 
-    #  清理 + 保存
-    envs.close()
-    writer.close()
 
+#  主训练入口
+
+def main():
+    # 共享初始化
+    args = Args()
+    writer, device, envs, seg, run_name = init_training_setup(args)
+
+    # DQN 配置
+    n_actions = int(envs.single_action_space.n)
+    print(f"[Obs] segments: self={seg.self_dim} player={seg.player_dim} "
+          f"ball={seg.ball_dim} enemy={seg.enemy_dim} map={seg.map_dim} total={seg.total}")
+
+    # 网络，目标网络，缓冲区，优化器
+    q_network = QNetwork(envs, seg).to(device)
+    target_network = QNetwork(envs, seg).to(device)
+    target_network.load_state_dict(q_network.state_dict())
+    optimizer = optim.Adam(q_network.parameters(), lr=args.learning_rate)
+    rb = ReplayBuffer(args.buffer_size)
+
+    # 奖励归一化器
+    reward_normalizer = None
+    if args.reward_norm:
+        reward_normalizer = RewardNormalizer(clip=args.reward_clip)
+        print(f"[RewardNorm] enabled, clip={args.reward_clip}")
+
+    # 初始观测
+    next_obs_array, _ = envs.reset(seed=args.seed)
+    next_obs_array = np.array(next_obs_array, dtype=np.float32)
+
+    try:
+        train(
+            args, q_network, target_network, envs, optimizer, rb,
+            device, writer, reward_normalizer, next_obs_array,
+        )
+    except KeyboardInterrupt:
+        print("\n[Interrupt] 训练被手动中断 (Ctrl+C)")
+        if args.save_model_path is not None:
+            print(f"[Interrupt] 保存检查点到 {args.save_model_path} ...")
+            save_dict = {"q_network_state_dict": q_network.state_dict()}
+            save_pt_model(args.save_model_path, save_dict, args, reward_normalizer)
+        return
+    finally:
+        envs.close()
+        writer.close()
+
+    # 正常训练结束后的保存与导出
     if args.save_model_path is not None:
         save_dict = {"q_network_state_dict": q_network.state_dict()}
-        if reward_normalizer is not None:
-            save_dict["reward_normalizer"] = reward_normalizer.state_dict()
-        save_pt_model(args.save_model_path, save_dict, args)
+        save_pt_model(args.save_model_path, save_dict, args, reward_normalizer)
 
     if args.onnx_export_path is not None:
         export_dqn_onnx(

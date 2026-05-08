@@ -421,12 +421,7 @@ def export_ppo_onnx(agent: PPOAgent, onnx_path: str, obs_shape: tuple) -> None:
     """将 PPO 智能体导出为 ONNX 模型 (确定性策略)。
 
     导出时会包装一层 OnnxPolicy, 只输出动作 logits,
-    用于 Godot 端的推理 (不需要概率采样)。
-
-    Args:
-        agent:     训练好的 PPOAgent
-        onnx_path: 导出路径 (不加后缀, 自动追加 .onnx)
-        obs_shape: 观测空间形状, 如 (142,)
+    用于 Godot 端的推理 (不需要概率采样)
     """
     path_onnx = pathlib.Path(onnx_path).with_suffix(".onnx")
     print(f"[Export] Exporting ONNX to {path_onnx}")
@@ -463,42 +458,26 @@ def export_ppo_onnx(agent: PPOAgent, onnx_path: str, obs_shape: tuple) -> None:
     print(f"[Export] Done: {path_onnx}")
 
 
-#  主训练入口w
+#  主训练循环
 
-def main():
-    #初始化
-    args = Args()
-    writer, device, envs, seg, run_name = init_training_setup(args)
-
-    # PPO配置 
-    args.num_envs = envs.num_envs #智能体（并行环境）的数量
-    args.batch_size = args.num_envs * args.num_steps # 每个rollout总采样步数
-    args.minibatch_size = args.batch_size // args.num_minibatches
-    n_actions = int(envs.single_action_space.n)
-
-    # 智能体 + 优化器
-    agent = PPOAgent(n_actions, seg).to(device)
-    optimizer = optim.Adam(agent.parameters(), lr=args.learning_rate, eps=1e-5)
-
-    #训练状态
+def train(
+    args: Args,
+    agent: PPOAgent,
+    envs: GodotDiscreteEnvWrapper,
+    optimizer: optim.Optimizer,
+    device: torch.device,
+    writer,
+    reward_normalizer: Optional[RewardNormalizer],
+    next_obs: torch.Tensor,
+    next_done: torch.Tensor,
+) -> None:
+    """PPO 主训练循环。"""
     global_step = 0
     start_time = time.time()
     num_updates = args.total_timesteps // args.batch_size
-    episode_returns = deque(maxlen=100) # 最近100个回合奖励
-    accum_rewards: np.ndarray = np.zeros(args.num_envs) # 每个环境每回合的累计奖励
+    episode_returns = deque(maxlen=100)
+    accum_rewards: np.ndarray = np.zeros(args.num_envs)
 
-    # 奖励归一化器
-    reward_normalizer = None
-    if args.reward_norm:
-        reward_normalizer = RewardNormalizer(clip=args.reward_clip)
-        print(f"[RewardNorm] enabled, clip={args.reward_clip}")
-
-    # 初始观测
-    next_obs_array, _ = envs.reset(seed=args.seed)
-    next_obs = torch.tensor(np.array(next_obs_array, dtype=np.float32)).to(device)#shape(args.num_envs, obs_dim)
-    next_done = torch.zeros(args.num_envs).to(device)#shape(args.num_envs,)
-
-    # 训练循环
     for update in range(1, num_updates + 1):
         # 学习率退火
         if args.anneal_lr:
@@ -520,20 +499,20 @@ def main():
             next_value = agent.get_value(rollout.next_obs).reshape(1, -1)
 
             advantages, target_values = compute_gae(
-            rollout.rewards, rollout.values, rollout.dones,
-            next_value, rollout.next_done,
-            args.gamma, args.gae_lambda,
-        )
+                rollout.rewards, rollout.values, rollout.dones,
+                next_value, rollout.next_done,
+                args.gamma, args.gae_lambda,
+            )
 
         # 展平 rollout 数据,统一形状为(batch_size, *)
-        b_obs = rollout.obs.reshape((-1,) + envs.single_observation_space.shape)#shape (num_steps * num_envs, obs_dim)
-        b_actions = rollout.actions.reshape(-1) #shape (num_steps * num_envs,)
+        b_obs = rollout.obs.reshape((-1,) + envs.single_observation_space.shape)
+        b_actions = rollout.actions.reshape(-1)
         b_logprobs = rollout.logprobs.reshape(-1)
         b_advantages = advantages.reshape(-1)
         b_target_values = target_values.reshape(-1)
         b_values = rollout.values.reshape(-1)
 
-        b_inds = np.arange(args.batch_size)#batch indices
+        b_inds = np.arange(args.batch_size)
         clipfracs = []
 
         for epoch in range(args.update_epochs):
@@ -568,9 +547,9 @@ def main():
                     args.clip_vloss,
                 )
 
-                #优化loss
-                loss = pg_loss- args.ent_coef * entropy.mean()+ v_loss * args.vf_coef
-                
+                # 优化 loss
+                loss = pg_loss - args.ent_coef * entropy.mean() + v_loss * args.vf_coef
+
                 optimizer.zero_grad()
                 loss.backward()
                 nn.utils.clip_grad_norm_(agent.parameters(), args.max_grad_norm)
@@ -581,8 +560,8 @@ def main():
                 break
 
         # 计算解释方差
-        y_pred = b_values.cpu().numpy() #旧网络估计状态值
-        y_true = b_target_values.cpu().numpy() #目标状态值
+        y_pred = b_values.cpu().numpy()
+        y_true = b_target_values.cpu().numpy()
         var_y = np.var(y_true)
         explained_var = (
             np.nan if var_y == 0 else 1 - np.var(y_true - y_pred) / var_y
@@ -597,15 +576,54 @@ def main():
             update=update, num_updates=num_updates,
         )
 
-    #  清理 + 保
-    envs.close()
-    writer.close()
 
+#  主训练入口
+def main():
+    # 初始化
+    args = Args()
+    writer, device, envs, seg, run_name = init_training_setup(args)
+
+    # PPO配置
+    args.num_envs = envs.num_envs
+    args.batch_size = args.num_envs * args.num_steps
+    args.minibatch_size = args.batch_size // args.num_minibatches
+    n_actions = int(envs.single_action_space.n)
+
+    # 智能体 + 优化器
+    agent = PPOAgent(n_actions, seg).to(device)
+    optimizer = optim.Adam(agent.parameters(), lr=args.learning_rate, eps=1e-5)
+
+    # 奖励归一化器
+    reward_normalizer = None
+    if args.reward_norm:
+        reward_normalizer = RewardNormalizer(clip=args.reward_clip)
+        print(f"[RewardNorm] enabled, clip={args.reward_clip}")
+
+    # 初始观测
+    next_obs_array, _ = envs.reset(seed=args.seed)
+    next_obs = torch.tensor(np.array(next_obs_array, dtype=np.float32)).to(device)
+    next_done = torch.zeros(args.num_envs).to(device)
+
+    try:
+        train(
+            args, agent, envs, optimizer, device, writer,
+            reward_normalizer, next_obs, next_done,
+        )
+    except KeyboardInterrupt:
+        print("\n[Interrupt] 训练被手动中断")
+        if args.save_model_path is not None:
+            print(f"[Interrupt] 保存检查点到 {args.save_model_path} ...")
+            save_dict = {"agent_state_dict": agent.state_dict()}
+            save_pt_model(args.save_model_path, save_dict, args, reward_normalizer)
+        return
+    finally:
+        envs.close()
+        writer.close()
+
+    # 正常训练结束后的保存与导出
     if args.save_model_path is not None:
         save_dict = {"agent_state_dict": agent.state_dict()}
-        if reward_normalizer is not None:
-            save_dict["reward_normalizer"] = reward_normalizer.state_dict()
-        save_pt_model(args.save_model_path, save_dict, args)
+        save_pt_model(args.save_model_path, save_dict, args, reward_normalizer)
 
     if args.onnx_export_path is not None:
         export_ppo_onnx(agent, args.onnx_export_path,
