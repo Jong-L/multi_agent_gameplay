@@ -272,18 +272,12 @@ def init_training_setup(args):
     return writer, device, envs, seg, run_name
 
 
-def save_pt_model(save_path: str, state_dicts: dict, args) -> None:
-    """保存 PyTorch 模型检查点。
-
-    Args:
-        save_path: 保存路径
-        state_dicts: 状态字典映射, 如 {"agent_state_dict": agent.state_dict()}
-        args: 训练配置, 将 vars(args) 一并保存以便恢复
+def save_pt_model(save_path: str, state_dicts: dict, args, reward_normalizer=None) -> None:
+    """保存 PyTorch 模型检查点
     """
     save_path = pathlib.Path(save_path).with_suffix(".pt")
-    torch.save(
-        {"args": vars(args), **state_dicts},
-        str(save_path),
-    )
+    if reward_normalizer is not None:
+        state_dicts["reward_normalizer"] = reward_normalizer.state_dict()
+    torch.save({"args": vars(args), **state_dicts},str(save_path),)
     print(f"[Save] Model saved to {save_path}")
 

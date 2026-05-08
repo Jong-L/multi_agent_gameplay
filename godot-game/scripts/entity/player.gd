@@ -15,6 +15,7 @@ enum Action {
 @export var player_spell_bar: SpellBar = null  #PlayScene 动态绑定技能栏
 @export var skin_color: String
 @export var player_id: int = 0#玩家唯一标识（0-3）
+@export var cfg:GameConfig
 
 @onready var skill_controller: SkillController = $SkillController
 @onready var ai_controller:AIController2D=$AIController2D
@@ -45,6 +46,16 @@ func _ready() -> void:
 	_apply_skin_color()
 	
 	ai_controller.init(self)#初始化绑定该玩家到控制器
+	#设置策略名
+	ai_controller.policy_name="policy_%d"%player_id
+	# 如果不是一起训练，根据 training_player_id 动态设置 policy_name
+	if cfg!= null:
+		if cfg.training_player_id != GameConfig.TrainingPlayer.ALL:
+			if player_id == cfg.training_player_id:
+				ai_controller.policy_name = "learning_policy"
+			else:
+				ai_controller.policy_name = "idle_policy"
+	
 	EventBus.player_cast_skill.connect(_handle_skill)  # 点击按钮也可以释放技能
 
 func _physics_process(delta: float) -> void:

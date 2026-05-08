@@ -974,7 +974,7 @@ def build_config(config: Args) -> PPOConfig:
         .multi_agent(
             policies=make_policy_specs(config),  # 策略规格字典
             policy_mapping_fn=make_policy_mapping_fn(config.shared_policy),  # 策略映射函数
-            count_steps_by="agent_steps",  # 步数统计方式（按智能体步数）
+            count_steps_by="env_steps",  # 步数统计方式
         )
     )
 

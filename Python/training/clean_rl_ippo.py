@@ -29,24 +29,21 @@ from godot_env_wrapper import (
 )
 
 
-#  配置
+#单个智能体的独立超参数配置
 @dataclass
 class AgentConfig:
-    """单个智能体的独立超参数配置。
-    每个智能体 (agent_id 0~3) 拥有独立的网络架构、PPO 超参和优化器参数。
-    """
     agent_id: int                  # 映射到 Godot 端 player_id (0~3)
 
     #训练开关
     train: bool = True     # True=用RL训练; False=强制IDLE
 
     #网络架构
-    self_hidden: int = 16
+    self_hidden: int = 32
     player_hidden: int = 64
     ball_hidden: int = 64
-    enemy_hidden: int = 32
-    map_hidden: int = 36
-    trunk_hidden: tuple = (128, 64)
+    enemy_hidden: int = 64
+    map_hidden: int = 64
+    trunk_hidden: tuple = (256, 128)
 
     # 优化器
     learning_rate: float = 3e-4
@@ -76,14 +73,14 @@ class IppoArgs:
     n_parallel: int = 1 #只能为1
     seed: int = 1
     show_window: bool = True
-    speedup: int = 8
+    speedup: int = 10
 
     # 训练
     total_timesteps: int = 5_000_000
-    num_steps: int = 1024
+    num_steps: int = 512
     """每个智能体（环境）每个 rollout 的步数"""
-    num_minibatches: int = 10
-    update_epochs: int = 4
+    num_minibatches: int = 8
+    update_epochs: int = 10
     norm_adv: bool = True # 是否归一化优势函数
     clip_vloss: bool = True
     anneal_lr: bool = False
@@ -93,15 +90,16 @@ class IppoArgs:
 
     #智能体配置
     agents: list[AgentConfig] = field(default_factory=lambda: [
-        AgentConfig(agent_id=0),
-        AgentConfig(agent_id=1),
-        AgentConfig(agent_id=2),
-        AgentConfig(agent_id=3),
+        AgentConfig(agent_id=0, train=True),
+        AgentConfig(agent_id=1,train=True),
+        AgentConfig(agent_id=2,train=True),
+        AgentConfig(agent_id=3,train=True),
     ])
 
     #日志 + 保存
     exp_name: str = os.path.basename(__file__)[: -len(".py")]
     experiment_dir: str = "logs/cleanrl_ippo"
+    # save_model_path: Optional[str] = "saved-models/clean_rl_ippo"
     save_model_path: Optional[str] = None
     track: bool = False
     wandb_project_name: str = "cleanRL"
@@ -147,7 +145,7 @@ class IPPOAgent(nn.Module):
         ball_hidden: int = 64,
         enemy_hidden: int = 32,
         map_hidden: int = 36,
-        trunk_hidden: tuple = (128, 64),
+        trunk_hidden: tuple = (256, 128),
     ):
         super().__init__()
 
@@ -186,9 +184,8 @@ class IPPOAgent(nn.Module):
         self.trunk = nn.Sequential(*trunk_layers)
         self._trunk_out_dim = trunk_hidden[-1] if trunk_hidden else fused_dim
 
-        # Actor / Critic 头
-        self.actor = layer_init(nn.Linear(self._trunk_out_dim, n_actions), std=0.01)
-        self.critic = layer_init(nn.Linear(self._trunk_out_dim, 1), std=1.0)
+        self.actor = layer_init(nn.Linear(self._trunk_out_dim, n_actions), std=0.01) # Actor head
+        self.critic = layer_init(nn.Linear(self._trunk_out_dim, 1), std=1.0) # Critic head
 
     def _forward_features(self, obs: torch.Tensor) -> torch.Tensor:
         i = 0
@@ -344,7 +341,7 @@ def collect_rollout_ippo(
         global_step += n_agents
 
         # 每个智能体独立推理动作
-        actions_list = [5] * n_agents  # 默认 IDLE (action index 5)
+        actions_list = [4] * n_agents  # 默认 IDLE (action index 5)
 
         for i in range(n_agents):
             obs_i = next_obs_all[i].unsqueeze(0)  # shape(1, obs_dim)
@@ -434,7 +431,7 @@ def log_ippo(
 ) -> None:
     """将 IPPO 训练指标写入 TensorBoard 并打印终端日志。"""
     # 全局指标
-    sps = int(global_step / (time.time() - start_time)) if start_time > 0 else 0
+    sps = int(global_step / (time.time() - start_time)) if start_time > 0 else 0 #steps per second 
     writer.add_scalar("charts/SPS", sps, global_step)
 
     # per-agent 指标
@@ -468,18 +465,28 @@ def log_ippo(
         for i in range(len(agents_cfg)):
             if agents_cfg[i].train and len(episode_returns[i]) > 0:
                 mean_ret = np.mean(np.array(episode_returns[i]))
-                return_strs.append(f"a{i}:{mean_ret:.1f}")
+                return_strs.append(f"p{i}:{mean_ret:.1f}")
+
         returns_summary = "  ".join(return_strs)
+
         kl_summary = "  ".join(
-            f"a{i}:{losses[i]['approx_kl']:.3f}"
+            f"p{i}:{losses[i]['approx_kl']:.3f}"
             for i in range(len(agents_cfg))
             if agents_cfg[i].train and losses[i] is not None
         )
+
+        ev_summary = "  ".join(
+            f"p{i}:{explained_vars[i]:.3f}"
+            for i in range(len(agents_cfg))
+            if agents_cfg[i].train and losses[i] is not None
+        )
+
         print(
             f"[Update {update:4d}/{num_updates}] "
-            f"SPS: {sps:5d}  "
+            # f"SPS: {sps:5d}  "
             f"returns [{returns_summary}]  "
-            f"kl [{kl_summary}]"
+            f"kl [{kl_summary}]  "
+            f"ev [{ev_summary}]"
         )
 
 
@@ -492,26 +499,16 @@ def save_ippo_model(
     args: IppoArgs,
 ) -> None:
     """保存 IPPO 所有智能体的模型检查点。
-
-    Args:
-        save_path: 保存路径 (不加后缀, 自动追加 .pt)
-        agents: 所有智能体网络
-        optimizers: 所有优化器
-        reward_normalizers: 所有奖励归一化器
-        args: 训练配置
     """
-    save_path = pathlib.Path(save_path).with_suffix(".pt")
+    save_path = pathlib.Path(save_path).with_suffix(".pt")#自动追加 .pt 后缀
     agent_states = {}
     for i, agent in enumerate(agents):
-        agent_states[f"agent_{i}_state_dict"] = agent.state_dict()
-        agent_states[f"agent_{i}_optimizer"] = optimizers[i].state_dict()
+        agent_states[f"agent_{i}_state_dict"] = agent.state_dict() #网络参数
+        agent_states[f"agent_{i}_optimizer"] = optimizers[i].state_dict() #优化器参数
         if reward_normalizers[i] is not None:
-            agent_states[f"agent_{i}_reward_norm"] = reward_normalizers[i].state_dict()
+            agent_states[f"agent_{i}_reward_norm"] = reward_normalizers[i].state_dict() #奖励归一化器参数
 
-    torch.save(
-        {"args": vars(args), **agent_states},
-        str(save_path),
-    )
+    torch.save({"args": vars(args), **agent_states},str(save_path))
     print(f"[Save] IPPO model saved to {save_path}")
 
 
@@ -616,26 +613,87 @@ def train_agent_update(
     return final_metrics
 
 
+#  主训练循环
+
+def train(
+    args: IppoArgs,
+    agents: list[IPPOAgent],
+    optimizers: list[optim.Optimizer],
+    envs: GodotDiscreteEnvWrapper,
+    device: torch.device,
+    writer,
+    reward_normalizers: list[Optional[RewardNormalizer]],
+    next_obs: torch.Tensor,
+    next_done: torch.Tensor,
+) -> None:
+    """IPPO 主训练循环。"""
+    n_agents = len(args.agents)
+    global_step = 0
+    start_time = time.time()
+    num_updates = args.total_timesteps // args.batch_size
+
+    episode_returns = [deque(maxlen=100) for _ in range(n_agents)]
+    accum_rewards = np.zeros(n_agents, dtype=np.float64)
+
+    for update in range(1, num_updates + 1):
+        # 学习率退火
+        if args.anneal_lr:
+            progress = 1.0 - (update - 1.0) / num_updates
+            for i in range(n_agents):
+                if args.agents[i].train:
+                    optimizers[i].param_groups[0]["lr"] = progress * args.agents[i].learning_rate
+
+        # 经验采集
+        rollouts, global_step = collect_rollout_ippo(
+            args.agents, agents, envs, args.num_steps, device,
+            next_obs, next_done, global_step,
+            episode_returns, accum_rewards, reward_normalizers,
+        )
+
+        next_obs = torch.stack([r.next_obs for r in rollouts])
+        next_done = torch.stack([r.next_done for r in rollouts])
+
+        # 独立更新
+        losses = []
+        explained_vars = []
+
+        for i in range(n_agents):
+            if args.agents[i].train:
+                metrics = train_agent_update(agents[i], optimizers[i], rollouts[i], args.agents[i], args, device)
+                losses.append(metrics)
+                explained_vars.append(metrics.get("explained_var", 0.0))
+            else:
+                losses.append(None)
+                explained_vars.append(0.0)
+
+        # 日志
+        log_ippo(
+            writer, global_step, args.agents, optimizers,
+            losses, explained_vars,
+            episode_returns, start_time,
+            update=update, num_updates=num_updates,
+        )
+
+
 #  主训练入口
 def main():
-    #初始化
+    # 初始化
     args = IppoArgs()
     writer, device, envs, seg, run_name = init_training_setup(args)
 
-    n_agents = len(args.agents) #每个进程内智能体数量
+    n_agents = len(args.agents)
     args.num_agents = n_agents
-    args.num_envs = envs.num_envs    # = n_agents * n_parallel，总的环境数量
-    args.batch_size = args.num_envs * args.num_steps #每次给所有智能体采集的样本数量
+    args.num_envs = envs.num_envs
+    args.batch_size = args.num_envs * args.num_steps
     args.minibatch_size = max(1, args.batch_size // args.num_minibatches)
 
     n_actions = int(envs.single_action_space.n)
 
-    #创建 per-agent 网络、优化器、奖励归一化器
+    # 创建 per-agent 网络、优化器、奖励归一化器
     agents: list[IPPOAgent] = []
     optimizers: list[optim.Optimizer] = []
     reward_normalizers: list[Optional[RewardNormalizer]] = []
 
-    #4个智能体
     for cfg in args.agents:
         agent = IPPOAgent(
             n_actions=n_actions,
@@ -656,74 +714,29 @@ def main():
         else:
             reward_normalizers.append(None)
 
-    #训练状态
-    global_step = 0 #日志步数
-    start_time = time.time()
-    num_updates = args.total_timesteps // args.batch_size #更新次数，环境越多越小
-
-    episode_returns = [deque(maxlen=100) for _ in range(n_agents)] #每个智能体的最近100个回合奖励
-    accum_rewards = np.zeros(n_agents, dtype=np.float64) #每个智能体每回合的累计奖励
-
-    #初始观测
-    next_obs_array, _ = envs.reset(seed=args.seed) #shape (n_agents, obs_dim)
+    # 初始观测
+    next_obs_array, _ = envs.reset(seed=args.seed)
     next_obs = torch.tensor(np.array(next_obs_array, dtype=np.float32)).to(device)
-    next_done = torch.zeros(n_agents).to(device) #shape (n_agents,)
+    next_done = torch.zeros(n_agents).to(device)
 
-    #打印训练信息
-    # print(f"[IPPO] {n_agents} agents, {envs.num_envs} envs")
-    # print(f"[IPPO] obs_dim={envs.single_observation_space.shape[0]}, n_actions={n_actions}")
-    # for i, cfg in enumerate(args.agents):
-    #     status = "TRAIN" if cfg.train else "IDLE"
-    #     print(f"  agent_{i}: {status}  lr={cfg.learning_rate}  "
-    #           f"ent={cfg.ent_coef}  clip={cfg.clip_coef}  "
-    #           f"r_norm={'on' if cfg.reward_norm else 'off'}")
-
-    #  主训练循环
-    for update in range(1, num_updates + 1):
-        #学习率退火
-        if args.anneal_lr:
-            progress = 1.0 - (update - 1.0) / num_updates
-            for i in range(n_agents):
-                if args.agents[i].train:
-                    optimizers[i].param_groups[0]["lr"] = progress * args.agents[i].learning_rate
-
-        # 经验采集
-        rollouts, global_step = collect_rollout_ippo(
-            args.agents, agents, envs, args.num_steps, device,
-            next_obs, next_done, global_step,
-            episode_returns, accum_rewards, reward_normalizers,
+    try:
+        train(
+            args, agents, optimizers, envs, device, writer,
+            reward_normalizers, next_obs, next_done,
         )
+    except KeyboardInterrupt:
+        print("\n[Interrupt] 训练被手动中断")
+        if args.save_model_path is not None:
+            print(f"[Interrupt] 保存检查点到 {args.save_model_path} ...")
+            save_ippo_model(args.save_model_path, agents, optimizers, reward_normalizers, args)
+        return
+    finally:
+        envs.close()
+        writer.close()
 
-        next_obs = torch.stack([r.next_obs for r in rollouts])#shape (n_agents, obs_dim) 每个智能体的最后一步观测
-        next_done = torch.stack([r.next_done for r in rollouts])#shape (n_agents,)
-
-        #独立更新
-        losses = []
-        explained_vars = []
-
-        for i in range(n_agents):
-            if args.agents[i].train:
-                metrics = train_agent_update(agents[i], optimizers[i], rollouts[i],args.agents[i], args, device)
-                losses.append(metrics)
-                explained_vars.append(metrics.get("explained_var", 0.0))
-            else:
-                losses.append(None)
-                explained_vars.append(0.0)
-
-        #日志
-        log_ippo(
-            writer, global_step, args.agents, optimizers,
-            losses, explained_vars,
-            episode_returns, start_time,
-            update=update, num_updates=num_updates,
-        )
-
-    #  清理 + 保存
-    envs.close()
-    writer.close()
-
+    # 正常训练结束后的保存
     if args.save_model_path is not None:
-        save_ippo_model(args.save_model_path, agents, optimizers,reward_normalizers, args)
+        save_ippo_model(args.save_model_path, agents, optimizers, reward_normalizers, args)
 
 
 if __name__ == "__main__":
