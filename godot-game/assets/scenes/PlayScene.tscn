@@ -417,7 +417,6 @@ player_reward_configs = Array[ExtResource("24_54rql")]([ExtResource("25_eg0d4"),
 
 [node name="Sync" type="Node" parent="." unique_id=1321988269]
 script = ExtResource("16_r6opt")
-control_mode = 0
 deterministic_inference = false
 metadata/_custom_type_script = "uid://bmy6w68efk7bl"
 
@@ -431,27 +430,30 @@ visible = false
 script = ExtResource("17_vsens")
 vision_radius = 200.0
 
-[node name="Player_Blue" parent="." unique_id=490246979 instance=ExtResource("1_s7ljx")]
+[node name="Player_Blue" parent="." unique_id=490246979 node_paths=PackedStringArray("player_spell_bar") instance=ExtResource("1_s7ljx")]
 z_index = 6
 position = Vector2(-416, -415.00003)
+player_spell_bar = NodePath("../CanvasLayer/Control/SpellBar")
 skin_color = "Blue"
 
-[node name="Player_Black" parent="." unique_id=844634870 instance=ExtResource("1_s7ljx")]
+[node name="Player_Black" parent="." unique_id=844634870 node_paths=PackedStringArray("player_spell_bar") instance=ExtResource("1_s7ljx")]
 z_index = 6
 position = Vector2(440, -415.00003)
+player_spell_bar = NodePath("../CanvasLayer/Control/SpellBar")
 skin_color = "Black"
 player_id = 1
-max_health = 150.0
 
-[node name="Player_Red" parent="." unique_id=895822030 instance=ExtResource("1_s7ljx")]
+[node name="Player_Red" parent="." unique_id=895822030 node_paths=PackedStringArray("player_spell_bar") instance=ExtResource("1_s7ljx")]
 z_index = 6
 position = Vector2(440.00003, 438)
+player_spell_bar = NodePath("../CanvasLayer/Control/SpellBar")
 skin_color = "Red"
 player_id = 2
 
-[node name="Player_Yellow" parent="." unique_id=526836106 instance=ExtResource("1_s7ljx")]
+[node name="Player_Yellow" parent="." unique_id=526836106 node_paths=PackedStringArray("player_spell_bar") instance=ExtResource("1_s7ljx")]
 z_index = 6
 position = Vector2(-417, 440.00003)
+player_spell_bar = NodePath("../CanvasLayer/Control/SpellBar")
 skin_color = "Yellow"
 player_id = 3
 
@@ -498,28 +500,24 @@ collision_mask = 6
 sight_range = 105.0
 
 [node name="Enemy2" parent="." unique_id=1731494535 instance=ExtResource("5_fb4j2")]
-visible = false
 z_index = 5
 position = Vector2(-80, 80)
 collision_mask = 6
 sight_range = 105.0
 
 [node name="Enemy3" parent="." unique_id=885321562 instance=ExtResource("5_fb4j2")]
-visible = false
 z_index = 5
 position = Vector2(100, 60)
 collision_mask = 6
 sight_range = 105.0
 
 [node name="Enemy4" parent="." unique_id=54783004 instance=ExtResource("5_fb4j2")]
-visible = false
 z_index = 5
 position = Vector2(109, -120)
 collision_mask = 6
 sight_range = 105.0
 
 [node name="Enemy5" parent="." unique_id=1105827535 instance=ExtResource("5_fb4j2")]
-visible = false
 z_index = 5
 position = Vector2(-98, -132)
 collision_mask = 6

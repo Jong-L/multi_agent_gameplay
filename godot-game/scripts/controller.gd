@@ -9,15 +9,6 @@ var n_time_step:int=0
 func _ready():
 	super._ready()
 	
-	# 根据 training_player_id 动态设置 policy_name
-	# 必须在 Sync._get_agents() 读取 policy_name 之前完成
-	if play_scene != null and play_scene.game_config != null:
-		if cfg.training_player_id != GameConfig.TrainingPlayer.ALL:
-			if _player is Player and _player.player_id == cfg.training_player_id:
-				policy_name = "learning_policy"
-			else:
-				policy_name = "idle_policy"
-
 func _physics_process(_delta):
 	n_steps += 1
 	if n_steps > reset_after:
