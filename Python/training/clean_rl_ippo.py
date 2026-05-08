@@ -368,7 +368,7 @@ def collect_rollout_ippo(
                 buffers[i]["values"][step] = 0.0
 
         # 所有智能体一起执行动作
-        next_obs_raw, rewards_raw, terminations, truncations, infos = envs.step(np.array(actions_list))
+        next_obs_raw, rewards_raw, terminations, truncations, infos = envs.step(np.array(actions_list,dtype=np.int64))
         dones_raw = np.logical_or(terminations, truncations)#反应的是第i+1步状态是否终止
 
         #转换为张量

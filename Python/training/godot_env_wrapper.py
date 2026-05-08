@@ -62,7 +62,7 @@ class GodotDiscreteEnvWrapper:
     def step(self, actions):
         if isinstance(self._act_space, gym.spaces.Discrete):
             if isinstance(self._env.envs[0].action_space, gym.spaces.MultiDiscrete):
-                actions = np.asarray(actions).reshape(-1, 1)
+                actions = np.asarray(actions,dtype=np.int64).reshape(-1, 1)
         return self._env.step(actions)
 
 #godot tres 配置解析

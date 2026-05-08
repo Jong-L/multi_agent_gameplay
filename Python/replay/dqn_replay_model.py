@@ -80,7 +80,7 @@ def main():
                 actions = [int(q_values.argmax(dim=1).item())]
 
             next_obs, rewards, terms, truncs, infos = envs.step(
-                np.array(actions)
+                np.array(actions,dtype=np.int64)
             )
             next_obs = np.array(next_obs, dtype=np.float32)
     except KeyboardInterrupt:
