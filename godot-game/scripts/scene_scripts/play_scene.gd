@@ -61,6 +61,8 @@ var _map_states_physics_frame: int = -1
 
 func _physics_process(_delta: float) -> void:
 	_update_alive_players_cache()
+	if ray_debug_visible and sync_node.control_mode==sync_node.ControlModes.HUMAN:
+		ensure_map_states_current()
 
 # 更新存活玩家缓存（每物理帧执行一次，死亡事件即时标记脏）
 func _update_alive_players_cache() -> void:
@@ -479,7 +481,7 @@ func _build_map_state(player: Player) -> Array[float]:
 	
 	return map_state
 
-## 射线调试绘制：在 _draw() 中调用，不需要时注释掉此调用即可
+## 射线调试绘制：在 _draw() 中调用
 func _draw() -> void:
 	_draw_rays_debug()
 
