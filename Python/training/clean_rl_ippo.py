@@ -10,6 +10,7 @@ import pathlib
 import time
 from collections import deque
 from dataclasses import dataclass, field
+from enum import Enum
 from typing import Optional
 
 import gymnasium as gym
@@ -29,6 +30,15 @@ from godot_env_wrapper import (
 )
 
 
+# 网络架构枚举
+class NetworkType(str, Enum):
+    """网络架构类型。
+    - SEGMENTED: 5 子网络分段
+    - MLP:       普通 flat
+    """
+    SEGMENTED = "segmented"
+    MLP = "mlp"
+
 #单个智能体的独立超参数配置
 @dataclass
 class AgentConfig:
@@ -37,13 +47,21 @@ class AgentConfig:
     #训练开关
     train: bool = True     # True=用RL训练; False=强制IDLE
 
-    #网络架构
+    # ---- 网络架构 ----
+
+    #网络类型: SEGMENTED = 5子网络分段架构; MLP = 普通 flat MLP
+    network_type: NetworkType = NetworkType.MLP
+
+    #子网络分段架构参数 (network_type=NetworkType.SEGMENTED 时生效)
     self_hidden: int = 32
     player_hidden: int = 64
     ball_hidden: int = 64
     enemy_hidden: int = 64
     map_hidden: int = 64
     trunk_hidden: tuple = (256, 128)
+
+    # 普通 MLP 参数 (network_type=NetworkType.MLP 时生效)
+    mlp_hiddens: tuple = (400, 150)
 
     # 优化器
     learning_rate: float = 3e-4
@@ -130,79 +148,103 @@ class AgentRolloutData:
     next_value: Optional[torch.Tensor] = None  # V(next_obs), GAE 阶段填充
 
 class IPPOAgent(nn.Module):
-    """离散 PPO 智能体
-    输入: 观测向量 (obs_dim,):
-          [self_state | nearby_players | nearby_balls | nearby_enemies | map_state]
-    输出: 离散动作 (0~n_actions-1) + 对数概率 + 熵 + 状态价值
+    """离散 PPO 智能体 — 两种网络架构
     """
 
     def __init__(
         self,
         n_actions: int,
         seg: ObsSegmentDims,
+        network_type: NetworkType = NetworkType.SEGMENTED,
         self_hidden: int = 16,
         player_hidden: int = 64,
         ball_hidden: int = 64,
         enemy_hidden: int = 32,
         map_hidden: int = 36,
         trunk_hidden: tuple = (256, 128),
+        mlp_hiddens: tuple = (256, 256),
     ):
         super().__init__()
 
-        self.seg_self = seg.self_dim
-        self.seg_player = seg.player_dim
-        self.seg_ball = seg.ball_dim
-        self.seg_enemy = seg.enemy_dim
-        self.seg_map = seg.map_dim
+        self.network_type = network_type
+        self.seg = seg
 
-        #各段独立特征提取子网络
-        self.self_net = nn.Sequential(
-            layer_init(nn.Linear(self.seg_self, self_hidden)), nn.ReLU()
-        )
-        self.player_net = nn.Sequential(
-            layer_init(nn.Linear(self.seg_player, player_hidden)), nn.ReLU()
-        )
-        self.ball_net = nn.Sequential(
-            layer_init(nn.Linear(self.seg_ball, ball_hidden)), nn.ReLU()
-        )
-        self.enemy_net = nn.Sequential(
-            layer_init(nn.Linear(self.seg_enemy, enemy_hidden)), nn.ReLU()
-        )
-        self.map_net = nn.Sequential(
-            layer_init(nn.Linear(self.seg_map, map_hidden)), nn.ReLU()
-        )
+        if network_type == NetworkType.SEGMENTED:
+            # 5 段子网络
+            self.seg_self = seg.self_dim
+            self.seg_player = seg.player_dim
+            self.seg_ball = seg.ball_dim
+            self.seg_enemy = seg.enemy_dim
+            self.seg_map = seg.map_dim
 
-        fused_dim = self_hidden + player_hidden + ball_hidden + enemy_hidden + map_hidden
+            self.self_net = nn.Sequential(
+                layer_init(nn.Linear(self.seg_self, self_hidden)), nn.ReLU()
+            )
+            self.player_net = nn.Sequential(
+                layer_init(nn.Linear(self.seg_player, player_hidden)), nn.ReLU()
+            )
+            self.ball_net = nn.Sequential(
+                layer_init(nn.Linear(self.seg_ball, ball_hidden)), nn.ReLU()
+            )
+            self.enemy_net = nn.Sequential(
+                layer_init(nn.Linear(self.seg_enemy, enemy_hidden)), nn.ReLU()
+            )
+            self.map_net = nn.Sequential(
+                layer_init(nn.Linear(self.seg_map, map_hidden)), nn.ReLU()
+            )
 
-        #共享躯干
-        trunk_layers = []
-        in_dim = fused_dim
-        for h in trunk_hidden:
-            trunk_layers.append(layer_init(nn.Linear(in_dim, h)))
-            trunk_layers.append(nn.ReLU())
-            in_dim = h
-        self.trunk = nn.Sequential(*trunk_layers)
-        self._trunk_out_dim = trunk_hidden[-1] if trunk_hidden else fused_dim
+            fused_dim = self_hidden + player_hidden + ball_hidden + enemy_hidden + map_hidden
 
-        self.actor = layer_init(nn.Linear(self._trunk_out_dim, n_actions), std=0.01) # Actor head
-        self.critic = layer_init(nn.Linear(self._trunk_out_dim, 1), std=1.0) # Critic head
+            # 共享躯干
+            trunk_layers = []
+            in_dim = fused_dim
+            for h in trunk_hidden:
+                trunk_layers.append(layer_init(nn.Linear(in_dim, h)))
+                trunk_layers.append(nn.ReLU())
+                in_dim = h
+            self.trunk = nn.Sequential(*trunk_layers)
+            self._trunk_out_dim = trunk_hidden[-1] if trunk_hidden else fused_dim
+
+        elif network_type == NetworkType.MLP:
+            # 普通 flat MLP 
+            obs_dim = seg.total
+            trunk_layers = []
+            in_dim = obs_dim
+            for h in mlp_hiddens:
+                trunk_layers.append(layer_init(nn.Linear(in_dim, h)))
+                trunk_layers.append(nn.ReLU())
+                in_dim = h
+            self.mlp_trunk = nn.Sequential(*trunk_layers)
+            self._trunk_out_dim = mlp_hiddens[-1] if mlp_hiddens else obs_dim
+
+        # Actor / Critic 头 (两种架构共享)
+        self.actor = layer_init(nn.Linear(self._trunk_out_dim, n_actions), std=0.01)
+        self.critic = layer_init(nn.Linear(self._trunk_out_dim, 1), std=1.0)
 
     def _forward_features(self, obs: torch.Tensor) -> torch.Tensor:
-        i = 0
-        s = obs[:, i: i + self.seg_self];      i += self.seg_self
-        p = obs[:, i: i + self.seg_player];    i += self.seg_player
-        b = obs[:, i: i + self.seg_ball];      i += self.seg_ball
-        e = obs[:, i: i + self.seg_enemy];     i += self.seg_enemy
-        m = obs[:, i: i + self.seg_map]
+        if self.network_type == NetworkType.SEGMENTED:
+            i = 0
+            s = obs[:, i: i + self.seg_self];      i += self.seg_self
+            p = obs[:, i: i + self.seg_player];    i += self.seg_player
+            b = obs[:, i: i + self.seg_ball];      i += self.seg_ball
+            e = obs[:, i: i + self.seg_enemy];     i += self.seg_enemy
+            m = obs[:, i: i + self.seg_map]
 
-        fused = torch.cat([
-            self.self_net(s),
-            self.player_net(p),
-            self.ball_net(b),
-            self.enemy_net(e),
-            self.map_net(m),
-        ], dim=1)
-        return self.trunk(fused)
+            fused = torch.cat([
+                self.self_net(s),
+                self.player_net(p),
+                self.ball_net(b),
+                self.enemy_net(e),
+                self.map_net(m),
+            ], dim=1)
+            return self.trunk(fused)
+        else:
+            # MLP: 直接全向量送入
+            return self.mlp_trunk(obs)
+
+    def num_params(self) -> int:
+        """返回可训练参数总数"""
+        return sum(p.numel() for p in self.parameters() if p.requires_grad)
 
     def get_value(self, obs: torch.Tensor) -> torch.Tensor:
         return self.critic(self._forward_features(obs))
@@ -698,13 +740,19 @@ def main():
         agent = IPPOAgent(
             n_actions=n_actions,
             seg=seg,
+            network_type=cfg.network_type,
             self_hidden=cfg.self_hidden,
             player_hidden=cfg.player_hidden,
             ball_hidden=cfg.ball_hidden,
             enemy_hidden=cfg.enemy_hidden,
             map_hidden=cfg.map_hidden,
             trunk_hidden=cfg.trunk_hidden,
+            mlp_hiddens=cfg.mlp_hiddens,
         ).to(device)
+
+        # 打印每个智能体的网络类型和参数量, 便于对比验证
+        tag = f"[Agent {cfg.agent_id}]"
+        print(f"{tag} network_type={cfg.network_type}, params={agent.num_params():,}")
 
         agents.append(agent)
         optimizers.append(optim.Adam(agent.parameters(), lr=cfg.learning_rate, eps=1e-5))
