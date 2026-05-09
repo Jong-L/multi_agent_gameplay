@@ -98,20 +98,21 @@ texture = ExtResource("4_wxnc3")
 5:2/0 = 0
 6:2/0 = 0
 0:3/0 = 0
-0:3/0/physics_layer_0/polygon_0/points = PackedVector2Array(-3.5691166, -6.5288715, 3.7432194, -6.0065613, 5.6583557, 5.1360455, -5.1360455, 6.180666)
+0:3/0/physics_layer_0/polygon_0/points = PackedVector2Array(-8, -8, 8, -8, 8, 8, -8, 8)
 1:3/0 = 0
-1:3/0/physics_layer_0/polygon_0/points = PackedVector2Array(-2.6986008, -6.5288715, 4.2655296, -4.787838, 5.6583557, 5.1360455, -5.1360455, 6.180666)
+1:3/0/physics_layer_0/polygon_0/points = PackedVector2Array(-8, -8, 8, -8, 8, 8, -8, 8)
 2:3/0 = 0
-2:3/0/physics_layer_0/polygon_0/points = PackedVector2Array(-2.6986008, -2.3503933, 4.2655296, -4.787838, 5.6583557, 5.1360455, -5.1360455, 6.180666)
+2:3/0/physics_layer_0/polygon_0/points = PackedVector2Array(-8, -8, 8, -8, 8, 8, -8, 8)
 3:3/0 = 0
-3:3/0/physics_layer_0/polygon_0/points = PackedVector2Array(-5.8324585, -3.9173222, 4.2655296, -4.787838, 5.6583557, 5.1360455, -5.1360455, 6.180666)
+3:3/0/physics_layer_0/polygon_0/points = PackedVector2Array(-8, -8, 8, -8, 8, 8, -8, 8)
 4:3/0 = 0
 6:3/0 = 0
 0:4/0 = 0
-0:4/0/physics_layer_0/polygon_0/points = PackedVector2Array(-3.5691166, -6.5288715, 3.7432194, -6.0065613, 5.6583557, 5.1360455, -5.1360455, 6.180666)
+0:4/0/physics_layer_0/polygon_0/points = PackedVector2Array(-8, -8, 8, -8, 8, 8, -8, 8)
 1:4/0 = 0
-1:4/0/physics_layer_0/polygon_0/points = PackedVector2Array(-3.5691166, -6.5288715, 3.7432194, -6.0065613, 5.6583557, 5.1360455, -5.1360455, 6.180666)
+1:4/0/physics_layer_0/polygon_0/points = PackedVector2Array(-8, -8, 8, -8, 8, 8, -8, 8)
 2:4/0 = 0
+2:4/0/physics_layer_0/polygon_0/points = PackedVector2Array(-8, -8, 8, -8, 8, 8, -8, 8)
 4:4/0 = 0
 0:5/0 = 0
 0:5/0/physics_layer_0/polygon_0/points = PackedVector2Array(-8, -8, 8, -8, 8, 8, -8, 8)
@@ -127,9 +128,9 @@ texture = ExtResource("4_wxnc3")
 2:6/0 = 0
 4:6/0 = 0
 0:7/0 = 0
-0:7/0/physics_layer_0/polygon_0/points = PackedVector2Array(-4.091427, -4.091425, 8, -4.613735, 8, 4.4396324, -3.220909, 4.091427)
+0:7/0/physics_layer_0/polygon_0/points = PackedVector2Array(-8, -8, 8, -8, 8, 8, -8, 8)
 1:7/0 = 0
-1:7/0/physics_layer_0/polygon_0/points = PackedVector2Array(-8, -2.8727036, 2.3503933, -3.7432194, 3.7432194, 4.4396324, -8, 5.31015)
+1:7/0/physics_layer_0/polygon_0/points = PackedVector2Array(-8, -8, 8, -8, 8, 8, -8, 8)
 2:7/0 = 0
 0:8/0 = 0
 1:8/0 = 0
@@ -149,7 +150,7 @@ texture = ExtResource("4_wxnc3")
 3:11/0 = 0
 
 [sub_resource type="TileSet" id="TileSet_c0hqu"]
-physics_layer_0/collision_layer = 0
+physics_layer_0/collision_layer = 4
 physics_layer_0/collision_mask = 3
 sources/0 = SubResource("TileSetAtlasSource_onnvd")
 
@@ -417,6 +418,7 @@ player_reward_configs = Array[ExtResource("24_54rql")]([ExtResource("25_eg0d4"),
 
 [node name="Sync" type="Node" parent="." unique_id=1321988269]
 script = ExtResource("16_r6opt")
+control_mode = 0
 deterministic_inference = false
 metadata/_custom_type_script = "uid://bmy6w68efk7bl"
 
