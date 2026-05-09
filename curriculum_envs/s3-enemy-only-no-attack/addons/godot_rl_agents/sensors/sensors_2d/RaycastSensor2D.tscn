@@ -1,7 +1,0 @@
-[gd_scene format=3 uid="uid://drvfihk5esgmv"]
-
-[ext_resource type="Script" uid="uid://b1a82dxhtwjjb" path="res://addons/godot_rl_agents/sensors/sensors_2d/RaycastSensor2D.gd" id="1"]
-
-[node name="RaycastSensor2D" type="Node2D" unique_id=1327721110]
-script = ExtResource("1")
-n_rays = 24.0

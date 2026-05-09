@@ -14,8 +14,8 @@
 [ext_resource type="Texture2D" uid="uid://ccfcowrmeakqg" path="res://assets/healthbarProgress.png" id="10_mc6or"]
 
 [sub_resource type="CapsuleShape2D" id="CapsuleShape2D_physics"]
-radius = 43.0
-height = 86.0
+radius = 35.0
+height = 70.0
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_addju"]
 shader = ExtResource("2_qu62d")
@@ -198,8 +198,8 @@ animations = [{
 }]
 
 [sub_resource type="CapsuleShape2D" id="CapsuleShape2D_4wvqw"]
-radius = 49.666664
-height = 177.33333
+radius = 49.67
+height = 177.33
 
 [sub_resource type="LabelSettings" id="LabelSettings_jc3ay"]
 font_size = 25
@@ -215,9 +215,7 @@ damage_text_color = Color(0.9999998, 0.23224765, 0.098263316, 1)
 atk = 15.0
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=655665298]
-visible = false
 z_index = 3
-position = Vector2(-3, -2)
 shape = SubResource("CapsuleShape2D_physics")
 
 [node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="." unique_id=1802750636]
@@ -236,7 +234,6 @@ script = ExtResource("3_e80uo")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Area2D" unique_id=1611915700]
 z_index = 6
-position = Vector2(-10, -6.666667)
 shape = SubResource("CapsuleShape2D_4wvqw")
 
 [node name="AIController2D" type="Node2D" parent="." unique_id=720197141]
