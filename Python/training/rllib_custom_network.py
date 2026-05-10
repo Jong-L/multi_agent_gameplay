@@ -51,7 +51,7 @@ def _ortho_init(layer: nn.Module, std: float = np.sqrt(2), bias_const: float = 0
     return layer
 
 
-# 自定义分段模型 (RLlib CustomModel)
+# 自定义分段模型
 class SegmentedModel(TorchModelV2, nn.Module):
     def __init__(self, obs_space, action_space, num_outputs, model_config, name):
         TorchModelV2.__init__(self, obs_space, action_space, num_outputs, model_config, name)

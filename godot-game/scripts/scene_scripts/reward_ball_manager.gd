@@ -95,9 +95,16 @@ func _spawn_type_b_balls() -> void:
 	var patrol := _play_scene.patrol_rect
 	if patrol.size == Vector2.ZERO:
 		return
+	var player_positions := _current_player_positions()
+	var collision_decoration_positions := _play_scene.collision_decoration_positions
+	var candidate_positions := _grid_pos_candidates_avoiding_positions_and_deco(_play_scene.patrol_tile_positions, patrol, BALL_B_SPAWN_MARGIN, player_positions, BALL_B_MIN_PLAYER_DIST, collision_decoration_positions, BALL_B_MIN_DECO_DIST)
 	
 	for i in range(BALL_B_MAX_COUNT):
-		var pos := _safe_pos_in_patrol()
+		var pos: Vector2
+		if candidate_positions.is_empty():
+			pos = _safe_pos_in_patrol()
+		else:
+			pos = _pop_random_pos(candidate_positions)
 		var ball := _create_ball(RewardBall.BallType.TYPE_B, BALL_B_REWARD, pos)
 		type_b_balls.append(ball)
 		reward_balls.append(ball)
@@ -144,6 +151,11 @@ func _process(delta: float) -> void:
 func _safe_pos_in_patrol() -> Vector2:
 	var patrol := _play_scene.patrol_rect
 	var deco_positions := _play_scene.collision_decoration_positions
+	var player_positions := _current_player_positions()
+	var candidate_positions := _grid_pos_candidates_avoiding_positions_and_deco(_play_scene.patrol_tile_positions, patrol, BALL_B_SPAWN_MARGIN, player_positions, BALL_B_MIN_PLAYER_DIST, deco_positions, BALL_B_MIN_DECO_DIST)
+	if not candidate_positions.is_empty():
+		return _pop_random_pos(candidate_positions)
+
 	var last_pos := _rng_pos_in_rect(patrol, BALL_B_SPAWN_MARGIN)
 	
 	for attempt in range(_SAFE_POS_MAX_ATTEMPTS):
@@ -175,11 +187,6 @@ func _safe_pos_in_patrol() -> Vector2:
 
 
 ## 在矩形内生成随机位置，避开指定的出生点
-## @param rect 目标矩形区域
-## @param margin 距矩形边缘的最小距离
-## @param spawn_positions 需要避开的出生点列表
-## @param min_dist 与出生点的最小距离
-## @return 符合条件的随机位置（最多重试 _SAFE_POS_MAX_ATTEMPTS 次）
 func _random_pos_avoiding_spawn(rect: Rect2, margin: float, spawn_positions: Array[Vector2], min_dist: float) -> Vector2:
 	for attempt in range(_SAFE_POS_MAX_ATTEMPTS):
 		var pos := _rng_pos_in_rect(rect, margin)
@@ -194,8 +201,11 @@ func _random_pos_avoiding_spawn(rect: Rect2, margin: float, spawn_positions: Arr
 	return _rng_pos_in_rect(rect, margin)
 
 func _grid_pos_candidates_avoiding_spawn_and_deco(rect: Rect2, margin: float, spawn_positions: Array[Vector2], min_dist: float, deco_positions: Array[Vector2], min_deco_dist: float) -> Array[Vector2]:
+	return _grid_pos_candidates_avoiding_positions_and_deco(_play_scene.arena_tile_positions, rect, margin, spawn_positions, min_dist, deco_positions, min_deco_dist)
+
+func _grid_pos_candidates_avoiding_positions_and_deco(grid_positions: Array[Vector2], rect: Rect2, margin: float, avoid_positions: Array[Vector2], min_dist: float, deco_positions: Array[Vector2], min_deco_dist: float) -> Array[Vector2]:
 	var candidates: Array[Vector2] = []
-	if _play_scene == null or _play_scene.arena_tile_positions.is_empty():
+	if _play_scene == null or grid_positions.is_empty():
 		return candidates
 
 	var usable_rect := Rect2(
@@ -205,10 +215,10 @@ func _grid_pos_candidates_avoiding_spawn_and_deco(rect: Rect2, margin: float, sp
 	if usable_rect.size.x <= 0.0 or usable_rect.size.y <= 0.0:
 		return candidates
 
-	for tile_pos in _play_scene.arena_tile_positions:
+	for tile_pos in grid_positions:
 		if not usable_rect.has_point(tile_pos):
 			continue
-		if _is_too_close_to_any(tile_pos, spawn_positions, min_dist):
+		if _is_too_close_to_any(tile_pos, avoid_positions, min_dist):
 			continue
 		if _is_too_close_to_any(tile_pos, deco_positions, min_deco_dist):
 			continue
@@ -220,6 +230,15 @@ func _pop_random_pos(positions: Array[Vector2]) -> Vector2:
 	var pos := positions[index]
 	positions.remove_at(index)
 	return pos
+
+func _current_player_positions() -> Array[Vector2]:
+	var positions: Array[Vector2] = []
+	if _play_scene == null:
+		return positions
+	for player in _play_scene.players:
+		if is_instance_valid(player):
+			positions.append(player.global_position)
+	return positions
 
 func _is_too_close_to_any(pos: Vector2, positions: Array[Vector2], min_dist: float) -> bool:
 	var min_dist_sq := min_dist * min_dist
@@ -288,7 +307,12 @@ func reset_all() -> void:
 			a_idx += 1
 	
 	# 重新随机化 B 类球位置
+	var b_player_positions := _current_player_positions()
+	var b_candidate_positions := _grid_pos_candidates_avoiding_positions_and_deco(_play_scene.patrol_tile_positions, _play_scene.patrol_rect, BALL_B_SPAWN_MARGIN, b_player_positions, BALL_B_MIN_PLAYER_DIST, collision_decoration_positions, BALL_B_MIN_DECO_DIST)
 	for ball in type_b_balls:
 		if is_instance_valid(ball):
 			ball.reset_ball()
-			ball.position = _safe_pos_in_patrol()
+			if b_candidate_positions.is_empty():
+				ball.position = _safe_pos_in_patrol()
+			else:
+				ball.position = _pop_random_pos(b_candidate_positions)
