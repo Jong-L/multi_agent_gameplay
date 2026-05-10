@@ -526,12 +526,14 @@ func get_obs_for_player(player: Player) -> Dictionary:
 	var all_balls: Array[RewardBall] = []
 	if reward_ball_manager != null:
 		all_balls = reward_ball_manager.reward_balls
+	var arena_center := arena_bounds.position + arena_bounds.size / 2.0
 	var obs_dict = vision_sensor.scan(
 		player,
 		players,
 		enemies,
 		all_balls,
 		arena_length,
+		arena_center,
 		use_valid_mask,
 		use_velocity_obs,
 	)
