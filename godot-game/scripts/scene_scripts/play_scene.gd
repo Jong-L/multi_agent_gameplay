@@ -36,6 +36,7 @@ var reward_ball_manager: RewardBallManager = null
 # 调试信息窗口（由 InfoWindow._ready 赋值，reparenting 之前）
 var info_window: InfoWindow = null
 var arena_tile_positions: Array[Vector2] = []
+var patrol_tile_positions: Array[Vector2] = []
 
 # 相机切换按钮组
 var camera_buttons: Array[Button] = []
@@ -125,6 +126,7 @@ func _init_map_data() -> void:
 	# Road 层（巡逻区域）
 	if _road_layer != null:
 		patrol_rect =MathUtils._tilemap_to_world_rect(_road_layer)
+		patrol_tile_positions = MathUtils._tilemap_to_world_positions(_road_layer)
 	
 	# CollisionDecoration
 	if _collision_deco_layer != null:

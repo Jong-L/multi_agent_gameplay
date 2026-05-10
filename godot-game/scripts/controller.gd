@@ -18,7 +18,7 @@ func _physics_process(_delta):
 		needs_reset=false
 		reset()
 
-	#if _player.player_id==2:
+	#if _player.player_id==0:
 		#print(get_obs())
 
 
@@ -40,6 +40,8 @@ func get_obs() -> Dictionary:
 	flat.append_array(obs_dict["nearby_balls"])
 	flat.append_array(obs_dict["nearby_enemies"])
 	flat.append_array(obs_dict["map_state"])
+	#if _player.player_id==0:
+		#print(obs_dict["self_state"])
 	return {"obs": flat}
 
 func get_reward() -> float:

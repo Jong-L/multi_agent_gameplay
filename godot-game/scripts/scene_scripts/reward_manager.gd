@@ -453,7 +453,7 @@ func _calculate_ball_shaping_potential(player: Player, cfg: RewardConfig) -> flo
 	#否则计算最近奖励球势能
 	return calculate_ball_potential(player)
 
-# 获取玩家到障碍物的碰撞距离列表（已过滤非碰撞射线）
+# 获取玩家到障碍物的碰撞距离列表
 func _get_collision_distances(player: Player, pid: int) -> Array[float]:
 	if _play_scene == null:
 		return []
@@ -698,11 +698,9 @@ func _process_wall_collision(_delta: float) -> void:
 		var cfg := _cfg(pid)
 
 		# 撞墙惩罚
-		var is_wall_collision := false
-		if player.last_collison_data and player.is_moving:
-			if player.last_collison_data.get_collider() is TileMapLayer:
-				add_reward(pid, -cfg.wall_collision_penalty, "wall_collision")
-				is_wall_collision = true
+		var is_wall_collision := _is_player_pressing_wall(player)
+		if is_wall_collision:
+			add_reward(pid, -cfg.wall_collision_penalty, "wall_collision")
 
 		# 撞墙计数器与 reset_on_wall
 		if game_config != null and game_config.reset_on_wall:
@@ -725,6 +723,25 @@ func _process_wall_collision(_delta: float) -> void:
 			var epsilon: float = 1.0 / cfg.wall_collision_penalty
 			var rd: float = -1.0 / (d_min + epsilon)
 			add_reward(pid, rd, "wall_distance")
+
+func _is_player_pressing_wall(player: Player) -> bool:
+	if not player.is_moving:
+		return false
+
+	var desired: Vector2 = player.desired_velocity
+	if desired.length() <= 0.001: #弹性检测
+		return false
+
+	if player.is_on_wall():
+		var wall_normal: Vector2 = player.get_wall_normal() #碰撞法线
+		if wall_normal != Vector2.ZERO and desired.dot(wall_normal) < -0.001:
+			return true
+	if player.is_on_floor():
+		return desired.y > 0.001
+	if player.is_on_ceiling():
+		return desired.y < -0.001
+
+	return false
 
 ## ── 重置 ──
 
