@@ -76,6 +76,7 @@ func scan(
 			int(other.is_attack_animating()),#是否正在播放攻击动画 [0,1]
 			other.get_skill_cooldown_ratio(),#技能冷却比例 [0,1]
 		]
+		#速度
 		if use_velocity_obs:
 			_slot.append(other.get_normalized_velocity().x)
 			_slot.append(other.get_normalized_velocity().y)
