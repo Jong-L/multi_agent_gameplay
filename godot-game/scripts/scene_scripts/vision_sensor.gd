@@ -32,6 +32,7 @@ func scan(
 	all_enemies: Array[Enemy],
 	all_balls: Array[RewardBall],
 	arena_length: float,
+	arena_center: Vector2 = Vector2.ZERO,
 	use_valid_mask: bool = false,
 	use_velocity_obs: bool = true,
 ) -> Dictionary:
@@ -41,11 +42,11 @@ func scan(
 	# 计算有效槽位维度
 	var _eff_player_dim := PLAYER_SLOT_DIM - (0 if use_velocity_obs else VELOCITY_DIMS)
 	var _eff_enemy_dim := ENEMY_SLOT_DIM - (0 if use_velocity_obs else VELOCITY_DIMS)
-	# 自身状态 
+	# 自身状态 — 相对于竞技场中心归一化到[-1,1]
 	var self_state: Array = [
 		#player.player_id, #调试时用，但智能体不需要管"我是谁"
-		player_pos.x / half_arena,#归一化到[-1,1]
-		player_pos.y / half_arena,
+		(player_pos.x - arena_center.x) / half_arena,
+		(player_pos.y - arena_center.y) / half_arena,
 		player.current_health / player.max_health,#归一化到[0,1]
 		int(player.animated_sprite.flip_h),#是否翻转影响攻击范围
 		int(player.is_attack_animating()),#自身攻击动画状态 [0,1]

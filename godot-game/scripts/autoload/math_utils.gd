@@ -64,7 +64,7 @@ func _tilemap_to_world_rect(layer: TileMapLayer) -> Rect2:
 	var used := layer.get_used_rect()
 	var cell_size := layer.tile_set.tile_size
 	var s := layer.scale
-	var p := layer.position#图块偏移位置
+	var p := layer.position     #图块偏移位置
 	return Rect2(
 		p.x + used.position.x * cell_size.x * s.x,
 		p.y + used.position.y * cell_size.y * s.y,
