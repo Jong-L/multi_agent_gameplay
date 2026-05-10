@@ -88,6 +88,10 @@ skill_3={
 2d_physics/layer_3="wall"
 2d_physics/layer_4="score_ball"
 
+[network]
+
+limits/debugger/max_chars_per_second=327680
+
 [physics]
 
 3d/physics_engine="Jolt Physics"

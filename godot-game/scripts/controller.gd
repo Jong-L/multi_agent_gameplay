@@ -18,7 +18,7 @@ func _physics_process(_delta):
 		needs_reset=false
 		reset()
 
-	#if _player.player_id==0:
+	#if _player.player_id==2:
 		#print(get_obs())
 
 

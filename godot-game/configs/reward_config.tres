@@ -6,5 +6,4 @@
 script = ExtResource("1_y2fv5")
 run = -0.001
 idle = -0.05
-ball_potential_func = 2
 wall_collision_penalty = 5.0

@@ -48,6 +48,7 @@ def _ortho_init(layer: nn.Module, std: float = np.sqrt(2), bias_const: float = 0
     """正交权重初始化"""
     torch.nn.init.orthogonal_(layer.weight, std)
     torch.nn.init.constant_(layer.bias, bias_const)
+    return layer
 
 
 # 自定义分段模型 (RLlib CustomModel)
@@ -117,11 +118,44 @@ from ray.rllib.models import ModelCatalog
 ModelCatalog.register_custom_model("segmented_model", SegmentedModel)
 
 
+def _convert_obs(obs):
+    """将 Godot 返回的 list 观测转换为 numpy float32 array"""
+    if isinstance(obs, dict):
+        # Godot 返回的多智能体观测结构为 {agent_id: {"obs": [..values..]}}
+        result = {}
+        for k, v in obs.items():
+            if isinstance(v, dict) and "obs" in v:
+                arr = np.array(v["obs"], dtype=np.float32)
+                result[k] = {"obs": arr}
+            else:
+                result[k] = np.array(v, dtype=np.float32)
+        return result
+    return np.array(obs, dtype=np.float32)
+
+
+def _wrap_pettingzoo_obs(env):
+    """包装 PettingZoo env，确保观测为 float32 numpy array"""
+    original_reset = env.reset
+    original_step = env.step
+
+    def reset(*args, **kwargs):
+        obs, info = original_reset(*args, **kwargs)
+        return _convert_obs(obs), info
+
+    def step(action):
+        obs, reward, terminated, truncated, info = original_step(action)
+        return _convert_obs(obs), reward, terminated, truncated, info
+
+    env.reset = reset
+    env.step = step
+    return env
+
+
 # 入口
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(allow_abbrev=False)
     parser.add_argument("--config_file", default="Python\\training\\rllib_config.yaml", type=str, help="The yaml config file")
-    parser.add_argument("--restore", default="saved-models/checkpoints/checkpoint_v1", type=str, help="the location of a checkpoint to restore from")
+    parser.add_argument("--restore", default=None, type=str, help="the location of a checkpoint to restore from")
     parser.add_argument(
         "--experiment_dir",
         default="logs/rllib",
@@ -146,14 +180,14 @@ if __name__ == "__main__":
         port = index + GodotEnv.DEFAULT_PORT
         seed = index
         if is_multiagent:
-            return ParallelPettingZooEnv(
-                GDRLPettingZooEnv(
-                    config=env_config,
-                    port=port,
-                    seed=seed,
-                    show_window=env_config.get("show_window", False),
-                )
+            pz_env = GDRLPettingZooEnv(
+                config=env_config,
+                port=port,
+                seed=seed,
+                show_window=env_config.get("show_window", False),
             )
+            pz_env = _wrap_pettingzoo_obs(pz_env)
+            return ParallelPettingZooEnv(pz_env)
         else:
             return RayVectorGodotEnv(config=env_config, port=port, seed=seed)
 
