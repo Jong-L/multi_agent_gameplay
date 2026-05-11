@@ -6,5 +6,4 @@
 script = ExtResource("1")
 ray_count = 36
 use_observation_valid_mask = true
-use_velocity_obs = false
 training_player_id = -1
