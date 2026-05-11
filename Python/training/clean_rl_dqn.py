@@ -51,8 +51,8 @@ class Args:
     """DQN 训练配置 (dataclass 风格，兼容 CleanRL 惯例)"""
 
     #环境
-    env_path: Optional[str] = None
-    # env_path: Optional[str] = "godot-game\\build\\game.exe"
+    # env_path: Optional[str] = None
+    env_path: Optional[str] = "godot-game\\build\\game.exe"
     """Godot 导出可执行文件路径。为 None 时连接 Godot 编辑器。"""
     config_path: str = "godot-game/configs/game_config.tres"
     """game_config.tres 路径, 用于读取 ray_count 和 use_observation_valid_mask 等动态参数"""
@@ -60,7 +60,7 @@ class Args:
     """并行 Godot 进程数量"""
     seed: int = 1
     """随机种子"""
-    show_window: bool = False
+    show_window: bool = True
     """是否显示游戏窗口"""
     speedup: int = 8
     """物理引擎加速倍数"""

@@ -111,29 +111,27 @@ class ObsSegmentDims:
         常量与 res://scripts/scene_scripts/vision_sensor.gd 保持同步。
         """
         # VisionSensor 常量 — 与 vision_sensor.gd 保持一致
-        SELF = 6
-        SLOT_DIMS = (9, 4, 9)      # player, ball, enemy 每槽维度 (含速度)
-        SLOT_COUNTS = (3, 8, 5)    # 每类实体槽位数
-        VELOCITY_DIMS = 2
+        SELF = 8                       # SELF_STATE_DIM (不含 controller 追加的 prev_action/ep_progress)
+        SELF_EXTRA = 7                 # +6(prev_action one-hot) +1(episode_progress), controller 追加
+        SLOT_DIMS = (9, 4, 9)          # player, ball, enemy 每槽维度 (含速度)
+        SLOT_COUNTS = (3, 8, 5)        # 每类实体槽位数
+        PLAYER_EXTRA_DIM = 1           # 归一化 player_id
 
         ray = 36
         valid = 0
-        use_vel = True
         try:
             cfg = parse_godot_tres(config_path)
             ray = cfg.get("ray_count", 36)
             if cfg.get("use_observation_valid_mask", True):
                 valid = 1
-            use_vel = cfg.get("use_velocity_obs", True)
         except (FileNotFoundError, OSError):
             print(f"[Warning] 无法读取 {config_path}, 使用默认值 ray=36 valid=0")
 
-        vel_sub = VELOCITY_DIMS if not use_vel else 0
         return cls(
-            self_dim=SELF,
-            player_dim=SLOT_COUNTS[0] * (SLOT_DIMS[0] - vel_sub + valid),
+            self_dim=SELF + SELF_EXTRA,
+            player_dim=SLOT_COUNTS[0] * (SLOT_DIMS[0] + PLAYER_EXTRA_DIM + valid),
             ball_dim=SLOT_COUNTS[1] * (SLOT_DIMS[1] + valid),
-            enemy_dim=SLOT_COUNTS[2] * (SLOT_DIMS[2] - vel_sub + valid),
+            enemy_dim=SLOT_COUNTS[2] * (SLOT_DIMS[2] + valid),
             map_dim=ray,
         )
 

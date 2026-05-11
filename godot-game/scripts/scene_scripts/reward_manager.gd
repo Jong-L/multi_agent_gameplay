@@ -700,7 +700,7 @@ func _process_wall_collision(_delta: float) -> void:
 		# 撞墙惩罚
 		var is_wall_collision := _is_player_pressing_wall(player)
 		if is_wall_collision:
-			add_reward(pid, -cfg.wall_collision_penalty, "wall_collision")
+			add_reward(pid, cfg.wall_collision_penalty, "wall_collision")
 
 		# 撞墙计数器与 reset_on_wall
 		if game_config != null and game_config.reset_on_wall:

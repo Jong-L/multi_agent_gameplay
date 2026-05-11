@@ -23,12 +23,6 @@ RLlib PPO 多智能体训练入口脚本
     使用共享策略:
         python Python/training/rllib_multiagent_ppo.py --shared-policy
 
-观测空间设计（142维）:
-    - self_state: 6维 (位置x,y, 血量比例, 朝向, 攻击动画, 技能冷却)
-    - nearby_players: 27维 (3个附近玩家 × 9维/玩家)
-    - nearby_balls: 32维 (8个奖励球 × 4维/球)
-    - nearby_enemies: 45维 (5个敌人 × 9维/敌人)
-    - map_state: 32维 (射线检测)
 
 """
 
@@ -184,14 +178,14 @@ def infer_flat_obs_dim(config_path: str) -> int:
     
     设计目的：
         RLlib 需要预先知道观测空间的维度来构建策略网络。
-        此函数读取 Godot 配置，根据配置的动态参数（如射线数量、是否使用速度观测等）
+        此函数读取 Godot 配置，根据配置的动态参数（如射线数量等）
         计算出总的观测维度，避免硬编码。
         
-    观测空间组成（总计 142 维）：
-        - self_state: 6维 (pos_x, pos_y, hp_ratio, flip_h, is_attack_animating, skill_cooldown_ratio)
-        - nearby_players: 3个 × (9维 + valid_mask)
-        - nearby_balls: 8个 × (4维 + valid_mask)
-        - nearby_enemies: 5个 × (9维 + valid_mask)
+    观测空间组成（总计 174 维）：
+        - self_state: 15维 (8 VisionSensor + 6 prev_action + 1 episode_progress)
+        - nearby_players: 3个 × (9基础 + 1 player_id + valid_mask)
+        - nearby_balls: 8个 × (4基础 + valid_mask)
+        - nearby_enemies: 5个 × (9基础 + valid_mask)
         - map_state: ray_count 维（射线检测）
     
     参数：
@@ -205,20 +199,13 @@ def infer_flat_obs_dim(config_path: str) -> int:
     # 从配置文件读取动态参数，使用默认值作为后备
     ray_count = int(cfg.get("ray_count", 36))  # 射线数量，默认 36
     use_valid_mask = bool(cfg.get("use_observation_valid_mask", False))  # 是否使用有效掩码
-    use_velocity_obs = bool(cfg.get("use_velocity_obs", True))  # 是否包含速度观测
 
-    # 基础维度定义
-    self_dim = 6  # 自身状态维度
-    player_slot_dim = 9  # 每个附近玩家的观测维度
-    ball_slot_dim = 4  # 每个奖励球的观测维度
-    enemy_slot_dim = 9  # 每个敌人的观测维度
-    velocity_dims = 2  # 速度维度 (vel_x, vel_y)
-    valid_dims = 1 if use_valid_mask else 0  # 有效掩码维度
-
-    # 如果不使用速度观测，从玩家和敌人维度中减去速度维度
-    if not use_velocity_obs:
-        player_slot_dim -= velocity_dims
-        enemy_slot_dim -= velocity_dims
+    # 基础维度定义（与 vision_sensor.gd 同步）
+    self_dim = 15  # 自身状态: 8(VisionSensor) + 6(prev_action) + 1(episode_progress)
+    player_slot_dim = 9 + 1  # 9基础 + 1 player_id
+    ball_slot_dim = 4
+    enemy_slot_dim = 9
+    valid_dims = 1 if use_valid_mask else 0
 
     # 计算总维度
     return (

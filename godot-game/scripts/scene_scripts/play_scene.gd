@@ -158,6 +158,9 @@ func _collect_enemis()->void:
 	for child in get_children():
 		if child is Enemy:
 			enemies.append(child)
+	# 按名称排序确保数组顺序稳定,用于观测槽位固定
+	enemies.sort_custom(func(a, b): return a.name.naturalnocasecmp_to(b.name) < 0)
+
 # 初始化相机系统，将玩家引用传给 CameraManager
 func _setup_camera_system() -> void:
 	CameraManager.players.clear()
@@ -513,11 +516,10 @@ func _draw_rays_debug() -> void:
 #为指定玩家生成观测数据
 func get_obs_for_player(player: Player) -> Dictionary:
 	var use_valid_mask := game_config.use_observation_valid_mask if game_config else false
-	var use_velocity_obs := game_config.use_velocity_obs if game_config else true
 	if vision_sensor == null or not is_instance_valid(vision_sensor):
 		# 无传感器时返回最小观测
 		var fallback_obs := {
-			"self_state": [0.0, 0.0, 0.0, 0.0],
+			"self_state": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
 			"nearby_players": [],
 			"nearby_balls": [],
 			"nearby_enemies": [],
@@ -537,7 +539,6 @@ func get_obs_for_player(player: Player) -> Dictionary:
 		arena_length,
 		arena_center,
 		use_valid_mask,
-		use_velocity_obs,
 	)
 	#添加饥饿时间
 	#var starve_duration:float=reward_manager.compute_starve_duration(player)

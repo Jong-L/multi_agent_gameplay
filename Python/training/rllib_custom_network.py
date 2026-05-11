@@ -26,11 +26,11 @@ import torch
 import torch.nn as nn
 
 # 观测维度常量 — 与 godot-game/scripts/scene_scripts/vision_sensor.gd 保持同步
-_SEG_SELF = 6          # self_state
-_SEG_PLAYER = 27       # nearby_players: 3 × 9
-_SEG_BALL = 32         # nearby_balls: 8 × 4
-_SEG_ENEMY = 45        # nearby_enemies: 5 × 9
-_SEG_MAP = 36         # map_state: 36 条射线 
+_SEG_SELF = 15          # self_state: 8(VisionSensor) + 6(prev_action) + 1(episode_progress)
+_SEG_PLAYER = 33        # nearby_players: 3 × (9 + 1(player_id) + 1(valid))
+_SEG_BALL = 40          # nearby_balls: 8 × (4 + 1(valid))
+_SEG_ENEMY = 50         # nearby_enemies: 5 × (9 + 1(valid))
+_SEG_MAP = 36           # map_state: 36 条射线 
 
 # 子网络隐层维度
 _SEG_SELF_HIDDEN = 16
@@ -39,7 +39,7 @@ _SEG_BALL_HIDDEN = 64
 _SEG_ENEMY_HIDDEN = 64
 _SEG_MAP_HIDDEN = 64
 
-_FUSED_DIM = _SEG_SELF_HIDDEN + _SEG_PLAYER_HIDDEN + _SEG_BALL_HIDDEN + _SEG_ENEMY_HIDDEN + _SEG_MAP_HIDDEN  # = 212
+_FUSED_DIM = _SEG_SELF_HIDDEN + _SEG_PLAYER_HIDDEN + _SEG_BALL_HIDDEN + _SEG_ENEMY_HIDDEN + _SEG_MAP_HIDDEN  # = 272
 _TRUNK_HIDDEN_1 = 128
 _TRUNK_HIDDEN_2 = 64
 
