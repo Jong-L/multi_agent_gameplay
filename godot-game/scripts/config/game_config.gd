@@ -16,7 +16,6 @@ enum TrainingPlayer { ALL = -1, PLAYER_0 = 0, PLAYER_1 = 1, PLAYER_2 = 2, PLAYER
 
 @export_category("Observation")
 @export var use_observation_valid_mask: bool
-@export var use_velocity_obs: bool = true  # 观测是否包含实体速度（vel_x, vel_y）
 
 @export_category("Training")
 @export var training_player_id: TrainingPlayer       # ALL: 所有玩家训练; PLAYER_0~3: 仅该玩家训练（其余强制 IDLE）
