@@ -28,8 +28,8 @@ config:
     env_config:
         env_path: d:\schoolTour\softwares\multi-agent-gameplay\godot-game\build\game.exe # Set your env path here (exported executable from Godot) - e.g. env_path: 'env_path.exe' on Windows
         action_repeat: null # Doesn't need to be set here, you can set this in sync node in Godot editor as well
-        show_window: true # Displays game window while training. Might be faster when false in some cases, turning off also reduces GPU usage if you don't need rendering.
-        speedup: 16 # Speeds up Godot physics
+        show_window: True # Displays game window while training. Might be faster when false in some cases, turning off also reduces GPU usage if you don't need rendering.
+        speedup: 8 # Speeds up Godot physics
 
     framework: torch # ONNX models exported with torch are compatible with the current Godot RL Agents Plugin
 
@@ -53,10 +53,11 @@ config:
     num_envs_per_env_runner: 2 # Number of env instances per worker
     # The value below needs changing per env
     # Basic calculation for this value can be rollout_fragment_length * num_workers * num_envs_per_env_runner (how many AIControllers you have if not multi_agent, otherwise the value you set)
-    train_batch_size: 2048
-
-    num_sgd_iter: 4 #how many times the past experiences is used to update the neural network
-    batch_mode: truncate_episodes
+    train_batch_size: 500
+    #godot端每个回合步数为reset_after/8 -1
+    num_sgd_iter: 6 #how many times the past experiences is used to update the neural network
+    batch_mode: complete_episodes
+    # batch_mode: truncated_episodes
 
     num_gpus: 1
 
@@ -76,8 +77,9 @@ model_config:
         map_hiddens: [64]
         trunk_hiddens: [256, 128, 64]
     gru_mlp:
+        max_seq_len: 64     
         gru_hidden: 128             # GRU 隐藏层维度
-        gru_num_layers: 2           # GRU 层数
-        gru_input_layernorm: False    # GRU 输入 LayerNorm
+        gru_num_layers: 1           # GRU 层数
+        gru_input_layernorm: True    # GRU 输入 LayerNorm
         ball_hiddens: [64]          # Ball 非时序段 MLP 层宽
-        trunk_hiddens: [256, 128, 64]    # 融合 trunk MLP 层宽
+        trunk_hiddens: [128, 64]    # 融合 trunk MLP 层宽
