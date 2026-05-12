@@ -61,7 +61,7 @@ class Args:
     """W&B 团队 / 实体名称。"""
 
     # PPO 算法超参数
-    total_timesteps: int = 1_000_000
+    total_timesteps: int = 5_000_000
     """总训练步数 (环境步数)。"""
     learning_rate: float = 3e-4
     """Adam 优化器学习率。"""
@@ -71,9 +71,9 @@ class Args:
     """折扣因子"""
     gae_lambda: float = 0.95
     """GAE 的 λ 参数"""
-    num_minibatches: int = 10
+    num_minibatches: int = 4
     """小批量数量"""
-    update_epochs: int = 4
+    update_epochs: int = 8
     """每次更新遍历数据的轮数，即同一批经验的使用次数"""
     clip_coef: float = 0.2
     """PPO 裁剪系数 ε。"""
@@ -97,7 +97,7 @@ class Args:
     """启用 CUDA 加速。"""
     reward_norm: bool = True
     """是否对奖励做 running z-score 归一化。"""
-    reward_clip: float = 10.0
+    reward_clip: float = 1.0
     """奖励归一化裁剪范围 (仅在 reward_norm=True 时生效)。"""
 
     # 运行时计算的衍生值
