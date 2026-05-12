@@ -1,92 +1,328 @@
-# RLlib 可配置训练脚本 for GodotRL.
-# 支持通过 model.custom_model 切换不同网络架构 (默认分段模型 SegmentedModel)。
-# 需要 rllib_config.yaml 在同一目录, 或通过 --config_file 参数指定路径。
+
+
+#类型定义
+from __future__ import annotations
 
 import argparse
 import os
+import sys
 import pathlib
+from dataclasses import dataclass
+from enum import Enum
+from typing import Callable, Optional
 
 import numpy as np
 import ray
+import torch
+import torch.nn as nn
 import yaml
 from ray import train, tune
 from ray.rllib.algorithms.algorithm import Algorithm
 from ray.rllib.env.wrappers.pettingzoo_env import ParallelPettingZooEnv
 from ray.rllib.models.torch.torch_modelv2 import TorchModelV2
-from ray.rllib.models.torch.fcnet import FullyConnectedNetwork as TorchFC
 from ray.rllib.policy.policy import PolicySpec
 from ray.rllib.utils.annotations import override
-from ray.rllib.utils.framework import try_import_torch
 
 from godot_rl.core.godot_env import GodotEnv
 from godot_rl.wrappers.petting_zoo_wrapper import GDRLPettingZooEnv
 from godot_rl.wrappers.ray_wrapper import RayVectorGodotEnv
 
-import torch
-import torch.nn as nn
+# 确保 Ray worker 进程也能找到同目录的本地模块
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-# 观测维度常量 — 与 godot-game/scripts/scene_scripts/vision_sensor.gd 保持同步
-_SEG_SELF = 15          # self_state: 8(VisionSensor) + 6(prev_action) + 1(episode_progress)
-_SEG_PLAYER = 33        # nearby_players: 3 × (9 + 1(player_id) + 1(valid))
-_SEG_BALL = 40          # nearby_balls: 8 × (4 + 1(valid))
-_SEG_ENEMY = 50         # nearby_enemies: 5 × (9 + 1(valid))
-_SEG_MAP = 36           # map_state: 36 条射线 
-
-# 子网络隐层维度
-_SEG_SELF_HIDDEN = 16
-_SEG_PLAYER_HIDDEN = 64
-_SEG_BALL_HIDDEN = 64
-_SEG_ENEMY_HIDDEN = 64
-_SEG_MAP_HIDDEN = 64
-
-_FUSED_DIM = _SEG_SELF_HIDDEN + _SEG_PLAYER_HIDDEN + _SEG_BALL_HIDDEN + _SEG_ENEMY_HIDDEN + _SEG_MAP_HIDDEN  # = 272
-_TRUNK_HIDDEN_1 = 128
-_TRUNK_HIDDEN_2 = 64
+from godot_env_wrapper import ObsSegmentDims
 
 
-def _ortho_init(layer: nn.Module, std: float = np.sqrt(2), bias_const: float = 0.0):
-    """正交权重初始化"""
+class NetworkType(str, Enum):
+    """支持的网络架构类型。"""
+    DEFAULT = "default"
+    SEGMENTED_MLP = "segmented_mlp"
+    GRU_MLP = "gru_mlp"
+
+@dataclass
+class NetworkDefaults:
+    """分段网络隐层维度的内置默认值。
+
+    当 YAML model_config 中未显式配置某段的 hiddens 时使用。
+    所有属性可被 YAML 配置覆盖。
+    """
+    self_hidden: int = 48
+    player_hidden: int = 64
+    ball_hidden: int = 64
+    enemy_hidden: int = 64
+    map_hidden: int = 64
+    trunk_hiddens: tuple = (128, 64)
+
+    @staticmethod
+    def _as_tuple(value, default):
+        """将 None / int / iterable 统一为 tuple。"""
+        if value is None:
+            value = default
+        if isinstance(value, int):
+            return (value,)
+        return tuple(int(v) for v in value)
+
+    def get_hiddens(self, config: dict, plural_key: str, singular_key: str,
+                    default: tuple) -> tuple:
+        """从 config dict 中提取隐层维度"""
+        if plural_key in config:
+            return self._as_tuple(config[plural_key], default)
+        if singular_key in config:
+            return self._as_tuple(config[singular_key], default)
+        return self._as_tuple(None, default)
+
+
+#网络构建块
+def ortho_init(layer: nn.Module, std: float = np.sqrt(2), bias_const: float = 0.0):
+    """正交权重初始化 (用于 Linear 层)。"""
     torch.nn.init.orthogonal_(layer.weight, std)
     torch.nn.init.constant_(layer.bias, bias_const)
     return layer
 
 
-# 自定义分段模型
-class SegmentedModel(TorchModelV2, nn.Module):
+def init_gru_weights(gru: nn.GRU):
+    """GRU 权重初始化: Xavier (input) + Orthogonal (hidden) + Zero (bias)。"""
+    for name, param in gru.named_parameters():
+        if "weight_ih" in name:
+            torch.nn.init.xavier_uniform_(param)
+        elif "weight_hh" in name:
+            torch.nn.init.orthogonal_(param)
+        elif "bias" in name:
+            torch.nn.init.constant_(param, 0.0)
+    return gru
+
+
+def make_mlp(input_dim: int, hidden_sizes: tuple,
+            final_std: float = np.sqrt(2)) -> tuple[nn.Module, int]:
+    """构建 MLP 序列: Linear + ReLU 堆叠。
+
+    Returns:
+        (nn.Sequential | nn.Identity, output_dim) — 空 hidden_sizes 时返回 Identity
+    """
+    layers: list[nn.Module] = []
+    in_dim = input_dim
+    for hidden_size in hidden_sizes:
+        layers.append(ortho_init(nn.Linear(in_dim, hidden_size), std=final_std))
+        layers.append(nn.ReLU())
+        in_dim = hidden_size
+    net = nn.Sequential(*layers) if layers else nn.Identity()
+    return net, in_dim # 输出维度
+
+
+class _TemporalGRU(nn.Module):
+    """单时间步 GRU, 支持 RLlib recurrent state 管理。
+
+    输入每个时间步的特征向量 (batch, input_size),
+    输出 (batch, hidden_size) 并维护跨时间步的隐藏态。
+
+    - get_initial_state() 返回 [torch.zeros(num_layers, hidden_size)]  (无 batch 维)
+    - forward() 接受 h_prev: (num_layers, batch, hidden_size), 返回 (output, h_new)
+    """
+    def __init__(self, input_size: int, hidden_size: int, num_layers: int = 1):
+        super().__init__()
+        self.input_size = input_size
+        self.hidden_size = hidden_size
+        self.num_layers = num_layers
+        self.gru = init_gru_weights(nn.GRU(input_size, hidden_size, num_layers=num_layers, batch_first=False))
+        self.output_dim = hidden_size
+
+    def get_initial_state(self) -> list:
+        """RLlib：返回不含 batch 维的初始隐藏态列表。"""
+        return [torch.zeros(self.num_layers, self.hidden_size)]
+
+    def forward(self, x: torch.Tensor, hx: torch.Tensor):
+        """单步前向。
+        Args:
+            x:  (batch, input_size) — 当前时间步特征
+            hx: (num_layers, batch, hidden_size) — 上一时间步隐藏态
+
+        Returns:
+            output: (batch, hidden_size) — GRU 输出
+            h_new:  (num_layers, batch, hidden_size) — 新隐藏态
+        """
+        x_seq = x.unsqueeze(0)       # (1, batch, input_size)
+        output, h_new = self.gru(x_seq, hx)
+        return output.squeeze(0), h_new
+
+
+def parse_network_type(value) -> NetworkType:
+    """将字符串或枚举值解析为 NetworkType。"""
+    if isinstance(value, NetworkType):
+        return value
+    text = str(value or NetworkType.SEGMENTED_MLP.value).lower()
+    for nt in NetworkType:
+        if text in (nt.value, nt.name.lower()):
+            return nt
+    raise ValueError(
+        f"Unsupported network_type={value!r}. "
+        f"Use one of {[t.value for t in NetworkType]}."
+    )
+
+
+#网络构建块
+
+class SegmentedObsHelper:
+    """观测分段辅助工具: 封装 ObsSegmentDims, 提供统一的分段/拼接接口。
+    """
+    def __init__(self, seg_dims: ObsSegmentDims):
+        self._d = seg_dims
+
+    @property
+    def dims(self) -> ObsSegmentDims:
+        return self._d
+
+    def total_dim(self) -> int:
+        d = self._d
+        return d.self_dim + d.player_dim + d.ball_dim + d.enemy_dim + d.map_dim
+
+    def split(self, obs: torch.Tensor) -> tuple:
+        """将扁平观测 (batch, total_dim) 拆解为 (self, player, ball, enemy, map) 五段。
+        每段保留 batch 维, 返回 5 个 (batch, seg_dim) 张量。
+        """
+        d = self._d
+        i = 0
+        s = obs[:, i: i + d.self_dim];   i += d.self_dim
+        p = obs[:, i: i + d.player_dim]; i += d.player_dim
+        b = obs[:, i: i + d.ball_dim];   i += d.ball_dim
+        e = obs[:, i: i + d.enemy_dim];  i += d.enemy_dim
+        m = obs[:, i: i + d.map_dim]
+        return s, p, b, e, m
+
+    def concat_temporal(self, obs: torch.Tensor) -> torch.Tensor:
+        """拼接时序段特征 (SELF + PLAYER + ENEMY + MAP), 排除非时序段 (BALL)。
+        """
+        s, p, _, e, m = self.split(obs)
+        return torch.cat([s, p, e, m], dim=-1)#特征维度拼接
+
+
+class CustomSegmentedModel(TorchModelV2, nn.Module):
+    """RLlib 自定义分段/GRU-MLP 模型。
+
+    支持两种网络架构:
+      - SEGMENTED_MLP: 5 段独立 MLP (self/player/ball/enemy/map) -> concat -> trunk
+      - GRU_MLP:     时序段 (self/player/enemy/map) -> GRU + BALL MLP -> concat -> trunk
+
+    通过 custom_model_config 注入:
+      - network_type: "segmented_mlp" | "gru_mlp"
+      - obs_seg_dims: ObsSegmentDims 实例 (观测分段维度)
+      - 各段的 hiddens 配置
+    """
+
     def __init__(self, obs_space, action_space, num_outputs, model_config, name):
-        TorchModelV2.__init__(self, obs_space, action_space, num_outputs, model_config, name)
+        TorchModelV2.__init__(self, obs_space, action_space, num_outputs,model_config, name)
         nn.Module.__init__(self)
 
-        # 5 段独立子网络
-        self.self_net = nn.Sequential(_ortho_init(nn.Linear(_SEG_SELF, _SEG_SELF_HIDDEN)), nn.ReLU())
-        self.player_net = nn.Sequential(_ortho_init(nn.Linear(_SEG_PLAYER, _SEG_PLAYER_HIDDEN)), nn.ReLU())
-        self.ball_net = nn.Sequential(_ortho_init(nn.Linear(_SEG_BALL, _SEG_BALL_HIDDEN)), nn.ReLU())
-        self.enemy_net = nn.Sequential(_ortho_init(nn.Linear(_SEG_ENEMY, _SEG_ENEMY_HIDDEN)), nn.ReLU())
-        self.map_net = nn.Sequential(_ortho_init(nn.Linear(_SEG_MAP, _SEG_MAP_HIDDEN)), nn.ReLU())
+        custom = model_config.get("custom_model_config", {}) or {}
+        self._network_type = parse_network_type(custom.get("network_type", NetworkType.SEGMENTED_MLP.value))
+        self._defaults = NetworkDefaults()
 
-        # 共享躯干
-        self.trunk = nn.Sequential(
-            _ortho_init(nn.Linear(_FUSED_DIM, _TRUNK_HIDDEN_1)), nn.ReLU(),
-            _ortho_init(nn.Linear(_TRUNK_HIDDEN_1, _TRUNK_HIDDEN_2)), nn.ReLU(),
+        # 观测分段辅助 — 通过 custom_model_config 注入
+        seg_dims = custom.get("obs_seg_dims")
+        if seg_dims is None:
+            raise ValueError(
+                "obs_seg_dims must be provided in custom_model_config. "
+                "Use build_rllib_model_config() to construct the model config."
+            )
+        self._obs = SegmentedObsHelper(seg_dims)
+
+        # 按网络类型构建特征提取网络
+        self._build_network(custom)
+
+        # Actor / Critic 头 — 共享 trunk 输出
+        self._actor = ortho_init(
+            nn.Linear(self._features_dim, num_outputs), std=0.01
+        )
+        self._critic = ortho_init(
+            nn.Linear(self._features_dim, 1), std=1.0
         )
 
-        # Actor 头
-        self.actor = _ortho_init(nn.Linear(_TRUNK_HIDDEN_2, num_outputs), std=0.01)
-
-        # Critic 头
-        self.critic = _ortho_init(nn.Linear(_TRUNK_HIDDEN_2, 1), std=1.0)
-
         # 注册价值函数分支给 RLlib
-        self._value_branch = self.critic
+        self._value_branch = self._critic
 
-    def _forward_features(self, obs: torch.Tensor) -> torch.Tensor:
-        i = 0
-        s = obs[:, i: i + _SEG_SELF];     i += _SEG_SELF
-        p = obs[:, i: i + _SEG_PLAYER];   i += _SEG_PLAYER
-        b = obs[:, i: i + _SEG_BALL];     i += _SEG_BALL
-        e = obs[:, i: i + _SEG_ENEMY];    i += _SEG_ENEMY
-        m = obs[:, i: i + _SEG_MAP]
+        # RLlib 要求声明的属性
+        self._features: Optional[torch.Tensor] = None
 
+    # 网络构建
+    def _build_network(self, custom: dict):
+        """工厂方法: 按 network_type 分发到对应的构建方法。"""
+        if self._network_type == NetworkType.SEGMENTED_MLP:
+            self._build_segmented_mlp(custom)
+        elif self._network_type == NetworkType.GRU_MLP:
+            self._build_gru_mlp(custom)
+        else:
+            raise ValueError(f"Unsupported network_type={self._network_type}")
+
+    def _build_segmented_mlp(self, config: dict):
+        """5 段独立 MLP 子网络 -> concat -> trunk -> actor/critic 头。"""
+        d = self._defaults
+        seg = self._obs.dims
+
+        self.self_net, self_out   = make_mlp(seg.self_dim,   d.get_hiddens(config, "self_hiddens",   "self_hidden",   (d.self_hidden,)))
+        self.player_net, plr_out  = make_mlp(seg.player_dim, d.get_hiddens(config, "player_hiddens", "player_hidden", (d.player_hidden,)))
+        self.ball_net, ball_out   = make_mlp(seg.ball_dim,   d.get_hiddens(config, "ball_hiddens",   "ball_hidden",   (d.ball_hidden,)))
+        self.enemy_net, enemy_out = make_mlp(seg.enemy_dim,  d.get_hiddens(config, "enemy_hiddens",  "enemy_hidden",  (d.enemy_hidden,)))
+        self.map_net, map_out     = make_mlp(seg.map_dim,    d.get_hiddens(config, "map_hiddens",    "map_hidden",    (d.map_hidden,)))
+
+        fused_dim = self_out + plr_out + ball_out + enemy_out + map_out
+        trunk_hiddens = d.get_hiddens(config, "trunk_hiddens", "trunk_hidden", d.trunk_hiddens)
+        self.trunk, self._features_dim = make_mlp(fused_dim, trunk_hiddens)
+
+    def _build_gru_mlp(self, config: dict):
+        """GRU-MLP 混合网络。
+
+        时序段 (SELF/PLAYER/ENEMY/MAP) -> 原始特征concat -> LayerNorm -> GRU
+        非时序段 (BALL) -> 独立 MLP -> concat -> trunk -> actor/critic
+
+        观测槽位顺序固定, 这使得隐藏态不错位。
+        """
+        d = self._defaults
+        seg = self._obs.dims
+
+        gru_hidden = config.get("gru_hidden", 128)
+        gru_layers = config.get("gru_num_layers", 1)
+        use_layernorm = config.get("gru_input_layernorm", True)
+
+        # GRU 输入
+        gru_input_dim = seg.self_dim + seg.player_dim + seg.enemy_dim + seg.map_dim
+        self._gru = _TemporalGRU(gru_input_dim, gru_hidden, num_layers=gru_layers)
+        self._gru_ln = nn.LayerNorm(gru_input_dim) if use_layernorm else nn.Identity()
+
+        # Ball 独立 MLP
+        ball_hiddens = d.get_hiddens(config, "ball_hiddens", "ball_hidden", (d.ball_hidden,))
+        self.ball_net, ball_out_dim = make_mlp(seg.ball_dim, ball_hiddens)
+
+        fused_dim = self._gru.output_dim + ball_out_dim
+        trunk_hiddens = d.get_hiddens(config, "trunk_hiddens", "trunk_hidden", d.trunk_hiddens)
+        self.trunk, self._features_dim = make_mlp(fused_dim, trunk_hiddens)
+
+    # RLlib 接口
+    @override(TorchModelV2)
+    def get_initial_state(self):
+        """RLlib规定返回不含 batch 维的初始隐藏态列表。"""
+        if self._network_type == NetworkType.GRU_MLP:
+            return self._gru.get_initial_state()
+        return []
+
+    @override(TorchModelV2)
+    def forward(self, input_dict, state, seq_lens):
+        """RLlib 前向: 返回 (action_logits, state_outs)
+        按网络类型分派到 _forward_segmented_mlp 或 _forward_gru_mlp
+        """
+        obs = input_dict["obs_flat"].float()
+        if self._network_type == NetworkType.GRU_MLP:
+            return self._forward_gru_mlp(obs, state)
+        else:
+            return self._forward_segmented_mlp(obs, state)
+
+    @override(TorchModelV2)
+    def value_function(self):
+        """RLlib 调用此方法获取 V(s)。"""
+        return self._critic(self._features).squeeze(1)
+
+    # 前向传播
+    def _forward_segmented_mlp(self, obs: torch.Tensor, state):
+        """SEGMENTED_MLP 前向: 5 段独立 MLP -> concat -> trunk。"""
+        s, p, b, e, m = self._obs.split(obs)
         fused = torch.cat([
             self.self_net(s),
             self.player_net(p),
@@ -94,37 +330,93 @@ class SegmentedModel(TorchModelV2, nn.Module):
             self.enemy_net(e),
             self.map_net(m),
         ], dim=1)
-
-        return self.trunk(fused)
-
-    @override(TorchModelV2)
-    def forward(self, input_dict, state, seq_lens):
-        """RLlib 前向: 返回 (action_logits, state_outs)"""
-        obs = input_dict["obs_flat"].float()       # (batch, obs_dim)
-        features = self._forward_features(obs)
-        logits = self.actor(features)              # (batch, num_outputs)
-        # 将当前特征缓存, 供 value_function() 使用
-        self._features = features
+        self._features = self.trunk(fused)
+        logits = self._actor(self._features)
         return logits, state
 
-    @override(TorchModelV2)
-    def value_function(self):
-        """RLlib 调用此方法获取 V(s)"""
-        return self.critic(self._features).squeeze(1)
+    def _forward_gru_mlp(self, obs: torch.Tensor, state):
+        """GRU_MLP 前向: 时序特征 -> GRU + Ball MLP -> concat -> trunk。
+        Arg:
+            obs: (batch, total_dim) 扁平观测
+            state: RLlib 传入的隐藏态列表 [h_prev]
+                h_prev shape: (batch, num_layers, hidden)
+        Returns:
+            (logits, [h_new]) — h_new shape: (batch, num_layers, hidden)
+        """
+        s, p, b, e, m = self._obs.split(obs)
+
+        # 时序段原始特征 concat
+        gru_input = torch.cat([s, p, e, m], dim=-1)
+        gru_input = self._gru_ln(gru_input)
+
+        # 维度转换: RLlib (batch, num_layers, hidden) -> nn.GRU (num_layers, batch, hidden)
+        h_prev = state[0]
+        # 对齐 batch 维度: loss 初始化时 RLlib 的 dummy batch 可能 obs 和 state 的 batch 不一致
+        if h_prev.size(0) != obs.size(0):
+            h_prev = h_prev[:1].expand(obs.size(0), -1, -1).contiguous()
+        h_prev = h_prev.transpose(0, 1).contiguous()
+
+        # GRU 单步
+        gru_feats, h_new = self._gru(gru_input, h_prev)
+
+        # Ball 独立 MLP + 融合
+        ball_feats = self.ball_net(b)
+        fused = torch.cat([gru_feats, ball_feats], dim=-1)
+        self._features = self.trunk(fused)
+
+        logits = self._actor(self._features)
+
+        # 维度转换回 RLlib 约定: (num_layers, batch, hidden) -> (batch, num_layers, hidden)
+        return logits, [h_new.transpose(0, 1).contiguous()]
 
 
-# 模型注册 (RLlib 通过 model.custom_model 字符串查找)
+# 模型注册
 from ray.rllib.models import ModelCatalog
-ModelCatalog.register_custom_model("segmented_model", SegmentedModel)
+ModelCatalog.register_custom_model("custom_segmented_model", CustomSegmentedModel)
 
 
-def _convert_obs(obs):
-    """将 Godot 返回的 list 观测转换为 numpy float32 array"""
+#配置桥接
+def build_rllib_model_config(exp: dict) -> dict:
+    """从 YAML exp 配置构建 RLlib model config dict。
+
+    读取 exp["config"]["model"] (字符串) 作为网络类型,
+    exp["model_config"][type] 作为对应的结构参数,
+    返回 RLlib 兼容的 model config dict。
+    """
+    network_type = str(exp["config"]["model"]).strip().lower()
+    type_params = exp.get("model_config", {}).get(network_type, {}) #结构参数
+
+    if network_type == NetworkType.DEFAULT.value:
+        # RLlib 内置网络: 直接传递 model 参数
+        return dict(type_params)
+
+    # 加载观测分段维度
+    tres_path = exp.get("obs_seg_config_path", r"D:\schoolTour\softwares\multi-agent-gameplay\godot-game\configs\game_config.tres")
+    obs_seg_dims = ObsSegmentDims.from_config(tres_path)
+
+    # 自定义网络: 注入 custom_model + custom_model_config
+    return {
+        "custom_model": "custom_segmented_model",
+        "custom_model_config": {
+            "network_type": network_type,
+            "obs_seg_dims": obs_seg_dims,
+            **dict(type_params),
+        },
+    }
+
+
+#环境工具
+def convert_godot_obs(obs):
+    """将 Godot 返回的 list/dict 观测转换为 numpy float32 array。
+
+    支持两种格式:
+      - 多智能体: {agent_id: {"obs": [..values..]}}
+      - 单智能体: [..values..]
+    """
     if isinstance(obs, dict):
-        # Godot 返回的多智能体观测结构为 {agent_id: {"obs": [..values..]}}
         result = {}
         for k, v in obs.items():
-            if isinstance(v, dict) and "obs" in v:
+            if isinstance(v, dict) and "obs" in v:#多智能体
                 arr = np.array(v["obs"], dtype=np.float32)
                 result[k] = {"obs": arr}
             else:
@@ -132,135 +424,218 @@ def _convert_obs(obs):
         return result
     return np.array(obs, dtype=np.float32)
 
+def wrap_pettingzoo_obs(env):
+    """包装 PettingZoo env, 确保观测为 float32 numpy array。
 
-def _wrap_pettingzoo_obs(env):
-    """包装 PettingZoo env，确保观测为 float32 numpy array"""
+    通过猴子补丁替换 reset/step 方法, 在返回值上应用 convert_godot_obs。
+    """
     original_reset = env.reset
     original_step = env.step
 
     def reset(*args, **kwargs):
         obs, info = original_reset(*args, **kwargs)
-        return _convert_obs(obs), info
+        return convert_godot_obs(obs), info
 
     def step(action):
         obs, reward, terminated, truncated, info = original_step(action)
-        return _convert_obs(obs), reward, terminated, truncated, info
+        return convert_godot_obs(obs), reward, terminated, truncated, info
 
     env.reset = reset
     env.step = step
+
     return env
 
-
-# 入口
-if __name__ == "__main__":
+def _parse_args():
+    """解析命令行参数。"""
     parser = argparse.ArgumentParser(allow_abbrev=False)
-    parser.add_argument("--config_file", default="Python\\training\\rllib_config.yaml", type=str, help="The yaml config file")
-    parser.add_argument("--restore", default=None, type=str, help="the location of a checkpoint to restore from")
     parser.add_argument(
-        "--experiment_dir",
-        default="logs/rllib",
-        type=str,
-        help="The name of the the experiment directory, used to store logs.",
+        "--config_file", default=r"D:\schoolTour\softwares\multi-agent-gameplay\Python\training\rllib_config.yaml",
+        type=str, help="The yaml config file",
     )
-    args, extras = parser.parse_known_args()
+    parser.add_argument(
+        "--restore", default=None, type=str,
+        help="the location of a checkpoint to restore from",
+    )
+    parser.add_argument(
+        "--experiment_dir", default="logs/rllib", type=str,
+        help="The name of the experiment directory, used to store logs.",
+    )
+    args, _extras = parser.parse_known_args()
+    return args
 
-    # Get config from file
-    with open(args.config_file, encoding="utf-8") as f:
-        exp = yaml.safe_load(f)
 
-    is_multiagent = exp["env_is_multiagent"]
-    show_window = exp["config"]["env_config"]["show_window"]
+class RLLibTrainingPipeline:
+    """RLlib 训练流水线
+    """
+    def __init__(self, config_path: str, experiment_dir: str,restore: Optional[str] = None):
+        self._config_path = config_path
+        self._experiment_dir = experiment_dir
+        self._restore = restore
 
-    # Register env
-    env_name = "godot"
-    env_wrapper = None
+        # 执行过程中填充
+        self._exp: Optional[dict] = None # 配置
+        self._is_multiagent: bool = False
+        self._policy_names: Optional[list] = None
+        self._num_envs: Optional[int] = None
 
-    def env_creator(env_config):
-        index = env_config.worker_index * exp["config"]["num_envs_per_env_runner"] + env_config.vector_index
-        port = index + GodotEnv.DEFAULT_PORT
-        seed = index
-        if is_multiagent:
-            pz_env = GDRLPettingZooEnv(
-                config=env_config,
-                port=port,
-                seed=seed,
-                show_window=env_config.get("show_window", False),
-            )
-            pz_env = _wrap_pettingzoo_obs(pz_env)
-            return ParallelPettingZooEnv(pz_env)
+    #加载配置
+    def _load_config(self) -> dict:
+        """加载 YAML 配置, 构建 RLlib model config, 返回完整 exp dict。"""
+        with open(self._config_path, encoding="utf-8") as f:
+            exp = yaml.safe_load(f)
+
+        self._is_multiagent = exp["env_is_multiagent"]
+
+        # 桥接: YAML model 字符串 → RLlib model config dict
+        exp["config"]["model"] = build_rllib_model_config(exp)
+
+        return exp
+
+    #创建环境
+    def _create_env_creator(self) -> Callable:
+        """创建 Ray 注册用的 env_creator 工厂函数。
+
+        Returns:
+            env_creator(env_config) -> Ray env instance
+        """
+        exp = self._exp
+        is_multiagent = self._is_multiagent
+
+        def env_creator(env_config):
+            index = env_config.worker_index* exp["config"]["num_envs_per_env_runner"]+ env_config.vector_index
+            port = index + GodotEnv.DEFAULT_PORT
+            seed = index
+            if is_multiagent:
+                pz_env = GDRLPettingZooEnv(
+                    config=env_config, port=port, seed=seed,
+                    show_window=env_config.get("show_window", False),
+                )
+                pz_env = wrap_pettingzoo_obs(pz_env)
+                return ParallelPettingZooEnv(pz_env)
+            else:
+                return RayVectorGodotEnv(config=env_config, port=port, seed=seed)
+
+        return env_creator
+
+    def _make_temp_env(self) -> None:
+        """创建临时环境以获取 policy_names (多智能体) 或 num_envs (单智能体)。"""
+        env_config = self._exp["config"]["env_config"]
+
+        if self._is_multiagent:
+            print("Starting a temporary multi-agent env to get the policy names")
+            tmp_env = GDRLPettingZooEnv(config=env_config, show_window=False)
+            self._policy_names = tmp_env.agent_policy_names
+            print("Policy names for each Agent (AIController) set in the "
+                  "Godot Environment", self._policy_names)
         else:
-            return RayVectorGodotEnv(config=env_config, port=port, seed=seed)
+            print("Starting a temporary env to get the number of envs and "
+                  "auto-set the num_envs_per_worker config value")
+            tmp_env = GodotEnv(env_path=env_config["env_path"], show_window=False)
+            self._num_envs = tmp_env.num_envs
 
-    tune.register_env(env_name, env_creator)
+        tmp_env.close()
 
-    policy_names = None
-    num_envs = None
-    tmp_env = None
+    #配置多智能体 / 单智能体
+    def _configure_agent_mode(self) -> None:
+        """根据 is_multiagent 注入 policies 或 num_envs_per_env_runner。"""
+        if self._is_multiagent:
+            def policy_mapping_fn(agent_id: int, _episode=None, _worker=None, **_kwargs) -> str:
+                return self._policy_names[agent_id]
 
-    if is_multiagent:  # Make temp env to get info needed for multi-agent training config
-        print("Starting a temporary multi-agent env to get the policy names")
-        tmp_env = GDRLPettingZooEnv(config=exp["config"]["env_config"], show_window=False)
-        policy_names = tmp_env.agent_policy_names
-        print("Policy names for each Agent (AIController) set in the Godot Environment", policy_names)
-    else:  # Make temp env to get info needed for setting num_workers training config
-        print("Starting a temporary env to get the number of envs and auto-set the num_envs_per_worker config value")
-        tmp_env = GodotEnv(env_path=exp["config"]["env_config"]["env_path"], show_window=False)
-        num_envs = tmp_env.num_envs
+            self._exp["config"]["multiagent"] = {
+                "policies": {
+                    pn: PolicySpec() for pn in self._policy_names
+                },
+                "policy_mapping_fn": policy_mapping_fn,
+            }
+        else:
+            self._exp["config"]["num_envs_per_env_runner"] = self._num_envs
 
-    tmp_env.close()
+    #训练
+    def _run_training(self) -> tune.ResultGrid:
+        """执行 RLlib 训练 (新建或恢复)。"""
+        exp = self._exp
 
-    def policy_mapping_fn(agent_id: int, episode, worker, **kwargs) -> str:
-        return policy_names[agent_id]
+        if not self._restore:
+            tuner = tune.Tuner(
+                trainable=exp["algorithm"],
+                param_space=exp["config"],
+                run_config=train.RunConfig(
+                    storage_path=os.path.abspath(self._experiment_dir),
+                    stop=exp["stop"],
+                    checkpoint_config=train.CheckpointConfig(checkpoint_frequency=exp["checkpoint_frequency"]),
+                ),
+            )
+        else:
+            tuner = tune.Tuner.restore(
+                trainable=exp["algorithm"],
+                path=self._restore,
+                resume_unfinished=True,
+            )
 
-    ray.init(_temp_dir=os.path.abspath(args.experiment_dir))
+        return tuner.fit()
 
-    if is_multiagent:
-        exp["config"]["multiagent"] = {
-            "policies": {policy_name: PolicySpec() for policy_name in policy_names},
-            "policy_mapping_fn": policy_mapping_fn,
-        }
-    else:
-        exp["config"]["num_envs_per_env_runner"] = num_envs
+    #ONNX 导出
+    @staticmethod
+    def _export_onnx(result: tune.ResultGrid, is_multiagent: bool,
+                     policy_names: Optional[list]) -> None:
+        """从最优 checkpoint 导出 ONNX 模型。"""
+        checkpoint = result.get_best_result().checkpoint
+        if not checkpoint:
+            return
 
-    #使用自定义分段模型替代默认 fcnet
-    # 自定义模型时 fcnet_hiddens 会被忽略，子网络维度硬编码在 SegmentedModel 中,vf_share_layers 也被忽略
-    exp["config"]["model"] = {
-        "custom_model": "segmented_model",
-    }
-
-    tuner = None
-    if not args.restore:
-        tuner = tune.Tuner(
-            trainable=exp["algorithm"],
-            param_space=exp["config"],
-            run_config=train.RunConfig(
-                storage_path=os.path.abspath(args.experiment_dir),
-                stop=exp["stop"],
-                checkpoint_config=train.CheckpointConfig(checkpoint_frequency=exp["checkpoint_frequency"]),
-            ),
-        )
-    else:
-        tuner = tune.Tuner.restore(
-            trainable=exp["algorithm"],
-            path=args.restore,
-            resume_unfinished=True,
-        )
-    result = tuner.fit()
-
-    # Onnx export after training if a checkpoint was saved
-    checkpoint = result.get_best_result().checkpoint
-
-    if checkpoint:
         result_path = result.get_best_result().path
-        ppo = Algorithm.from_checkpoint(checkpoint)
+        algo = Algorithm.from_checkpoint(checkpoint)
+
         if is_multiagent:
             for policy_name in set(policy_names):
-                ppo.get_policy(policy_name).export_model(f"{result_path}/onnx_export/{policy_name}_onnx", onnx=12)
-                print(
-                    f"Saving onnx policy to {pathlib.Path(f'{result_path}/onnx_export/{policy_name}_onnx').resolve()}"
-                )
+                export_path = f"{result_path}/onnx_export/{policy_name}_onnx"
+                algo.get_policy(policy_name).export_model(export_path, onnx=12)
+                print(f"Saving onnx policy to "
+                      f"{pathlib.Path(export_path).resolve()}")
         else:
-            ppo.get_policy().export_model(f"{result_path}/onnx_export/single_agent_policy_onnx", onnx=12)
-            print(
-                f"Saving onnx policy to {pathlib.Path(f'{result_path}/onnx_export/single_agent_policy_onnx').resolve()}"
-            )
+            export_path = f"{result_path}/onnx_export/single_agent_policy_onnx"
+            algo.get_policy().export_model(export_path, onnx=12)
+            print(f"Saving onnx policy to "
+                  f"{pathlib.Path(export_path).resolve()}")
+
+    # 主入口
+    def execute(self) -> None:
+        """完整训练流水线"""
+        # 加载 YAML 配置
+        self._exp = self._load_config()
+
+        #注册环境
+        env_name = "godot"
+        tune.register_env(env_name, self._create_env_creator())
+
+        # 临时环境获取元数据
+        self._make_temp_env()
+
+        # 多/单智能体配置注入
+        self._configure_agent_mode()
+
+        # 初始化 Ray (注入 PYTHONPATH 使 worker 进程能找到本地模块)
+        training_dir = os.path.dirname(os.path.abspath(__file__))
+        ray.init(
+            _temp_dir=os.path.abspath(self._experiment_dir),
+            runtime_env={"env_vars": {"PYTHONPATH": training_dir}},
+        )
+
+        # 训练
+        result = self._run_training()
+
+        # 导出 ONNX
+        self._export_onnx(result, self._is_multiagent, self._policy_names)
+
+
+#入口
+
+if __name__ == "__main__":
+    args = _parse_args()
+    pipeline = RLLibTrainingPipeline(
+        config_path=args.config_file,
+        experiment_dir=args.experiment_dir,
+        restore=args.restore,
+    )
+    pipeline.execute()
