@@ -21,6 +21,7 @@ from ray.rllib.algorithms.algorithm import Algorithm
 from ray.rllib.env.wrappers.pettingzoo_env import ParallelPettingZooEnv
 from ray.rllib.models.torch.torch_modelv2 import TorchModelV2
 from ray.rllib.policy.policy import PolicySpec
+from ray.rllib.policy.rnn_sequencing import add_time_dimension
 from ray.rllib.utils.annotations import override
 
 from godot_rl.core.godot_env import GodotEnv
@@ -110,39 +111,48 @@ def make_mlp(input_dim: int, hidden_sizes: tuple,
 
 
 class _TemporalGRU(nn.Module):
-    """单时间步 GRU, 支持 RLlib recurrent state 管理。
+    """GRU 配置容器 + 初始状态工厂 + packed sequence 前向。
 
-    输入每个时间步的特征向量 (batch, input_size),
-    输出 (batch, hidden_size) 并维护跨时间步的隐藏态。
+    forward() 接收 PackedSequence (由 pack_padded_sequence 生成),
+    返回 (packed_output, h_n)。
 
-    - get_initial_state() 返回 [torch.zeros(num_layers, hidden_size)]  (无 batch 维)
-    - forward() 接受 h_prev: (num_layers, batch, hidden_size), 返回 (output, h_new)
+    RLlib 状态约定:
+      - get_initial_state() → [zeros(L*H)]  (1D, 无 batch 维)
+      - forward() 的 state 分量为 (B, L*H) 2D 张量
+      - 内部通过 view(B, L, H).transpose(0, 1) / transpose+reshape 与 nn.GRU 的 (L, B, H) 约定互转
+      - L=1 时 L*H = H，行为与单层完全一致
     """
     def __init__(self, input_size: int, hidden_size: int, num_layers: int = 1):
         super().__init__()
-        self.input_size = input_size
         self.hidden_size = hidden_size
         self.num_layers = num_layers
-        self.gru = init_gru_weights(nn.GRU(input_size, hidden_size, num_layers=num_layers, batch_first=False))
+        self.gru = init_gru_weights(
+            nn.GRU(input_size, hidden_size, num_layers=num_layers, batch_first=True)
+        )
         self.output_dim = hidden_size
 
     def get_initial_state(self) -> list:
-        """RLlib：返回不含 batch 维的初始隐藏态列表。"""
-        return [torch.zeros(self.num_layers, self.hidden_size)]
+        """RLlib: 返回 1D 初始隐藏态 (L*H,), 无 batch 维。
 
-    def forward(self, x: torch.Tensor, hx: torch.Tensor):
-        """单步前向。
+        所有层展平为单一张量, RLlib 广播时自动扩展为 (B, L*H)。
+        L=1 时等价于 (H,), 与单层路径完全一致。
+        """
+        weight = next(self.parameters())
+        return [weight.new_zeros(self.num_layers * self.hidden_size)]
+
+    def forward(self, packed_input, h0):
+        """将 PackedSequence 送入 GRU，返回 (packed_output, h_n)。
+
         Args:
-            x:  (batch, input_size) — 当前时间步特征
-            hx: (num_layers, batch, hidden_size) — 上一时间步隐藏态
+            packed_input: PackedSequence (由 pack_padded_sequence 生成)
+            h0: (L, B, H) 初始隐藏态
 
         Returns:
-            output: (batch, hidden_size) — GRU 输出
-            h_new:  (num_layers, batch, hidden_size) — 新隐藏态
+            (packed_output, h_n):
+              - packed_output: PackedSequence
+              - h_n: (L, B, H) 最终隐藏态
         """
-        x_seq = x.unsqueeze(0)       # (1, batch, input_size)
-        output, h_new = self.gru(x_seq, hx)
-        return output.squeeze(0), h_new
+        return self.gru(packed_input, h0)
 
 
 def parse_network_type(value) -> NetworkType:
@@ -188,12 +198,6 @@ class SegmentedObsHelper:
         m = obs[:, i: i + d.map_dim]
         return s, p, b, e, m
 
-    def concat_temporal(self, obs: torch.Tensor) -> torch.Tensor:
-        """拼接时序段特征 (SELF + PLAYER + ENEMY + MAP), 排除非时序段 (BALL)。
-        """
-        s, p, _, e, m = self.split(obs)
-        return torch.cat([s, p, e, m], dim=-1)#特征维度拼接
-
 
 class CustomSegmentedModel(TorchModelV2, nn.Module):
     """RLlib 自定义分段/GRU-MLP 模型。
@@ -224,6 +228,14 @@ class CustomSegmentedModel(TorchModelV2, nn.Module):
                 "Use build_rllib_model_config() to construct the model config."
             )
         self._obs = SegmentedObsHelper(seg_dims)
+        flat_obs_shape = getattr(obs_space, "shape", None)
+        if flat_obs_shape is not None and len(flat_obs_shape) > 0:
+            flat_obs_dim = int(np.prod(flat_obs_shape))
+            if flat_obs_dim != self._obs.total_dim():
+                raise ValueError(
+                    f"Observation dim mismatch: obs_space has {flat_obs_dim}, "
+                    f"but obs_seg_dims total is {self._obs.total_dim()}."
+                )
 
         # 按网络类型构建特征提取网络
         self._build_network(custom)
@@ -235,9 +247,6 @@ class CustomSegmentedModel(TorchModelV2, nn.Module):
         self._critic = ortho_init(
             nn.Linear(self._features_dim, 1), std=1.0
         )
-
-        # 注册价值函数分支给 RLlib
-        self._value_branch = self._critic
 
         # RLlib 要求声明的属性
         self._features: Optional[torch.Tensor] = None
@@ -298,26 +307,33 @@ class CustomSegmentedModel(TorchModelV2, nn.Module):
     # RLlib 接口
     @override(TorchModelV2)
     def get_initial_state(self):
-        """RLlib规定返回不含 batch 维的初始隐藏态列表。"""
+        """RLlib: 返回不含 batch 维的初始隐藏态列表。
+
+        RLlib 约定: 每个元素为 1D 张量 (H,), RLlib 广播时自动扩展为 (B, H)。
+        非 GRU 模型返回空列表。
+        """
         if self._network_type == NetworkType.GRU_MLP:
-            return self._gru.get_initial_state()
+            return self._gru.get_initial_state()  # [zeros(H)]
         return []
 
     @override(TorchModelV2)
     def forward(self, input_dict, state, seq_lens):
-        """RLlib 前向: 返回 (action_logits, state_outs)
-        按网络类型分派到 _forward_segmented_mlp 或 _forward_gru_mlp
+        """RLlib 前向: 返回 (action_logits, state_outs)。
+
+        GRU_MLP 使用 add_time_dimension 恢复时域, 遵循 RLlib 标准状态约定:
+          - state 各分量为 (B, H) 2D 张量
+          - 输出 logits 为 (B*T, num_outputs) 扁平格式
         """
         obs = input_dict["obs_flat"].float()
         if self._network_type == NetworkType.GRU_MLP:
-            return self._forward_gru_mlp(obs, state)
+            return self._forward_gru_mlp(obs, state, seq_lens)
         else:
             return self._forward_segmented_mlp(obs, state)
 
     @override(TorchModelV2)
     def value_function(self):
-        """RLlib 调用此方法获取 V(s)。"""
-        return self._critic(self._features).squeeze(1)
+        """RLlib 调用此方法获取 V(s), 返回 1D (batch,) 张量。"""
+        return self._critic(self._features).squeeze(-1)
 
     # 前向传播
     def _forward_segmented_mlp(self, obs: torch.Tensor, state):
@@ -334,40 +350,95 @@ class CustomSegmentedModel(TorchModelV2, nn.Module):
         logits = self._actor(self._features)
         return logits, state
 
-    def _forward_gru_mlp(self, obs: torch.Tensor, state):
-        """GRU_MLP 前向: 时序特征 -> GRU + Ball MLP -> concat -> trunk。
-        Arg:
-            obs: (batch, total_dim) 扁平观测
-            state: RLlib 传入的隐藏态列表 [h_prev]
-                h_prev shape: (batch, num_layers, hidden)
-        Returns:
-            (logits, [h_new]) — h_new shape: (batch, num_layers, hidden)
-        """
-        s, p, b, e, m = self._obs.split(obs)
+    def _forward_gru_mlp(self, obs: torch.Tensor, state, seq_lens):
+        """GRU_MLP 前向: 使用 add_time_dimension 恢复时域后处理。
 
-        # 时序段原始特征 concat
-        gru_input = torch.cat([s, p, e, m], dim=-1)
+        统一处理 rollout (T=1) 和 training (T>1) 两种模式,
+        不再区分单步/序列批处理分支。
+
+        RLlib 状态约定:
+          - state[0]: (B, L*H) 2D 张量 (num_layers 展平)
+          - 返回的 state_out[0]: (B, L*H) 2D 张量
+
+        内部通过 view(B, L, H).transpose(0, 1) 与 nn.GRU 的 (L, B, H) 约定互转。
+
+        Args:
+            obs: 扁平观测 (B*T, total_dim)
+            state: [h_prev], h_prev shape (B, L*H)
+            seq_lens: (B,) 每条序列的有效长度
+
+        Returns:
+            (logits, [h_new]):
+              - logits: (B*T, num_outputs) 扁平格式
+              - h_new:  (B, L*H) — 每序列最终隐藏态 (所有层展平)
+        """
+        h_prev = state[0]  # (B, L*H) — RLlib 标准 2D 格式
+        if h_prev.dim() == 1:
+            h_prev = h_prev.unsqueeze(0)
+
+        gru = self._gru
+        L, H = gru.num_layers, gru.hidden_size
+
+        if seq_lens is None:
+            raise ValueError(
+                "seq_lens must be provided for GRU_MLP model. "
+                "Ensure max_seq_len is set in model config."
+            )
+
+        # RLlib 扁平观测 → 恢复时域 (B, T, obs_dim)
+        time_major = self.model_config.get("_time_major", False)
+        inputs = add_time_dimension(
+            obs, seq_lens=seq_lens, framework="torch", time_major=time_major,
+        )
+        # time_major 时 transpose 为 batch-major 以便后续统一处理
+        if time_major:
+            inputs = inputs.transpose(0, 1)
+        B, T = inputs.size(0), inputs.size(1)
+
+        # 分段拆解
+        obs_flat = inputs.reshape(B * T, -1)
+        s, p, b, e, m = self._obs.split(obs_flat)
+
+        # 时序段 concat -> LayerNorm -> (B, T, gru_input_dim)
+        gru_input = torch.cat([
+            s.reshape(B, T, -1),
+            p.reshape(B, T, -1),
+            e.reshape(B, T, -1),
+            m.reshape(B, T, -1),
+        ], dim=-1)
         gru_input = self._gru_ln(gru_input)
 
-        # 维度转换: RLlib (batch, num_layers, hidden) -> nn.GRU (num_layers, batch, hidden)
-        h_prev = state[0]
-        # 对齐 batch 维度: loss 初始化时 RLlib 的 dummy batch 可能 obs 和 state 的 batch 不一致
-        if h_prev.size(0) != obs.size(0):
-            h_prev = h_prev[:1].expand(obs.size(0), -1, -1).contiguous()
-        h_prev = h_prev.transpose(0, 1).contiguous()
+        # RLlib (B, L*H) -> PyTorch GRU (L, B, H)
+        # 必须先 view(B, L, H) 再 transpose — 直接 view(L, B, H) 会打乱 batch/layer 语义
+        h0 = h_prev.view(B, L, H).transpose(0, 1).contiguous()
 
-        # GRU 单步
-        gru_feats, h_new = self._gru(gru_input, h_prev)
+        # 处理 seq_lens: 转为 CPU long tensor并 clamp
+        if isinstance(seq_lens, torch.Tensor):
+            lengths = seq_lens.detach().to(dtype=torch.long, device="cpu")
+        else:
+            lengths = torch.as_tensor(seq_lens, dtype=torch.long)
+        lengths = lengths.clamp(min=1, max=T)
 
-        # Ball 独立 MLP + 融合
-        ball_feats = self.ball_net(b)
-        fused = torch.cat([gru_feats, ball_feats], dim=-1)
-        self._features = self.trunk(fused)
+        # Packed GRU forward — 正确处理变长序列
+        packed = nn.utils.rnn.pack_padded_sequence(
+            gru_input, lengths, batch_first=True, enforce_sorted=False,
+        )
+        packed_out, h_new = self._gru(packed, h0)
+        gru_feats, _ = nn.utils.rnn.pad_packed_sequence(
+            packed_out, batch_first=True, total_length=T,
+        )
 
-        logits = self._actor(self._features)
+        # Ball MLP (非时序段, 逐帧独立处理)
+        ball_feats = self.ball_net(b.reshape(B * T, -1)).reshape(B, T, -1)
 
-        # 维度转换回 RLlib 约定: (num_layers, batch, hidden) -> (batch, num_layers, hidden)
-        return logits, [h_new.transpose(0, 1).contiguous()]
+        # 融合 + trunk + heads
+        fused = torch.cat([gru_feats, ball_feats], dim=-1)  # (B, T, fused_dim)
+        self._features = self.trunk(fused.reshape(B * T, -1))  # (B*T, features_dim)
+        logits = self._actor(self._features)  # (B*T, num_outputs)
+
+        # PyTorch GRU (L, B, H) → RLlib (B, L*H)
+        h_new = h_new.transpose(0, 1).reshape(B, L * H)
+        return logits, [h_new]
 
 
 # 模型注册
@@ -395,7 +466,7 @@ def build_rllib_model_config(exp: dict) -> dict:
     obs_seg_dims = ObsSegmentDims.from_config(tres_path)
 
     # 自定义网络: 注入 custom_model + custom_model_config
-    return {
+    model = {
         "custom_model": "custom_segmented_model",
         "custom_model_config": {
             "network_type": network_type,
@@ -403,6 +474,9 @@ def build_rllib_model_config(exp: dict) -> dict:
             **dict(type_params),
         },
     }
+    if network_type == NetworkType.GRU_MLP.value:
+        model["max_seq_len"] = int(type_params.get("max_seq_len", 32))
+    return model
 
 
 #环境工具

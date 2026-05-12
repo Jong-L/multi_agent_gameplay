@@ -9,5 +9,9 @@
 logs/
 experiment_data/
 
+# Python cache files
+__pycache__/
+
+
 
 
