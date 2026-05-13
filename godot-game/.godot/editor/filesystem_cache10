@@ -1,5 +1,5 @@
 63f7b34db8d8cdea90c76aacccf841ec
-::res://::1778589120
+::res://::1778639919
 export_presets.cfg::TextFile::-1::1778554763::0::1::::<><><>0<>0<><>::
 icon.svg::CompressedTexture2D::4541085455082572640::1771848123::1777215542::1::::<><><>0<>0<>224bf56117706275fd2108ed6375a969<>res://.godot/imported/icon.svg-218a8f2b3041327d8a5756f3a245f83b.ctex::
 ::res://addons/::1776081641
@@ -555,13 +555,14 @@ index.apple-touch-icon.png::CompressedTexture2D::2207323107353363557::1773548580
 index.icon.png::CompressedTexture2D::6903671498343453785::1773548580::1777215542::1::::<><><>0<>0<>d368f733ebc5842c856f4a40f15f89b5<>res://.godot/imported/index.icon.png-96098a584bb713a61c1e8aa1df56a1bb.ctex::
 index.png::CompressedTexture2D::4142150333055362816::1773548580::1777215542::1::::<><><>0<>0<>26cd501d7b51b07c266562cf6fb444f6<>res://.godot/imported/index.png-659c11691fe5279cf81f33eb936290a4.ctex::
 ::res://build2/::1777564393
-::res://configs/::1778484302
+::res://configs/::1778602848
 game_config.tres::Resource/GameConfig::1840666776433273995::1778398207::0::1::::<><><>0<>0<><>::uid://dnfqy4lfxwg7r::::res://scripts/config/game_config.gd
+readme.md::TextFile::-1::1778602848::0::1::::<><><>0<>0<><>::
 reward_config.tres::Resource/RewardConfig::5357456164155044212::1778484302::0::1::::<><><>0<>0<><>::uid://dnh5hksiuuxko::::res://scripts/config/reward_config.gd
-reward_config_p0.tres::Resource/RewardConfig::2379096434006049043::1777220526::0::1::::<><><>0<>0<><>::uid://dnh5hksiuuxko::::res://scripts/config/reward_config.gd
-reward_config_p1.tres::Resource/RewardConfig::-1::1777219467::0::1::::<><><>0<>0<><>::res://scripts/config/reward_config.gd
-reward_config_p2.tres::Resource/RewardConfig::-1::1777219469::0::1::::<><><>0<>0<><>::res://scripts/config/reward_config.gd
-reward_config_p3.tres::Resource/RewardConfig::-1::1777219471::0::1::::<><><>0<>0<><>::res://scripts/config/reward_config.gd
+reward_config_p0.tres::Resource/RewardConfig::2379096434006049043::1778603328::0::1::::<><><>0<>0<><>::uid://dnh5hksiuuxko::::res://scripts/config/reward_config.gd
+reward_config_p1.tres::Resource/RewardConfig::-1::1778603334::0::1::::<><><>0<>0<><>::res://scripts/config/reward_config.gd
+reward_config_p2.tres::Resource/RewardConfig::-1::1778603339::0::1::::<><><>0<>0<><>::res://scripts/config/reward_config.gd
+reward_config_p3.tres::Resource/RewardConfig::-1::1778603343::0::1::::<><><>0<>0<><>::res://scripts/config/reward_config.gd
 ::res://resources/::1775704233
 damage_font.tres::FontVariation::6277305180008484668::1773066541::0::1::::<><><>0<>0<><>::uid://dbu37r3755k7x::::res://assets/VCR_OSD_MONO_1.001.ttf
 ::res://scripts/::1778480765
