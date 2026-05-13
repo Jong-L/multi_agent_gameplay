@@ -18,11 +18,13 @@ import torch.nn as nn
 import yaml
 from ray import train, tune
 from ray.rllib.algorithms.algorithm import Algorithm
+from ray.rllib.algorithms.callbacks import DefaultCallbacks
 from ray.rllib.env.wrappers.pettingzoo_env import ParallelPettingZooEnv
 from ray.rllib.models.torch.torch_modelv2 import TorchModelV2
 from ray.rllib.policy.policy import PolicySpec
 from ray.rllib.policy.rnn_sequencing import add_time_dimension
 from ray.rllib.utils.annotations import override
+from ray.rllib.utils.checkpoints import get_checkpoint_info
 
 from godot_rl.core.godot_env import GodotEnv
 from godot_rl.wrappers.petting_zoo_wrapper import GDRLPettingZooEnv
@@ -116,7 +118,6 @@ class _TemporalGRU(nn.Module):
     forward() 接收 PackedSequence (由 pack_padded_sequence 生成),
     返回 (packed_output, h_n)。
 
-    RLlib 状态约定:
       - get_initial_state() → [zeros(L*H)]  (1D, 无 batch 维)
       - forward() 的 state 分量为 (B, L*H) 2D 张量
       - 内部通过 view(B, L, H).transpose(0, 1) / transpose+reshape 与 nn.GRU 的 (L, B, H) 约定互转
@@ -170,7 +171,6 @@ def parse_network_type(value) -> NetworkType:
 
 
 #网络构建块
-
 class SegmentedObsHelper:
     """观测分段辅助工具: 封装 ObsSegmentDims, 提供统一的分段/拼接接口。
     """
@@ -528,7 +528,19 @@ def _parse_args():
     )
     parser.add_argument(
         "--restore", default=None, type=str,
-        help="the location of a checkpoint to restore from",
+        help="Deprecated alias for --resume_experiment.",
+    )
+    parser.add_argument(
+        "--resume_experiment", default=None, type=str,
+        help="Tune experiment directory for crash recovery, e.g. logs/rllib/PPO_....",
+    )
+    parser.add_argument(
+        "--resume_checkpoint", default=None, type=str,
+        help=(
+            "RLlib checkpoint to initialize a new curriculum stage. "
+            "If an experiment/trial directory is provided, the latest checkpoint_* "
+            "under it will be used."
+        ),
     )
     parser.add_argument(
         "--experiment_dir", default="logs/rllib", type=str,
@@ -541,16 +553,177 @@ def _parse_args():
 class RLLibTrainingPipeline:
     """RLlib 训练流水线
     """
-    def __init__(self, config_path: str, experiment_dir: str,restore: Optional[str] = None):
+    def __init__(
+        self,
+        config_path: str,
+        experiment_dir: str,
+        resume_experiment: Optional[str] = None,
+        resume_checkpoint: Optional[str] = None,
+        restore: Optional[str] = None,
+    ):
         self._config_path = config_path
         self._experiment_dir = experiment_dir
-        self._restore = restore
+        if restore and resume_experiment:
+            raise ValueError("Use only one of --restore or --resume_experiment.")
+        if restore:
+            print("[Resume] --restore is deprecated; treating it as --resume_experiment.")
+            resume_experiment = restore
+        if resume_experiment and resume_checkpoint:
+            raise ValueError("Use only one of --resume_experiment or --resume_checkpoint.")
+
+        self._resume_experiment = resume_experiment
+        self._resume_checkpoint = resume_checkpoint
 
         # 执行过程中填充
         self._exp: Optional[dict] = None # 配置
         self._is_multiagent: bool = False
         self._policy_names: Optional[list] = None
         self._num_envs: Optional[int] = None
+
+    @staticmethod
+    def _as_abs_path(path: str) -> pathlib.Path:
+        p = pathlib.Path(path).expanduser()
+        if not p.is_absolute():
+            p = pathlib.Path.cwd() / p
+        return p.resolve()
+
+    @staticmethod
+    def _looks_like_tune_experiment(path: pathlib.Path) -> bool:
+        return (
+            (path / "tuner.pkl").exists()
+            or any(path.glob("experiment_state-*.json"))
+        )
+
+    @staticmethod
+    def _looks_like_rllib_checkpoint(path: pathlib.Path) -> bool:
+        if path.name.startswith("checkpoint_"):
+            return True
+        return any(
+            (path / marker).exists()
+            for marker in (
+                "algorithm_state.pkl",
+                "rllib_checkpoint.json",
+                "checkpoint.pkl",
+                "metadata.json",
+            )
+        )
+
+    def _resolve_experiment_path(self, path: str) -> str:
+        exp_path = self._as_abs_path(path)
+        if not exp_path.exists():
+            raise FileNotFoundError(f"Resume experiment path does not exist: {exp_path}")
+        if not exp_path.is_dir() or not self._looks_like_tune_experiment(exp_path):
+            raise ValueError(
+                "--resume_experiment must point to a Tune experiment directory "
+                f"(the folder containing tuner.pkl): {exp_path}"
+            )
+        return str(exp_path)
+
+    def _resolve_checkpoint_path(self, path: str) -> str:
+        checkpoint_path = self._as_abs_path(path)
+        if not checkpoint_path.exists():
+            raise FileNotFoundError(f"Resume checkpoint path does not exist: {checkpoint_path}")
+        if checkpoint_path.is_file():
+            return str(checkpoint_path)
+        if self._looks_like_rllib_checkpoint(checkpoint_path):
+            return str(checkpoint_path)
+
+        candidates = [
+            p for p in checkpoint_path.rglob("checkpoint_*")
+            if p.is_dir() and self._looks_like_rllib_checkpoint(p)
+        ]
+        if not candidates:
+            raise ValueError(
+                "--resume_checkpoint must point to an RLlib checkpoint directory "
+                "or a folder containing checkpoint_* directories: "
+                f"{checkpoint_path}"
+            )
+
+        latest = max(candidates, key=lambda p: p.stat().st_mtime)
+        print(f"[Resume] Using latest checkpoint under {checkpoint_path}: {latest}")
+        return str(latest)
+
+    @staticmethod
+    def _make_checkpoint_config(exp: dict) -> train.CheckpointConfig:
+        num_to_keep = exp.get("num_checkpoints_to_keep")
+        if num_to_keep is not None:
+            num_to_keep = int(num_to_keep)
+        return train.CheckpointConfig(
+            checkpoint_frequency=int(exp.get("checkpoint_frequency", 0)),
+            checkpoint_at_end=bool(exp.get("checkpoint_at_end", True)),
+            num_to_keep=num_to_keep, #  设置保留的检查点数量
+        )
+
+    @staticmethod
+    def _load_policy_weights(checkpoint_path: str, policy_mapping_fn=None) -> dict:
+        checkpoint_info = get_checkpoint_info(checkpoint_path)
+        checkpoint_state = Algorithm._checkpoint_info_to_algorithm_state(
+            checkpoint_info=checkpoint_info,
+            policy_mapping_fn=policy_mapping_fn,
+        )
+        worker_state = checkpoint_state.get("worker") or {}
+        policy_states = worker_state.get("policy_states") or {}
+        weights = { #  提取每个策略对应的权重
+            policy_id: policy_state["weights"]
+            for policy_id, policy_state in policy_states.items()
+            if "weights" in policy_state
+        }
+        if not weights:
+            raise ValueError(
+                "No policy weights found in RLlib checkpoint: "
+                f"{checkpoint_path}"
+            )
+        return weights
+
+    @staticmethod
+    def _make_restore_callbacks(
+        checkpoint_path: str,
+        base_callbacks=None,
+        policy_mapping_fn=None,
+    ):
+        base_callbacks = base_callbacks or DefaultCallbacks #  如果没有提供基础回调类，则使用默认的DefaultCallbacks
+        if not isinstance(base_callbacks, type):
+            raise TypeError(
+                "RLlib callbacks must be a callback class when using --resume_checkpoint."
+            )
+
+        class RestoreFromCheckpointCallbacks(base_callbacks):
+            def on_algorithm_init(self, *, algorithm, **kwargs):
+                super().on_algorithm_init(algorithm=algorithm, **kwargs)
+                checkpoint_weights = RLLibTrainingPipeline._load_policy_weights(
+                    checkpoint_path,
+                    policy_mapping_fn=policy_mapping_fn,
+                )
+                weights_to_load = {}
+                for policy_id, weights in checkpoint_weights.items():
+                    if algorithm.get_policy(policy_id) is None:
+                        print(
+                            f"[Resume] Skipping checkpoint policy {policy_id!r}; "
+                            "it is not present in the current stage."
+                        )
+                        continue
+                    weights_to_load[policy_id] = weights
+
+                if not weights_to_load:
+                    raise ValueError(
+                        "None of the checkpoint policies exist in the current "
+                        "stage config."
+                    )
+
+                print(
+                    "[Resume] Loading policy weights from "
+                    f"{checkpoint_path}: {sorted(weights_to_load)}"
+                )
+                algorithm.set_weights(weights_to_load)
+                if hasattr(algorithm, "env_runner_group"):
+                    algorithm.env_runner_group.sync_weights(
+                        policies=list(weights_to_load),
+                        from_worker_or_learner_group=(
+                            algorithm.env_runner_group.local_env_runner
+                        ),
+                    )
+
+        return RestoreFromCheckpointCallbacks
 
     #加载配置
     def _load_config(self) -> dict:
@@ -560,7 +733,7 @@ class RLLibTrainingPipeline:
 
         self._is_multiagent = exp["env_is_multiagent"]
 
-        # 桥接: YAML model 字符串 → RLlib model config dict
+        # 桥接: YAML model 字符串 -> RLlib model config dict
         exp["config"]["model"] = build_rllib_model_config(exp)
 
         return exp
@@ -630,29 +803,39 @@ class RLLibTrainingPipeline:
         """执行 RLlib 训练 (新建或恢复)。"""
         exp = self._exp
 
-        if not self._restore:
+        if self._resume_experiment:#恢复单次训练
+            experiment_path = self._resolve_experiment_path(self._resume_experiment)
+            tuner = tune.Tuner.restore(
+                trainable=exp["algorithm"],
+                path=experiment_path,
+                resume_unfinished=True,
+            )
+        else:
+            if self._resume_checkpoint:#用已有模型开始训练
+                checkpoint_path = self._resolve_checkpoint_path(self._resume_checkpoint)
+                base_callbacks = exp["config"].get("callbacks")
+                policy_mapping_fn = exp["config"].get("multiagent", {}).get("policy_mapping_fn")
+                exp["config"]["callbacks"] = self._make_restore_callbacks(
+                    checkpoint_path,
+                    base_callbacks,
+                    policy_mapping_fn=policy_mapping_fn,
+                )
+
             tuner = tune.Tuner(
                 trainable=exp["algorithm"],
                 param_space=exp["config"],
                 run_config=train.RunConfig(
                     storage_path=os.path.abspath(self._experiment_dir),
                     stop=exp["stop"],
-                    checkpoint_config=train.CheckpointConfig(checkpoint_frequency=exp["checkpoint_frequency"]),
+                    checkpoint_config=self._make_checkpoint_config(exp),
                 ),
-            )
-        else:
-            tuner = tune.Tuner.restore(
-                trainable=exp["algorithm"],
-                path=self._restore,
-                resume_unfinished=True,
             )
 
         return tuner.fit()
 
     #ONNX 导出
     @staticmethod
-    def _export_onnx(result: tune.ResultGrid, is_multiagent: bool,
-                     policy_names: Optional[list]) -> None:
+    def _export_onnx(result: tune.ResultGrid, is_multiagent: bool,policy_names: Optional[list]) -> None:
         """从最优 checkpoint 导出 ONNX 模型。"""
         checkpoint = result.get_best_result().checkpoint
         if not checkpoint:
@@ -666,12 +849,12 @@ class RLLibTrainingPipeline:
                 export_path = f"{result_path}/onnx_export/{policy_name}_onnx"
                 algo.get_policy(policy_name).export_model(export_path, onnx=12)
                 print(f"Saving onnx policy to "
-                      f"{pathlib.Path(export_path).resolve()}")
+                    f"{pathlib.Path(export_path).resolve()}")
         else:
             export_path = f"{result_path}/onnx_export/single_agent_policy_onnx"
             algo.get_policy().export_model(export_path, onnx=12)
             print(f"Saving onnx policy to "
-                  f"{pathlib.Path(export_path).resolve()}")
+                f"{pathlib.Path(export_path).resolve()}")
 
     # 主入口
     def execute(self) -> None:
@@ -710,6 +893,8 @@ if __name__ == "__main__":
     pipeline = RLLibTrainingPipeline(
         config_path=args.config_file,
         experiment_dir=args.experiment_dir,
+        resume_experiment=args.resume_experiment,
+        resume_checkpoint=args.resume_checkpoint,
         restore=args.restore,
     )
     pipeline.execute()

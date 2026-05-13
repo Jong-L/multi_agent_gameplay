@@ -56,7 +56,6 @@ var _prev_ball_distances: Dictionary = {}  # {player_id: 上帧最近球距离}
 var action_repeat_count:int=0
 
 # ── 配置路由 ──
-
 # 根据玩家ID获取对应的奖励配置
 func _cfg(player_id: int) -> RewardConfig:
 	if game_config and game_config.use_per_player_reward:
@@ -65,7 +64,6 @@ func _cfg(player_id: int) -> RewardConfig:
 	return reward_config
 
 # ── 生命周期 ──
-
 func _ready() -> void:
 	_play_scene = get_parent() if get_parent() is PlayScene else null
 	_connect_signals()
@@ -668,22 +666,23 @@ func _get_nearest_ball_distance(player: Player) -> float:
 	return min_dist
 
 ## 中央区域塑形奖励：鼓励智能体进入竞技场中心
-func _process_center_shaping(delta: float) -> void:
+#判断智能体是否在竞技场中心区域
+func is_in_center_arena(player:Player):
+	var patrol_rect:Rect2=_play_scene.patrol_rect
+	return patrol_rect.has_point(player.global_position)
+
+func _process_center_shaping(_delta: float) -> void:
 	if _play_scene == null:
 		return
-
-	var arena_center: Vector2 = Vector2.ZERO
-
 	for player in _play_scene.players:
 		if player.is_dead:
 			continue
 
 		var cfg := _cfg(player.player_id)
-		var dist_to_center: float = player.global_position.distance_to(arena_center)
-		#乘2，在边界奖励为0
-		var center_reward: float = cfg.center_reward_scale * maxf(0.0, 1.0 - 2*dist_to_center / _play_scene.arena_length)
-		# 直接修改 AIController 的 reward
-		player.ai_controller.reward += center_reward * delta
+		var in_center_arena:bool=is_in_center_arena(player)
+		if in_center_arena:
+			player.ai_controller.reward+=cfg.center_reward
+			#print("in center")
 
 ## ── 撞墙惩罚 ──
 func _process_wall_collision(_delta: float) -> void:
