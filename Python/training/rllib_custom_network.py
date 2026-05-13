@@ -523,7 +523,7 @@ def _parse_args():
     """解析命令行参数。"""
     parser = argparse.ArgumentParser(allow_abbrev=False)
     parser.add_argument(
-        "--config_file", default=r"D:\schoolTour\softwares\multi-agent-gameplay\Python\training\rllib_config.yaml",
+        "--config_file", default="D:\\schoolTour\\softwares\\multi-agent-gameplay\\Python\\training\\rllib_s1_config.yaml",
         type=str, help="The yaml config file",
     )
     parser.add_argument(
