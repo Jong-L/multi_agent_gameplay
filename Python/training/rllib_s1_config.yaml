@@ -1,0 +1,87 @@
+algorithm: PPO
+
+# Multi-agent-env setting:
+# If true:
+# - Any AIController with done = true will receive zeroes as action values until all AIControllers are done, an episode ends at that point.
+# - ai_controller.needs_reset will also be set to true every time a new episode begins (but you can ignore it in your env if needed).
+# If false:
+# - AIControllers auto-reset in Godot and will receive actions after setting done = true.
+# - Each AIController has its own episodes that can end/reset at any point.
+# Set to false if you have a single policy name for all agents set in AIControllers
+env_is_multiagent: true
+
+checkpoint_frequency: 100
+checkpoint_at_end: true
+num_checkpoints_to_keep: 5
+
+# You can set one or more stopping criteria
+stop:
+    #episode_reward_mean: 0
+    training_iteration: 1000
+    #timesteps_total: 10000
+    # time_total_s: 10000000
+
+obs_seg_config_path: D:\\schoolTour\\softwares\\multi-agent-gameplay\\curriculum_envs\\s1-no-wall-for ball\\configs\\game_config.tres
+
+config:
+    env: godot
+    enable_rl_module_and_learner: false
+    enable_env_runner_and_connector_v2: false
+    env_config:
+        env_path: D:\\schoolTour\\softwares\\multi-agent-gameplay\\curriculum_envs\\s1-no-wall-for ball\\build\\game.exe # Set your env path here (exported executable from Godot) - e.g. env_path: 'env_path.exe' on Windows
+        action_repeat: null # Doesn't need to be set here, you can set this in sync node in Godot editor as well
+        show_window: True # Displays game window while training. Might be faster when false in some cases, turning off also reduces GPU usage if you don't need rendering.
+        speedup: 8 # Speeds up Godot physics
+
+    framework: torch # ONNX models exported with torch are compatible with the current Godot RL Agents Plugin
+
+    lr: 0.0003
+    lambda: 0.95
+    gamma: 0.99
+
+    vf_loss_coeff: 0.5
+    vf_clip_param: .inf
+    #clip_param: 0.2
+    entropy_coeff: 0.001
+    entropy_coeff_schedule: null
+    #grad_clip: 0.5
+
+    normalize_actions: False
+    clip_actions: True # During onnx inference we simply clip the actions to [-1.0, 1.0] range, set here to match
+
+    rollout_fragment_length: "auto"
+    sgd_minibatch_size: 128 # number of samples to use when updating
+    num_workers: 4 # Number of parallel processes
+    num_envs_per_env_runner: 6 # Number of env instances per worker
+    # The value below needs changing per env
+    # Basic calculation for this value can be rollout_fragment_length * num_workers * num_envs_per_env_runner (how many AIControllers you have if not multi_agent, otherwise the value you set)
+    train_batch_size: 2048
+    #godot端每个回合步数为reset_after/8 -1
+    num_sgd_iter: 6 #how many times the past experiences is used to update the neural network
+    batch_mode: complete_episodes
+    # batch_mode: truncated_episodes
+
+    num_gpus: 1
+
+    # 网络类型: default (RLlib 内置) / segmented_mlp (分段 MLP) / gru_mlp (GRU-MLP 混合)
+    model: gru_mlp
+
+# 各网络类型的结构参数 
+model_config:
+    default:
+        vf_share_layers: False
+        fcnet_hiddens: [256, 128]
+    segmented_mlp:
+        self_hiddens: [48]
+        player_hiddens: [64]
+        ball_hiddens: [64]
+        enemy_hiddens: [64]
+        map_hiddens: [64]
+        trunk_hiddens: [256, 128, 64]
+    gru_mlp:
+        max_seq_len: 64     
+        gru_hidden: 128             # GRU 隐藏层维度
+        gru_num_layers: 1           # GRU 层数
+        gru_input_layernorm: True    # GRU 输入 LayerNorm
+        ball_hiddens: [64]          # Ball 非时序段 MLP 层宽
+        trunk_hiddens: [128, 64]    # 融合 trunk MLP 层宽

@@ -14,5 +14,7 @@ kill_player = 1.5
 run = -0.001
 attack = -0.02
 died = -1.5
+ball_potential_scale = 0.5
 distance_reward_scale = 0.01
+center_reward = 0.001
 wall_collision_penalty = -0.3

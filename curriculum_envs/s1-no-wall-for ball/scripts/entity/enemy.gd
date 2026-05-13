@@ -519,11 +519,10 @@ func get_skill_cooldown_ratio(skill_idx: int = 0) -> float:
 	return skill_controller.cooldowns.get(skill, 0.0) / skill.cooldown
 
 ## 获取归一化速度，观测数据使用
-## 以追击速度 speed 为归一化基准
 func get_normalized_velocity() -> Vector2:
 	if speed <= 0.0:
 		return Vector2.ZERO
-	return velocity / speed
+	return get_real_velocity() / speed
 
 #受击特效
 func _show_damage_taken_effect() -> void:

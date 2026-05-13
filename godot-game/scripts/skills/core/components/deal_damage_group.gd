@@ -18,7 +18,5 @@ func _ready() -> void:
 			sub_components.push_back(child)
 
 func _activate(context: SkillContext) -> void:
-	if execution_delay_time > 0:
-		await get_tree().create_timer(execution_delay_time).timeout
 	for component in sub_components:
 		component.activate(context)

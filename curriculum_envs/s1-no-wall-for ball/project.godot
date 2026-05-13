@@ -10,7 +10,7 @@ config_version=5
 
 [application]
 
-config/name="godot_game_play_no_wall_for_ball"
+config/name="s1_no_wall_for_ball"
 run/main_scene="uid://dkd5yj2ymualv"
 config/features=PackedStringArray("4.6", "GL Compatibility")
 config/icon="res://icon.svg"
@@ -87,6 +87,10 @@ skill_3={
 2d_physics/layer_2="enemy"
 2d_physics/layer_3="wall"
 2d_physics/layer_4="score_ball"
+
+[network]
+
+limits/debugger/max_chars_per_second=327680
 
 [physics]
 

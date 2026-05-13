@@ -11,6 +11,8 @@ algorithm: PPO
 env_is_multiagent: true
 
 checkpoint_frequency: 100
+checkpoint_at_end: true
+num_checkpoints_to_keep: 5
 
 # You can set one or more stopping criteria
 stop:
