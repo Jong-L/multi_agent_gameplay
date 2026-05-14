@@ -1,0 +1,221 @@
+% 华北电力大学毕业设计（论文）开题报告
+% 兼容 pdflatex / xelatex（xelatex 需要 fontconfig 正常工作）
+\documentclass[12pt,a4paper,UTF8]{ctexart}
+
+% === 页面设置 ===
+\usepackage[top=2.5cm, bottom=2.5cm, left=3cm, right=2.5cm]{geometry}
+\usepackage{setspace}
+\usepackage{titlesec}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{enumitem}
+\usepackage{hyperref}
+\usepackage{float}
+\usepackage{booktabs}   % 三线表
+\usepackage{graphicx}   % 图片插入
+\usepackage{amsmath}    % 提供数学公式及 \numberwithin 命令支持
+
+
+% ============================================================
+% 图片动态管理：按 section 编号（X.Y 格式），自动生成"图 X.Y 标题"
+% ============================================================
+\usepackage{chngcntr}
+\counterwithin{figure}{section}   % 图号随 section 重置
+
+\usepackage{caption}
+% caption 设置：图题用五号字，居中
+\captionsetup[figure]{
+  font     = small,
+  skip     = 6pt,
+  position = bottom,
+  justification = centering
+}
+% \figcaption{标题} — 自动输出"图 X.X  标题"，字号五号，居中
+\DeclareRobustCommand{\figcaption}[1]{%
+  \refstepcounter{figure}%
+  {\centering\zihao{5}% 五号字（比正文小一号）
+   图~\thesection.\arabic{figure}~~#1\par}%
+}
+
+% 公式随 section 编号
+\numberwithin{equation}{section}
+
+% === 英文断行：pdflatex 下 CJK 模式天然允许字母间换行；xelatex 下需显式开启 ===
+\ifxetex
+    \XeTeXlinebreaklocale "zh"
+    \XeTeXlinebreakskip = 0pt plus 1pt
+\fi
+
+% === 参考文献风格 ===
+\bibliographystyle{plain}
+
+\singlespacing
+\setstretch{1.25}
+
+% === 放宽断行容差，减少英文长词溢出 ===
+\sloppy
+\emergencystretch=3em
+
+% === 标题格式 ===
+\titleformat{\section}[block]{\Large\bfseries\centering}{}{0pt}{}
+\titleformat{\subsection}[block]{\large\bfseries}{}{0pt}{}
+\titlespacing{\section}{0pt}{1em}{0.5em}
+\titlespacing{\subsection}{0pt}{0.5em}{0.3em}
+
+% === 文档信息 ===
+\title{}
+\author{}
+\date{}
+
+\begin{document}
+
+% ============================================
+% 封面标题
+% ============================================
+\begin{center}
+    {\zihao{2}\heiti 华\quad 北\quad 电\quad 力\quad 大\quad 学}
+
+    \vspace{2em}
+    {\zihao{2}\heiti 毕业设计（论文）开题报告}
+
+    \vspace{6em}
+
+    \begin{spacing}{2.5}
+        {\zihao{4}\songti
+        \begin{tabular}{rl}
+            学生姓名： & 蒋伦吉 \hspace{2em} 班级：计算2202 \\
+            所在院系： & 控计学院 \hspace{2em} 所在专业：计算机科学与技术 \\
+            设计（论文）题目： & 基于机器学习的无人机博弈对抗研究 \\
+            指导教师： & 刘春阳 \\
+        \end{tabular}
+        }
+    \end{spacing}
+
+    \vspace{6em}
+
+    {\zihao{3}\songti 2026年~3月~7日}
+\end{center}
+
+\newpage
+
+% ============================================
+% 第一部分：选题背景和意义
+% ============================================
+\section{选题背景和意义}
+
+近年来，人工智能技术在实时对抗领域的应用日益广泛，机器博弈对抗作为智能决策的典型场景，已成为各国研究的热点方向。无人机博弈对抗要求智能体在复杂、动态、不确定的环境中，根据实时态势自主做出最优决策，这对传统基于规则的方法提出了严峻挑战。
+
+强化学习（Reinforcement Learning, RL）作为机器学习的重要分支，为序列决策问题提供了一套系统的解决框架。Sutton 和 Barto 在其经典著作中系统阐述了强化学习的核心思想：智能体通过与环境的交互，以试错的方式学习从状态到动作的最优映射，以最大化累积奖励，实现个体的不断进化~\cite{sutton2018reinforcement}。与监督学习和无监督学习不同，强化学习不依赖标注数据，而是通过奖励信号驱动探索与利用的平衡，这一特性使其天然适用于博弈对抗场景。
+
+多智能体强化学习（Multi-Agent Reinforcement Learning, MARL）进一步将单智能体范式扩展到多智能体共存的环境。在无人机博弈对抗中，多个无人机之间既存在合作关系（如编队侦察、协同攻击），也存在竞争关系（如与敌方无人机的对抗），同时还涉及混合动机下的协调问题。因此，研究多智能体强化学习算法在无人机博弈对抗中的应用，不仅具有重要的理论价值，也对提升无人机集群的智能化水平和实战能力具有现实意义。
+
+本课题旨在设计并实现一套基于多智能体强化学习的无人机博弈对抗系统，利用 Godot 引擎构建二维仿真环境，开发个人创意游戏《Tiny Swords》，该游戏是一个2D俯视角混战竞技场，旨在作为多智能体强化学习的博弈环境。四名角色（Agent）在一个封闭的竞技场中进行自由对抗，通过移动与近战攻击争夺分数。游戏在核心对抗之上叠加了少量环境交互元素（野生怪物、分数球），以丰富策略空间并产生更具层次的博弈行为。
+
+% ============================================
+% 第二部分：国内外研究现状
+% ============================================
+\section{国内外研究现状}
+强化学习是一门关于个体进化的科学，智能体与环境不断交互并改进自身策略，逐步获取更高的奖励。强化学习由
+两部分组成：智能体和环境。
+智能体在环境中进行观测，并根据观测结果选择一个动作执行，环境接受智能体的动作并做出响应，包括
+环境的状态变化和给予智能体的奖励信号，智能体根据新的观测和上一步动作的奖励改进自身行为策略，
+以期望在长期内获得最大的累积奖励。\cite{EASYRL}
+
+% 图 2.1  强化学习基本框架示意图
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.75\textwidth]{rl_diagram.png}
+  \figcaption{强化学习基本框架示意图}
+\end{figure}
+
+\subsection{强化学习的三个特征}
+\begin{enumerate}[label=（\arabic*）]
+    \item 强化学习是一个闭环问题。
+    \item 没有直接对该如何选择action的指示，需要试探搜索去发现哪个动作会产生最大的数值奖励。
+    \item 动作不光会影响直接的奖励，还会影响接下来的环境状态。
+\end{enumerate}
+
+\subsection{强化学习系统的构成要素}
+
+一个强化学习系统一般包括如下的几个要素：
+
+\textbf{（1）policy（策略）：}
+
+policy是从感知到的environment的state到在这些state下要执行的action的映射。这对应于心理学中stimulus-response rules or associations（应激-反应规则或关联）。在一些情况下，policy可以是简单的函数或者是查表。而在别的情况下，可能会需要更多的计算，例如暴力搜索。policy是强化学习agent的核心，因为一个policy便可以单独决定agent的行为。另外，policy也可能是随机的。
+
+\textbf{（2）reward signal（奖励信号）：}
+
+reward signal定义了强化学习问题的目标（goal）。在每个时间步内，environment给agent发送一个奖励值。agent唯一的目标便是在长时间运行中最大化接收到的总的reward。reward signal定义了一件事对于agent来说是好是坏。任一时刻发送给agent的reward取决于agent当前的action以及当前environment的state。agent影响reward signal的唯一方式就是通过action直接影响reward，或者通过改变environment的state间接影响。reward signal是改变policy的首要基础。如果一个policy选择了低reward的action，则之后在同样情况下，policy可能会改为选其他的action。总的来说，reward signal可能是environment state和采取的action的函数（也可以带有随机性）。
+
+\textbf{（3）value function（值函数）：}
+
+reward signal表示的是在直接感受下哪个是好的。而value function则是表示从长期来看，什么是好的。也就是state的value（价值）是一个agent从当前state开始，在未来期望累积的总的reward。reward定义的是环境state直接的好处，而value是state长期的好处，考虑了之后可能会出现的state以及这些state下的reward。例如一个state可能会产生一个低的reward，但是有着高的value，因为跟着它的通常是一些会产生高reward的state。反之亦然。
+
+reward是首要的，而value是其次的，因为没有reward就没有value。但是当我们做决策并对决策进行评估时，更关注的是value。对于action的选择是基于value来判断的。我们追寻的是带来最高value的state而不是最高的reward，因为这些action从长远上来讲会获得最多的reward。但不幸的是，决定value要比决定reward难得多。reward是由environment直接给出的，但是value是需要对agent的整个执行时间内的状况进行观察，以此对value进行估计和重估计。事实上，强化学习算法中最重要的部分就是如何有效地估计value。
+
+\textbf{（4）model of the environment（环境模型）：}
+
+model of the environment是用来模拟真实environment的行径的，或者说是对environment会如何表现的推断。例如，给定一个state和action，这个model会预测因此产生的下一state和下一reward。model一般用在planning（规划）里，可以在真正执行之前通过考虑未来的可能情况来决定一系列动作。利用model和planning用来解决强化学习问题的方法被称为model-based方法，作为更简单的model-free方法的对照。model-free方法主要是指通过trial-and-error（试错）学习，是planning的对立。（就是planning不需要直接执行action与真实的environment互动，可以对environment建模，然后自己跟这个environment模型互动。这样就叫planning）
+
+% ============================================
+% 第三部分：研究内容及预期目标
+% ============================================
+\section{设计（论文）的主要研究内容及预期目标}
+
+《坦克大战》简单来说就是玩家在不断生成的敌人的进攻下，保护"家园"的游戏。经典的《坦克大战》下，每一关有敌人数量上限。如果在"家园"存在的情况下消灭所有敌人，则玩家胜利，反之，如果"家园"被破坏，则失败。
+
+因此，在本课题下，我们要设计一个强化学习的算法，训练出一个《坦克大战》游戏玩家，对玩家在游戏中任何可能做出的行为设置一个奖励值（reward），以游戏胜利为前提，最大程度积累分数，并试着发现敌人的缺点。
+
+% ============================================
+% 第四部分：工作进度安排
+% ============================================
+\section{工作进度安排}
+
+\begin{table}[H]
+    \centering
+    \renewcommand{\arraystretch}{1.3}
+    \begin{tabularx}{\textwidth}{|c|X|c|p{2cm}|}
+        \hline
+        \textbf{序号} & \textbf{设计项目名称} & \textbf{完成时间} & \textbf{备注} \\
+        \hline
+        1 & 查阅资料，确定毕设题目 & 2022.2.20--2022.2.27 & 1周 \\
+        \hline
+        2 & 查阅资料，完成开题报告   & 2022.2.27--2022.3.12 & 2周 \\
+        \hline
+        3 & 完成系统编码工作         & 2022.4.1--2022.4.29   & 4周 \\
+        \hline
+        4 & 系统测试                 & 2022.5.4--2022.5.11   & 1周 \\
+        \hline
+        5 & 整理开发资料，完成毕业论文 & 2022.5.12--2022.5.27  & 2周 \\
+        \hline
+        6 & 完善系统，准备答辩       & 2022.5.28--2022.6.8   & 2周 \\
+        \hline
+    \end{tabularx}
+\end{table}
+
+% ============================================
+% 第五部分：参考文献
+% ============================================
+\section{参考文献}
+
+% 使用 BibTeX 管理参考文献，引用通过 \cite{<key>} 实现，点击可跳转（hyperref）
+\bibliography{references}
+
+% ============================================
+% 第六部分：指导教师意见
+% ============================================
+\section{指导教师意见}
+
+该生在前期研究中，对《基于强化学习算法的实时坦克大战实时博弈系统》课题研究内容及相关领域进行了较为详尽的调研，充分分析了课题任务及目标，完成了开题报告，并掌握了游戏环境搭建有关知识，初步完成了基础的强化学习研究，也为下一步开展编码工作做好了充分准备。在此期间，该生学习态度认真，遵守纪律，毕业设计任务进展符合预期计划。后续应继续开展对于强化学习算法的进一步研究。
+
+\vspace{3em}
+
+\begin{flushright}
+    指导教师签名：\hspace{5em}
+
+    \vspace{2em}
+
+    2022年~3月~10日
+\end{flushright}
+
+\end{document}
