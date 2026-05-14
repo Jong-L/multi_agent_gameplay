@@ -1,13 +1,71 @@
-\begin{thebibliography}{1}
+\begin{thebibliography}{10}
+
+\bibitem{bellman1957dynamic}
+Richard~E. Bellman.
+\newblock {\em Dynamic Programming}.
+\newblock Princeton University Press, Princeton, NJ, 1957.
+
+\bibitem{cybenko1989approximation}
+George Cybenko.
+\newblock Approximation by superpositions of a sigmoidal function.
+\newblock {\em Mathematics of Control, Signals and Systems}, 2(4):303--314, 1989.
+
+\bibitem{dewitt2020independentlearningneedstarcraft}
+Christian~Schroeder de~Witt, Tarun Gupta, Denys Makoviichuk, Viktor Makoviychuk, Philip H.~S. Torr, Mingfei Sun, and Shimon Whiteson.
+\newblock Is independent learning all you need in the starcraft multi-agent challenge?, 2020.
+
+\bibitem{degris2013offpolicyactorcritic}
+Thomas Degris, Martha White, and Richard~S. Sutton.
+\newblock Off-policy actor-critic, 2013.
+
+\bibitem{hornik1989multilayer}
+Kurt Hornik, Maxwell Stinchcombe, and Halbert White.
+\newblock Multilayer feedforward networks are universal approximators.
+\newblock {\em Neural Networks}, 2(5):359--366, 1989.
+
+\bibitem{mnih2013playingatarideepreinforcement}
+Volodymyr Mnih, Koray Kavukcuoglu, David Silver, Alex Graves, Ioannis Antonoglou, Daan Wierstra, and Martin Riedmiller.
+\newblock Playing atari with deep reinforcement learning, 2013.
+
+\bibitem{mnih2015human}
+Volodymyr Mnih, Koray Kavukcuoglu, David Silver, Andrei~A. Rusu, Joel Veness, Marc~G. Bellemare, Alex Graves, Martin Riedmiller, Andreas~K. Fidjeland, Georg Ostrovski, Stig Petersen, Charles Beattie, Amir Sadik, Ioannis Antonoglou, Helen King, Dharshan Kumaran, Daan Wierstra, Shane Legg, and Demis Hassabis.
+\newblock Human-level control through deep reinforcement learning.
+\newblock {\em Nature}, 518(7540):529--533, 2015.
+
+\bibitem{Ng1999PolicyIU}
+A.~Ng, Daishi Harada, and Stuart~J. Russell.
+\newblock Policy invariance under reward transformations: Theory and application to reward shaping.
+\newblock In {\em International Conference on Machine Learning}, 1999.
+
+\bibitem{schulman2016gae}
+John Schulman, Philipp Moritz, Sergey Levine, Michael~I. Jordan, and Pieter Abbeel.
+\newblock High-dimensional continuous control using generalized advantage estimation.
+\newblock In {\em International Conference on Learning Representations (ICLR)}, 2016.
+\newblock arXiv:1506.02438.
+
+\bibitem{sutton1988learning}
+Richard~S. Sutton.
+\newblock Learning to predict by the methods of temporal differences.
+\newblock {\em Machine Learning}, 3(1):9--44, 1988.
 
 \bibitem{sutton2018reinforcement}
 Richard~S. Sutton and Andrew~G. Barto.
 \newblock {\em Reinforcement Learning: An Introduction}.
 \newblock MIT Press, Cambridge, MA, 2nd edition, 2018.
 
+\bibitem{sutton1999policyandvalue}
+Richard~S. Sutton, David McAllester, Satinder Singh, and Yishay Mansour.
+\newblock Policy gradient methods for reinforcement learning with function approximation.
+\newblock In {\em Advances in Neural Information Processing Systems (NeurIPS)}, volume~12, pages 1057--1063. MIT Press, 1999.
+
+\bibitem{williams1992simple}
+Ronald~J. Williams.
+\newblock Simple statistical gradient-following algorithms for connectionist reinforcement learning.
+\newblock {\em Machine Learning}, 8(3):229--256, 1992.
+
 \bibitem{EASYRL}
-江季 王琦, 杨毅远.
-\newblock {\em EASYRL:强化学习教程}.
+王琦，杨毅远，江季.
+\newblock {\em EASYRL：强化学习教程}.
 \newblock 人民邮电出版社, 2022.
 
 \end{thebibliography}

@@ -4,17 +4,19 @@
 
 [resource]
 script = ExtResource("1_y2fv5")
-collect_ball_A = 0.2
-collect_ball_B = 0.4
-bear_damage = -0.3
-cause_damage_to_enemy = 0.8
-cause_damage_to_player = 1.0
-kill_enemy = 1.6
-kill_player = 2.0
+collect_ball_A = 2
+collect_ball_B = 4
+bear_damage = -5.0
+cause_damage_to_enemy = 8.0
+cause_damage_to_player = 10.0
+kill_enemy = 16.0
+kill_player = 20.0
 run = -0.001
+idle = -0.005
 attack = -0.01
-died = -1.2
+died = -10.0
+starve_time = 1500.0
 ball_potential_scale = 0.5
 distance_reward_scale = 0.002
 center_reward = 0.001
-wall_collision_penalty = -0.3
+wall_collision_penalty = -0.5
