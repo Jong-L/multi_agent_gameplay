@@ -196,9 +196,6 @@ class ReplayConfig:
     is_multiagent: bool = True
     """是否为多智能体环境。"""
 
-    policy_names: tuple = ("0", "1", "2", "3")
-    """多智能体各 agent 对应的策略名 (需与训练时一致)。"""
-
     # ── 推理控制 ──
     deterministic: bool = True
     """确定性推理 (argmax 而非采样)。"""
@@ -337,7 +334,9 @@ def replay_multiagent(
         for agent_id, reward in rewards.items():
             episode_rewards[agent_id] = episode_rewards.get(agent_id, 0.0) + float(reward or 0.0)
 
-        # env_is_multiagent=true 时 Godot 会在所有 AIController done 后结束 episode。
+        # env_is_multiagent=true 时所有 AIController 同时 reset, 所有活跃 agent
+        # 在同一帧终止/截断。actions 只含当前步出现在 obs_dict 中的存活 agent,
+        # 因此 all(...) 等价于 "所有存活 agent 都已终止"。
         episode_done = all(
             terminations.get(agent_id, False) or truncations.get(agent_id, False)
             for agent_id in actions
@@ -467,7 +466,7 @@ def main() -> None:
             show_window=config.show_window,
             seed=config.seed,
         )
-        # 从环境获取 policy_names (与训练时一致)
+        # policy_names 从 Godot 环境动态获取, 确保与训练时 AIController 命名一致
         actual_policy_names = tuple(env.agent_policy_names)
         print(f"[Env] 多智能体模式, agent 策略名: {actual_policy_names}")
     else:

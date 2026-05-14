@@ -30,7 +30,7 @@ config:
     env_config:
         env_path: curriculum_envs\\s1-no-wall-for ball\\build\\game.exe # Set your env path here (exported executable from Godot) - e.g. env_path: 'env_path.exe' on Windows
         action_repeat: null # Doesn't need to be set here, you can set this in sync node in Godot editor as well
-        show_window: True # Displays game window while training. Might be faster when false in some cases, turning off also reduces GPU usage if you don't need rendering.
+        show_window: false # Displays game window while training. Might be faster when false in some cases, turning off also reduces GPU usage if you don't need rendering.
         speedup: 10 # Speeds up Godot physics
 
     framework: torch # ONNX models exported with torch are compatible with the current Godot RL Agents Plugin
@@ -49,24 +49,24 @@ config:
     normalize_actions: False
     clip_actions: True # During onnx inference we simply clip the actions to [-1.0, 1.0] range, set here to match
 
-    rollout_fragment_length: "auto"
-    sgd_minibatch_size: 128 # number of samples to use when updating
-    num_workers: 1 # Number of parallel processes
-    num_envs_per_env_runner: 2 # Number of env instances per worker
-    # The value below needs changing per env
-    # Basic calculation for this value can be rollout_fragment_length * num_workers * num_envs_per_env_runner (how many AIControllers you have if not multi_agent, otherwise the value you set)
-    train_batch_size: 3500
+    rollout_fragment_length: 512       
+    sgd_minibatch_size: 1024           # 必须 > max_seq_len(128) 且 > rollout 中实际最大seq长度(512)
+    num_workers: 1                     # Number of parallel processes
+    num_envs_per_env_runner: 2         # Number of env instances per worker
+    # train_batch_size = rollout_fragment_length * num_workers * num_envs_per_env_runner * num_agents
+    # 512 * 1 * 2 * 4 = 4096; train_batch_size 自动推导，显式设为 4096 保证 >= sgd_minibatch_size
+    train_batch_size: 4096
     #godot端每个回合步数为reset_after/8 -1
     num_sgd_iter: 6 #how many times the past experiences is used to update the neural network
-    batch_mode: complete_episodes
-    # batch_mode: truncated_episodes
+    # batch_mode: complete_episodes
+    batch_mode: truncate_episodes
 
     num_gpus: 1
 
     # 网络类型: default (RLlib 内置) / segmented_mlp (分段 MLP) / gru_mlp (GRU-MLP 混合)
-    model: gru_mlp
+    model: default
 
-# 各网络类型的结构参数 
+# 各网络类型的结构参数
 model_config:
     default:
         vf_share_layers: False

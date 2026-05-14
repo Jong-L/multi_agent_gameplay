@@ -30,51 +30,238 @@ from godot_env_wrapper import (
 )
 
 
-# 网络架构枚举
-class NetworkType(str, Enum):
-    """网络架构类型。
-    - SEGMENTED: 5 子网络分段
-    - MLP:       普通 flat
-    """
-    SEGMENTED = "segmented"
-    MLP = "mlp"
 
-#单个智能体的独立超参数配置
+
+class NetworkType(str, Enum):
+    """Supported feature extractors for each IPPO policy."""
+
+    SEGMENTED_MLP = "segmented_mlp"
+    MLP = "mlp"
+    GRU_MLP = "gru_mlp"
+
+
+def parse_network_type(value) -> NetworkType:
+    """Accept enum values plus legacy string aliases used by older configs."""
+    if isinstance(value, NetworkType):
+        return value
+
+    text = str(value or NetworkType.MLP.value).strip().lower()
+    aliases = {
+        "segmented": NetworkType.SEGMENTED_MLP,
+        "segmented_mlp": NetworkType.SEGMENTED_MLP,
+        "mlp": NetworkType.MLP,
+        "gru_mlp": NetworkType.GRU_MLP,
+    }
+    if text in aliases:
+        return aliases[text]
+
+    valid = sorted(aliases)
+    raise ValueError(f"Unsupported network_type={value!r}. Use one of {valid}.")
+
+
+def as_hidden_tuple(value, default: tuple) -> tuple:
+    """Normalize None/int/iterable hidden-size config into a tuple[int, ...]."""
+    if value is None:
+        value = default
+    if isinstance(value, int):
+        return (int(value),)
+    return tuple(int(v) for v in value)
+
+
+def make_mlp(input_dim: int, hidden_sizes: tuple) -> tuple[nn.Module, int]:
+    """Build Linear+ReLU layers and return both module and output size."""
+    layers: list[nn.Module] = []
+    in_dim = input_dim
+    for hidden_size in hidden_sizes:
+        layers.append(layer_init(nn.Linear(in_dim, hidden_size)))
+        layers.append(nn.ReLU())
+        in_dim = hidden_size
+    return (nn.Sequential(*layers) if layers else nn.Identity(), in_dim)
+
+
+def init_gru_weights(gru: nn.GRU) -> nn.GRU:
+    """Use stable GRU initialization matching rllib_custom_network.py."""
+    for name, param in gru.named_parameters():
+        if "weight_ih" in name:
+            torch.nn.init.xavier_uniform_(param)
+        elif "weight_hh" in name:
+            torch.nn.init.orthogonal_(param)
+        elif "bias" in name:
+            torch.nn.init.constant_(param, 0.0)
+    return gru
+
+
+class SegmentedObsHelper:
+    """Small helper for the shared observation layout."""
+
+    def __init__(self, seg: ObsSegmentDims):
+        self.seg = seg
+
+    def split(self, obs: torch.Tensor) -> tuple[torch.Tensor, ...]:
+        i = 0
+        s = obs[:, i: i + self.seg.self_dim];   i += self.seg.self_dim
+        p = obs[:, i: i + self.seg.player_dim]; i += self.seg.player_dim
+        b = obs[:, i: i + self.seg.ball_dim];   i += self.seg.ball_dim
+        e = obs[:, i: i + self.seg.enemy_dim];  i += self.seg.enemy_dim
+        m = obs[:, i: i + self.seg.map_dim]
+        return s, p, b, e, m
+
+
+class FlatMlpEncoder(nn.Module):
+    def __init__(self, obs_dim: int, mlp_hiddens: tuple):
+        super().__init__()
+        self.trunk, self.output_dim = make_mlp(obs_dim, mlp_hiddens)
+        self.recurrent_state_size = 0
+
+    def forward(
+        self,
+        obs: torch.Tensor,
+        rnn_state: Optional[torch.Tensor] = None,
+    ) -> tuple[torch.Tensor, Optional[torch.Tensor]]:
+        return self.trunk(obs), None
+
+
+class SegmentedMlpEncoder(nn.Module):
+    def __init__(
+        self,
+        obs_helper: SegmentedObsHelper,
+        self_hiddens: tuple,
+        player_hiddens: tuple,
+        ball_hiddens: tuple,
+        enemy_hiddens: tuple,
+        map_hiddens: tuple,
+        trunk_hiddens: tuple,
+    ):
+        super().__init__()
+        seg = obs_helper.seg
+        self.obs = obs_helper
+        self.self_net, self_out = make_mlp(seg.self_dim, self_hiddens)
+        self.player_net, player_out = make_mlp(seg.player_dim, player_hiddens)
+        self.ball_net, ball_out = make_mlp(seg.ball_dim, ball_hiddens)
+        self.enemy_net, enemy_out = make_mlp(seg.enemy_dim, enemy_hiddens)
+        self.map_net, map_out = make_mlp(seg.map_dim, map_hiddens)
+
+        fused_dim = self_out + player_out + ball_out + enemy_out + map_out
+        self.trunk, self.output_dim = make_mlp(fused_dim, trunk_hiddens)
+        self.recurrent_state_size = 0
+
+    def forward(
+        self,
+        obs: torch.Tensor,
+        rnn_state: Optional[torch.Tensor] = None,
+    ) -> tuple[torch.Tensor, Optional[torch.Tensor]]:
+        s, p, b, e, m = self.obs.split(obs)
+        fused = torch.cat([
+            self.self_net(s),
+            self.player_net(p),
+            self.ball_net(b),
+            self.enemy_net(e),
+            self.map_net(m),
+        ], dim=1)
+        return self.trunk(fused), None
+
+
+class GruMlpEncoder(nn.Module):
+    """GRU-MLP encoder mirroring rllib_custom_network.py."""
+
+    def __init__(
+        self,
+        obs_helper: SegmentedObsHelper,
+        ball_hiddens: tuple,
+        trunk_hiddens: tuple,
+        gru_hidden: int,
+        gru_num_layers: int,
+        gru_input_layernorm: bool,
+    ):
+        super().__init__()
+        seg = obs_helper.seg
+        self.obs = obs_helper
+        self.gru_hidden = int(gru_hidden)
+        self.gru_num_layers = int(gru_num_layers)
+        self.recurrent_state_size = self.gru_hidden * self.gru_num_layers
+
+        gru_input_dim = seg.self_dim + seg.player_dim + seg.enemy_dim + seg.map_dim
+        self.gru_ln = nn.LayerNorm(gru_input_dim) if gru_input_layernorm else nn.Identity()
+        self.gru = init_gru_weights(
+            nn.GRU(
+                input_size=gru_input_dim,
+                hidden_size=self.gru_hidden,
+                num_layers=self.gru_num_layers,
+                batch_first=True,
+            )
+        )
+
+        self.ball_net, ball_out = make_mlp(seg.ball_dim, ball_hiddens)
+        fused_dim = self.gru_hidden + ball_out
+        self.trunk, self.output_dim = make_mlp(fused_dim, trunk_hiddens)
+
+    def initial_state(self, batch_size: int, device: torch.device) -> torch.Tensor:
+        return torch.zeros(batch_size, self.recurrent_state_size, device=device)
+
+    def forward(
+        self,
+        obs: torch.Tensor,
+        rnn_state: Optional[torch.Tensor] = None,
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+        batch_size = obs.shape[0]
+        if rnn_state is None:
+            rnn_state = self.initial_state(batch_size, obs.device)
+        if rnn_state.dim() == 1:
+            rnn_state = rnn_state.unsqueeze(0)
+
+        s, p, b, e, m = self.obs.split(obs)
+        gru_input = torch.cat([s, p, e, m], dim=1).unsqueeze(1)
+        gru_input = self.gru_ln(gru_input)
+
+        h0 = rnn_state.view(batch_size, self.gru_num_layers, self.gru_hidden)
+        h0 = h0.transpose(0, 1).contiguous()
+        gru_out, h_new = self.gru(gru_input, h0)
+
+        ball_features = self.ball_net(b)
+        fused = torch.cat([gru_out[:, -1, :], ball_features], dim=1)
+        features = self.trunk(fused)
+        h_new = h_new.transpose(0, 1).reshape(batch_size, self.recurrent_state_size)
+        return features, h_new
+
+
 @dataclass
 class AgentConfig:
-    agent_id: int                  # 映射到 Godot 端 player_id (0~3)
+    agent_id: int
+    train: bool = True
 
-    #训练开关
-    train: bool = True     # True=用RL训练; False=强制IDLE
-
-    # ---- 网络架构 ----
-
-    #网络类型: SEGMENTED = 5子网络分段架构; MLP = 普通 flat MLP
     network_type: NetworkType = NetworkType.MLP
 
-    #子网络分段架构参数 (network_type=NetworkType.SEGMENTED 时生效)
+    # segmented mlp
     self_hidden: int = 32
     player_hidden: int = 64
     ball_hidden: int = 64
     enemy_hidden: int = 64
     map_hidden: int = 64
     trunk_hidden: tuple = (256, 128)
+    self_hiddens: Optional[tuple] = None
+    player_hiddens: Optional[tuple] = None
+    ball_hiddens: Optional[tuple] = None
+    enemy_hiddens: Optional[tuple] = None
+    map_hiddens: Optional[tuple] = None
+    trunk_hiddens: Optional[tuple] = None
 
-    # 普通 MLP 参数 (network_type=NetworkType.MLP 时生效)
+    # mlp
     mlp_hiddens: tuple = (400, 150)
 
-    # 优化器
+    # gru
+    gru_hidden: int = 128
+    gru_num_layers: int = 1
+    gru_input_layernorm: bool = True
+
     learning_rate: float = 3e-4
 
-    #超参
-    gamma: float = 0.99 # 折扣因子
-    gae_lambda: float = 0.95 # GAE 参数
-    clip_coef: float = 0.2 # 策略剪辑阈值
-    ent_coef: float = 0.001 # 熵项系数
-    vf_coef: float = 0.5 # 值函数系数
+    gamma: float = 0.99
+    gae_lambda: float = 0.95
+    clip_coef: float = 0.2
+    ent_coef: float = 0.001
+    vf_coef: float = 0.5
     max_grad_norm: float = 4.0
 
-    #奖励归一化
     reward_norm: bool = True
     reward_clip: float = 10.0
 
@@ -95,8 +282,10 @@ class IppoArgs:
 
     # 训练
     total_timesteps: int = 5_000_000
-    num_steps: int = 512
-    """每个智能体（环境）每个 rollout 的步数"""
+    count_steps_by: str = "agent_steps"
+    """训练步数计数方式: "agent_steps" (智能体步数) 或 "env_steps" (环境步数)"""
+    batch_size: int = 256
+    """每个智能体每个 rollout 的步数（也是每个 rollout 的环境步数）"""
     num_minibatches: int = 8
     update_epochs: int = 10
     norm_adv: bool = True # 是否归一化优势函数
@@ -110,15 +299,15 @@ class IppoArgs:
     agents: list[AgentConfig] = field(default_factory=lambda: [
         AgentConfig(agent_id=0, train=True),
         AgentConfig(agent_id=1,train=True),
-        AgentConfig(agent_id=2,train=True),
+        AgentConfig(agent_id=2,train=False),
         AgentConfig(agent_id=3,train=True),
     ])
 
     #日志 + 保存
     exp_name: str = os.path.basename(__file__)[: -len(".py")]
     experiment_dir: str = "logs/cleanrl_ippo"
-    # save_model_path: Optional[str] = "saved-models/clean_rl_ippo"
-    save_model_path: Optional[str] = None
+    save_model_path: Optional[str] = "saved-models/clean_rl_ippo"
+    # save_model_path: Optional[str] = None
     track: bool = False
     wandb_project_name: str = "cleanRL"
     wandb_entity: Optional[str] = None
@@ -128,34 +317,17 @@ class IppoArgs:
     """智能体数量"""
     num_envs: int = 0
     """环境数量"""
-    batch_size: int = 0
-    """每个智能体共用的样本数量"""
     minibatch_size: int = 0
-    """每个智能体共用的小批量样本数量"""
-
-#  Per-Agent Rollout 数据结构
-@dataclass
-class AgentRolloutData:
-    """单个智能体在一次 rollout 中收集的经验。"""
-    obs: torch.Tensor        # (num_steps, obs_dim)
-    actions: torch.Tensor    # (num_steps,)
-    logprobs: torch.Tensor   # (num_steps,)
-    rewards: torch.Tensor    # (num_steps,)
-    dones: torch.Tensor      # (num_steps,)  — 所有智能体同步的 done 标志
-    values: torch.Tensor     # (num_steps,)
-    next_obs: torch.Tensor   # (obs_dim,) 最后一步观测
-    next_done: torch.Tensor  # scalar  — 最后一步的 done 标志
-    next_value: Optional[torch.Tensor] = None  # V(next_obs), GAE 阶段填充
+    """每个智能体每个小批量的样本数量 (batch_size // num_minibatches)"""
 
 class IPPOAgent(nn.Module):
-    """离散 PPO 智能体 — 两种网络架构
-    """
+    """Policy/value module with pluggable MLP, segmented MLP, or GRU-MLP encoder."""
 
     def __init__(
         self,
         n_actions: int,
         seg: ObsSegmentDims,
-        network_type: NetworkType = NetworkType.SEGMENTED,
+        network_type: NetworkType = NetworkType.SEGMENTED_MLP,
         self_hidden: int = 16,
         player_hidden: int = 64,
         ball_hidden: int = 64,
@@ -163,108 +335,126 @@ class IPPOAgent(nn.Module):
         map_hidden: int = 36,
         trunk_hidden: tuple = (256, 128),
         mlp_hiddens: tuple = (256, 256),
+        self_hiddens: Optional[tuple] = None,
+        player_hiddens: Optional[tuple] = None,
+        ball_hiddens: Optional[tuple] = None,
+        enemy_hiddens: Optional[tuple] = None,
+        map_hiddens: Optional[tuple] = None,
+        trunk_hiddens: Optional[tuple] = None,
+        gru_hidden: int = 128,
+        gru_num_layers: int = 1,
+        gru_input_layernorm: bool = True,
     ):
         super().__init__()
 
-        self.network_type = network_type
+        self.network_type = parse_network_type(network_type)
         self.seg = seg
+        obs_helper = SegmentedObsHelper(seg)
 
-        if network_type == NetworkType.SEGMENTED:
-            # 5 段子网络
-            self.seg_self = seg.self_dim
-            self.seg_player = seg.player_dim
-            self.seg_ball = seg.ball_dim
-            self.seg_enemy = seg.enemy_dim
-            self.seg_map = seg.map_dim
+        self_hiddens = as_hidden_tuple(self_hiddens, (self_hidden,))
+        player_hiddens = as_hidden_tuple(player_hiddens, (player_hidden,))
+        ball_hiddens = as_hidden_tuple(ball_hiddens, (ball_hidden,))
+        enemy_hiddens = as_hidden_tuple(enemy_hiddens, (enemy_hidden,))
+        map_hiddens = as_hidden_tuple(map_hiddens, (map_hidden,))
+        trunk_hiddens = as_hidden_tuple(trunk_hiddens, trunk_hidden)
 
-            self.self_net = nn.Sequential(
-                layer_init(nn.Linear(self.seg_self, self_hidden)), nn.ReLU()
+        if self.network_type == NetworkType.SEGMENTED_MLP:
+            self.encoder = SegmentedMlpEncoder(
+                obs_helper,
+                self_hiddens,
+                player_hiddens,
+                ball_hiddens,
+                enemy_hiddens,
+                map_hiddens,
+                trunk_hiddens,
             )
-            self.player_net = nn.Sequential(
-                layer_init(nn.Linear(self.seg_player, player_hidden)), nn.ReLU()
+        elif self.network_type == NetworkType.MLP:
+            self.encoder = FlatMlpEncoder(seg.total, as_hidden_tuple(mlp_hiddens, ()))
+        elif self.network_type == NetworkType.GRU_MLP:
+            self.encoder = GruMlpEncoder(
+                obs_helper,
+                ball_hiddens=ball_hiddens,
+                trunk_hiddens=trunk_hiddens,
+                gru_hidden=gru_hidden,
+                gru_num_layers=gru_num_layers,
+                gru_input_layernorm=gru_input_layernorm,
             )
-            self.ball_net = nn.Sequential(
-                layer_init(nn.Linear(self.seg_ball, ball_hidden)), nn.ReLU()
-            )
-            self.enemy_net = nn.Sequential(
-                layer_init(nn.Linear(self.seg_enemy, enemy_hidden)), nn.ReLU()
-            )
-            self.map_net = nn.Sequential(
-                layer_init(nn.Linear(self.seg_map, map_hidden)), nn.ReLU()
-            )
-
-            fused_dim = self_hidden + player_hidden + ball_hidden + enemy_hidden + map_hidden
-
-            # 共享躯干
-            trunk_layers = []
-            in_dim = fused_dim
-            for h in trunk_hidden:
-                trunk_layers.append(layer_init(nn.Linear(in_dim, h)))
-                trunk_layers.append(nn.ReLU())
-                in_dim = h
-            self.trunk = nn.Sequential(*trunk_layers)
-            self._trunk_out_dim = trunk_hidden[-1] if trunk_hidden else fused_dim
-
-        elif network_type == NetworkType.MLP:
-            # 普通 flat MLP 
-            obs_dim = seg.total
-            trunk_layers = []
-            in_dim = obs_dim
-            for h in mlp_hiddens:
-                trunk_layers.append(layer_init(nn.Linear(in_dim, h)))
-                trunk_layers.append(nn.ReLU())
-                in_dim = h
-            self.mlp_trunk = nn.Sequential(*trunk_layers)
-            self._trunk_out_dim = mlp_hiddens[-1] if mlp_hiddens else obs_dim
-
-        # Actor / Critic 头 (两种架构共享)
-        self.actor = layer_init(nn.Linear(self._trunk_out_dim, n_actions), std=0.01)
-        self.critic = layer_init(nn.Linear(self._trunk_out_dim, 1), std=1.0)
-
-    def _forward_features(self, obs: torch.Tensor) -> torch.Tensor:
-        if self.network_type == NetworkType.SEGMENTED:
-            i = 0
-            s = obs[:, i: i + self.seg_self];      i += self.seg_self
-            p = obs[:, i: i + self.seg_player];    i += self.seg_player
-            b = obs[:, i: i + self.seg_ball];      i += self.seg_ball
-            e = obs[:, i: i + self.seg_enemy];     i += self.seg_enemy
-            m = obs[:, i: i + self.seg_map]
-
-            fused = torch.cat([
-                self.self_net(s),
-                self.player_net(p),
-                self.ball_net(b),
-                self.enemy_net(e),
-                self.map_net(m),
-            ], dim=1)
-            return self.trunk(fused)
         else:
-            # MLP: 直接全向量送入
-            return self.mlp_trunk(obs)
+            raise ValueError(f"Unsupported network_type={self.network_type}")
+
+        self.actor = layer_init(nn.Linear(self.encoder.output_dim, n_actions), std=0.01)
+        self.critic = layer_init(nn.Linear(self.encoder.output_dim, 1), std=1.0)
+
+    @property
+    def is_recurrent(self) -> bool:
+        return self.encoder.recurrent_state_size > 0
+
+    @property
+    def recurrent_state_size(self) -> int:
+        return self.encoder.recurrent_state_size
+
+    def get_initial_state(self, batch_size: int, device: torch.device) -> Optional[torch.Tensor]:
+        if not self.is_recurrent:
+            return None
+        return self.encoder.initial_state(batch_size, device)
+
+    def _forward_features(
+        self,
+        obs: torch.Tensor,
+        rnn_state: Optional[torch.Tensor] = None,
+    ) -> tuple[torch.Tensor, Optional[torch.Tensor]]:
+        return self.encoder(obs, rnn_state)
 
     def num_params(self) -> int:
-        """返回可训练参数总数"""
         return sum(p.numel() for p in self.parameters() if p.requires_grad)
 
-    def get_value(self, obs: torch.Tensor) -> torch.Tensor:
-        return self.critic(self._forward_features(obs))
+    def get_value(
+        self,
+        obs: torch.Tensor,
+        rnn_state: Optional[torch.Tensor] = None,
+    ) -> torch.Tensor:
+        features, _ = self._forward_features(obs, rnn_state)
+        return self.critic(features)
 
-    def get_action_and_value(self, obs: torch.Tensor, action: Optional[torch.Tensor] = None):
-        """根据观测采样动作，计算对数概率、熵和状态价值。"""
-
-        features = self._forward_features(obs)
+    def get_action_and_value(
+        self,
+        obs: torch.Tensor,
+        action: Optional[torch.Tensor] = None,
+        rnn_state: Optional[torch.Tensor] = None,
+        return_state: bool = False,
+    ):
+        features, next_rnn_state = self._forward_features(obs, rnn_state)
         logits = self.actor(features)
         probs = Categorical(logits=logits)
 
         if action is None:
             action = probs.sample()
 
-        return (
+        result = (
             action,
             probs.log_prob(action),
             probs.entropy(),
             self.critic(features),
         )
+        if return_state:
+            return (*result, next_rnn_state)
+        return result
+
+
+@dataclass
+class AgentRolloutData:
+    obs: torch.Tensor
+    actions: torch.Tensor
+    logprobs: torch.Tensor
+    rewards: torch.Tensor
+    dones: torch.Tensor
+    values: torch.Tensor
+    next_obs: torch.Tensor
+    next_done: torch.Tensor
+    next_value: Optional[float] = None
+    rnn_states: Optional[torch.Tensor] = None
+    next_rnn_state: Optional[torch.Tensor] = None
+
 
 #  GAE
 def compute_gae(
@@ -350,7 +540,7 @@ def collect_rollout_ippo(
     agents_cfg: list[AgentConfig],
     agents: list[IPPOAgent],
     envs: GodotDiscreteEnvWrapper,
-    num_steps: int,
+    rollout_steps: int,
     device: torch.device,
     next_obs_all: torch.Tensor,
     next_done_all: torch.Tensor,
@@ -358,8 +548,9 @@ def collect_rollout_ippo(
     episode_returns: list[deque],
     accum_rewards: list,
     reward_normalizers: list[Optional[RewardNormalizer]],
-) -> tuple[list[AgentRolloutData], int]:
-    """实际包括num_steps+1步"""
+    rnn_states: list[Optional[torch.Tensor]],
+) -> tuple[list[AgentRolloutData], int, list[Optional[torch.Tensor]]]:
+    """实际包括rollout_steps+1步"""
     n_agents = len(agents_cfg)
     obs_dim = envs.single_observation_space.shape
     active_agents = [i for i in range(n_agents) if agents_cfg[i].train]
@@ -368,22 +559,31 @@ def collect_rollout_ippo(
     buffers: list[dict] = []
     for _ in range(n_agents):
         buffers.append({
-            "obs": torch.zeros((num_steps, obs_dim[0])).to(device),
-            "actions": torch.zeros((num_steps,), dtype=torch.long).to(device),
-            "logprobs": torch.zeros((num_steps,)).to(device),
-            "rewards": torch.zeros((num_steps,)).to(device),
-            "dones": torch.zeros((num_steps,)).to(device),
-            "values": torch.zeros((num_steps,)).to(device),
+            "obs": torch.zeros((rollout_steps, obs_dim[0])).to(device),
+            "actions": torch.zeros((rollout_steps,), dtype=torch.long).to(device),
+            "logprobs": torch.zeros((rollout_steps,)).to(device),
+            "rewards": torch.zeros((rollout_steps,)).to(device),
+            "dones": torch.zeros((rollout_steps,)).to(device),
+            "values": torch.zeros((rollout_steps,)).to(device),
+            "rnn_states": None,
         })
+
+    for i, agent in enumerate(agents):
+        if agent.is_recurrent:
+            buffers[i]["rnn_states"] = torch.zeros(
+                (rollout_steps, agent.recurrent_state_size), device=device
+            )
+            if rnn_states[i] is None:
+                rnn_states[i] = agent.get_initial_state(1, device)
 
     next_obs_all = next_obs_all.clone()#所有智能体的观测
     next_done_all = next_done_all.clone()
 
-    for step in range(num_steps):
+    for step in range(rollout_steps):
         global_step += n_agents
 
         # 每个智能体独立推理动作
-        actions_list = [4] * n_agents  # 默认 IDLE (action index 5)
+        actions_list = [4] * n_agents  # 默认 IDLE 
 
         for i in range(n_agents):
             obs_i = next_obs_all[i].unsqueeze(0)  # shape(1, obs_dim)
@@ -394,15 +594,26 @@ def collect_rollout_ippo(
 
             if agents_cfg[i].train:
                 with torch.no_grad():
-                    action, logprob, _, value = agents[i].get_action_and_value(obs_i)
+                    if agents[i].is_recurrent and next_done_all[i].item():
+                        rnn_states[i] = agents[i].get_initial_state(1, device)
+                    if agents[i].is_recurrent:
+                        buffers[i]["rnn_states"][step] = rnn_states[i].squeeze(0)
+
+                    action, logprob, _, value, next_rnn_state = agents[i].get_action_and_value(
+                        obs_i,
+                        rnn_state=rnn_states[i],
+                        return_state=True,
+                    )
                     buffers[i]["actions"][step] = action.item()
                     buffers[i]["logprobs"][step] = logprob.item()
                     buffers[i]["values"][step] = value.item()
+                    if agents[i].is_recurrent:
+                        rnn_states[i] = next_rnn_state.detach()
                 
                 actions_list[i] = int(action.item())
             else:
-                # 非训练智能体: IDLE, 无价值估计
-                buffers[i]["actions"][step] = 5
+                # 非训练智能体: 随机动作, 无价值估计
+                buffers[i]["actions"][step] = np.random.randint(0, 5)
                 buffers[i]["logprobs"][step] = 0.0
                 buffers[i]["values"][step] = 0.0
 
@@ -417,10 +628,11 @@ def collect_rollout_ippo(
         for i in range(n_agents):
             r = float(rewards_raw[i])
 
-            # 奖励归一化
+            # 奖励归一化（先用当前统计量归一化，再用原始值更新）
             if agents_cfg[i].train and reward_normalizers[i] is not None:
+                r_norm = reward_normalizers[i].normalize(r)
                 reward_normalizers[i].update(r)
-                r = reward_normalizers[i].normalize(r)
+                r = r_norm
 
             buffers[i]["rewards"][step] = r
 
@@ -442,7 +654,10 @@ def collect_rollout_ippo(
         next_done_i = next_done_all[i]
         if agents_cfg[i].train:
             with torch.no_grad():
-                next_val = agents[i].get_value(next_obs_all[i].unsqueeze(0)).item()
+                next_val = agents[i].get_value(
+                    next_obs_all[i].unsqueeze(0),
+                    rnn_state=rnn_states[i],
+                ).item()
         rollouts.append(AgentRolloutData(
             obs=buffers[i]["obs"],
             actions=buffers[i]["actions"],
@@ -453,9 +668,11 @@ def collect_rollout_ippo(
             next_obs=next_obs_all[i],
             next_done=next_done_i,
             next_value=next_val,
+            rnn_states=buffers[i]["rnn_states"],
+            next_rnn_state=rnn_states[i],
         ))
 
-    return rollouts, global_step
+    return rollouts, global_step, rnn_states
 
 
 #  日志系统
@@ -565,20 +782,19 @@ def train_agent_update(
 ) -> dict:
     """对单个智能体执行一次 PPO 更新 (多个 epoch + minibatch)
     """
-    num_steps = rollout.obs.shape[0]
-    batch_size = num_steps  # per-agent: num_steps x 1 env
+    batch_size = rollout.obs.shape[0]  # per-agent (=args.batch_size)
 
     #GAE
     with torch.no_grad():
-        next_value_t = torch.tensor([rollout.next_value], device=device)
-        next_done_t = rollout.next_done.unsqueeze(0).to(device)
+        next_value_t = torch.tensor([rollout.next_value], device=device)         # (1,)
+        next_done_t = rollout.next_done.unsqueeze(0).to(device)                  # (1,)
 
         advantages, target_values = compute_gae(
             rollout.rewards.unsqueeze(1),     # (num_steps, 1)
             rollout.values.unsqueeze(1),       # (num_steps, 1)
             rollout.dones.unsqueeze(1),        # (num_steps, 1)
-            next_value_t.unsqueeze(0),         # (1, 1)
-            next_done_t.unsqueeze(0),          # (1, 1)
+            next_value_t,                      # (1,)
+            next_done_t,                       # (1,)
             cfg.gamma,
             cfg.gae_lambda,
         )
@@ -592,18 +808,30 @@ def train_agent_update(
 
     b_inds = np.arange(batch_size)#batch indices
     clipfracs = []
-    final_metrics = {}
+    pg_losses = []
+    v_losses = []
+    entropies = []
+    approx_kls = []
 
     minibatch_size = max(1, batch_size // args.num_minibatches)
 
     for epoch in range(args.update_epochs):
         np.random.shuffle(b_inds)
+        kl_start = len(approx_kls)  # 记录本 epoch 起始位置
 
         for start in range(0, batch_size, minibatch_size):
             end = start + minibatch_size
             mb_inds = b_inds[start:end]
 
-            _, new_logprob, entropy, new_value = agent.get_action_and_value(b_obs[mb_inds], b_actions[mb_inds])
+            mb_rnn_states = None
+            if agent.is_recurrent and rollout.rnn_states is not None:
+                mb_rnn_states = rollout.rnn_states[mb_inds]
+
+            _, new_logprob, entropy, new_value = agent.get_action_and_value(
+                b_obs[mb_inds],
+                b_actions[mb_inds],
+                rnn_state=mb_rnn_states,
+            )
             new_value = new_value.view(-1)  # 转换为一维向量(minibatch_size,)
 
             # Actor loss
@@ -633,17 +861,24 @@ def train_agent_update(
             nn.utils.clip_grad_norm_(agent.parameters(), cfg.max_grad_norm)
             optimizer.step()
 
-            final_metrics = {
-                "pg_loss": pg_loss.item(),
-                "v_loss": v_loss.item(),
-                "entropy": entropy.mean().item(),
-                "approx_kl": approx_kl.item(),
-                "clipfrac": np.mean(clipfracs),
-            }
+            pg_losses.append(pg_loss.item())
+            v_losses.append(v_loss.item())
+            entropies.append(entropy.mean().item())
+            approx_kls.append(approx_kl.item())
 
-        # KL 早停
-        if args.target_kl is not None and approx_kl > args.target_kl:
-            break
+        # KL 早停（使用本 epoch 所有 minibatch 的平均 KL）
+        if args.target_kl is not None:
+            epoch_approx_kl = float(np.mean(approx_kls[kl_start:]))
+            if epoch_approx_kl > args.target_kl:
+                break
+
+    final_metrics = {
+        "pg_loss": np.mean(pg_losses),
+        "v_loss": np.mean(v_losses),
+        "entropy": np.mean(entropies),
+        "approx_kl": np.mean(approx_kls),
+        "clipfrac": np.mean(clipfracs),
+    }
 
     #Explained variance
     y_pred = b_values.cpu().numpy()
@@ -672,10 +907,21 @@ def train(
     n_agents = len(args.agents)
     global_step = 0
     start_time = time.time()
-    num_updates = args.total_timesteps // args.batch_size
+
+    # 按 count_steps_by 计算总更新次数
+    if args.count_steps_by == "env_steps":
+        num_updates = args.total_timesteps // args.batch_size
+    elif args.count_steps_by == "agent_steps":
+        num_updates = args.total_timesteps // (n_agents * args.batch_size)
+    else:
+        raise ValueError(
+            f"Unknown count_steps_by='{args.count_steps_by}'. "
+            "Expected 'env_steps' or 'agent_steps'."
+        )
 
     episode_returns = [deque(maxlen=100) for _ in range(n_agents)]
     accum_rewards = np.zeros(n_agents, dtype=np.float64)
+    rnn_states = [agent.get_initial_state(1, device) for agent in agents]
 
     for update in range(1, num_updates + 1):
         # 学习率退火
@@ -686,10 +932,11 @@ def train(
                     optimizers[i].param_groups[0]["lr"] = progress * args.agents[i].learning_rate
 
         # 经验采集
-        rollouts, global_step = collect_rollout_ippo(
-            args.agents, agents, envs, args.num_steps, device,
+        rollouts, global_step, rnn_states = collect_rollout_ippo(
+            args.agents, agents, envs, args.batch_size, device,
             next_obs, next_done, global_step,
             episode_returns, accum_rewards, reward_normalizers,
+            rnn_states,
         )
 
         next_obs = torch.stack([r.next_obs for r in rollouts])
@@ -723,10 +970,27 @@ def main():
     args = IppoArgs()
     writer, device, envs, seg, run_name = init_training_setup(args)
 
+    if args.n_parallel != 1:
+        raise ValueError(
+            f"IPPO script only supports n_parallel=1, got {args.n_parallel}."
+        )
+
     n_agents = len(args.agents)
     args.num_agents = n_agents
     args.num_envs = envs.num_envs
-    args.batch_size = args.num_envs * args.num_steps
+    if args.num_envs != n_agents:
+        raise ValueError(
+            "IPPO expects one Godot training slot per configured agent: "
+            f"envs.num_envs={args.num_envs}, len(args.agents)={n_agents}."
+        )
+
+    obs_shape = envs.single_observation_space.shape
+    if len(obs_shape) != 1 or obs_shape[0] != seg.total:
+        raise ValueError(
+            "Observation dimension mismatch: "
+            f"env observation shape={obs_shape}, configured segment total={seg.total}."
+        )
+
     args.minibatch_size = max(1, args.batch_size // args.num_minibatches)
 
     n_actions = int(envs.single_action_space.n)
@@ -748,6 +1012,15 @@ def main():
             map_hidden=cfg.map_hidden,
             trunk_hidden=cfg.trunk_hidden,
             mlp_hiddens=cfg.mlp_hiddens,
+            self_hiddens=cfg.self_hiddens,
+            player_hiddens=cfg.player_hiddens,
+            ball_hiddens=cfg.ball_hiddens,
+            enemy_hiddens=cfg.enemy_hiddens,
+            map_hiddens=cfg.map_hiddens,
+            trunk_hiddens=cfg.trunk_hiddens,
+            gru_hidden=cfg.gru_hidden,
+            gru_num_layers=cfg.gru_num_layers,
+            gru_input_layernorm=cfg.gru_input_layernorm,
         ).to(device)
 
         # 打印每个智能体的网络类型和参数量, 便于对比验证
@@ -765,6 +1038,11 @@ def main():
     # 初始观测
     next_obs_array, _ = envs.reset(seed=args.seed)
     next_obs = torch.tensor(np.array(next_obs_array, dtype=np.float32)).to(device)
+    if next_obs.shape[0] != n_agents:
+        raise ValueError(
+            "Reset observation count does not match configured agents: "
+            f"next_obs.shape[0]={next_obs.shape[0]}, len(args.agents)={n_agents}."
+        )
     next_done = torch.zeros(n_agents).to(device)
 
     try:
