@@ -1,0 +1,13 @@
+\begin{thebibliography}{1}
+
+\bibitem{sutton2018reinforcement}
+Richard~S. Sutton and Andrew~G. Barto.
+\newblock {\em Reinforcement Learning: An Introduction}.
+\newblock MIT Press, Cambridge, MA, 2nd edition, 2018.
+
+\bibitem{EASYRL}
+江季 王琦, 杨毅远.
+\newblock {\em EASYRL:强化学习教程}.
+\newblock 人民邮电出版社, 2022.
+
+\end{thebibliography}

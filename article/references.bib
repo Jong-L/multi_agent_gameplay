@@ -1,0 +1,253 @@
+% ============================================================
+% 开题报告参考文献 — BibTeX 条目
+% 生成日期: 2026-05-13
+% 项目: Tiny Swords — Godot 2D 多智能体强化学习
+% ============================================================
+
+% ============================================================
+% Step 1: RL 核心思想 / 教材
+% ============================================================
+
+@book{sutton2018reinforcement,
+  author    = {Richard S. Sutton and Andrew G. Barto},
+  title     = {Reinforcement Learning: An Introduction},
+  edition   = {2nd},
+  publisher = {MIT Press},
+  address   = {Cambridge, MA},
+  year      = {2018},
+  isbn      = {978-0-262-03924-6},
+  url       = {http://incompleteideas.net/book/the-book.html}
+}
+@book{EASYRL,
+  author    = {王琦,杨毅远,江季},
+  title     = {EASYRL:强化学习教程},
+  publisher = {人民邮电出版社},
+  address   = {},
+  year      = {2022},
+  isbn      = {978-7-115-58470-0},
+}
+
+% ============================================================
+% Step 2: 贝尔曼方程与基于价值的算法
+% ============================================================
+
+@book{bellman1957dynamic,
+  author    = {Richard E. Bellman},
+  title     = {Dynamic Programming},
+  publisher = {Princeton University Press},
+  address   = {Princeton, NJ},
+  year      = {1957}
+}
+
+@article{watkins1992qlearning,
+  author    = {Christopher J. C. H. Watkins and Peter Dayan},
+  title     = {Q-learning},
+  journal   = {Machine Learning},
+  volume    = {8},
+  number    = {3},
+  pages     = {279--292},
+  year      = {1992},
+  doi       = {10.1007/BF00992698}
+}
+
+% ============================================================
+% Step 3: Model-Based → Model-Free (Dyna)
+% ============================================================
+
+@article{sutton1991dyna,
+  author    = {Richard S. Sutton},
+  title     = {Dyna, an Integrated Architecture for Learning, Planning, and Reacting},
+  journal   = {ACM SIGART Bulletin},
+  volume    = {2},
+  number    = {4},
+  pages     = {160--163},
+  year      = {1991},
+  doi       = {10.1145/122344.122377}
+}
+
+% ============================================================
+% Step 4: TD 学习 (增量学习)
+% ============================================================
+
+@article{sutton1988learning,
+  author    = {Richard S. Sutton},
+  title     = {Learning to Predict by the Methods of Temporal Differences},
+  journal   = {Machine Learning},
+  volume    = {3},
+  number    = {1},
+  pages     = {9--44},
+  year      = {1988},
+  doi       = {10.1007/BF00115009}
+}
+
+% ============================================================
+% Step 5: 神经网络万能逼近 + 深度强化学习
+% ============================================================
+
+@article{cybenko1989approximation,
+  author    = {George Cybenko},
+  title     = {Approximation by Superpositions of a Sigmoidal Function},
+  journal   = {Mathematics of Control, Signals and Systems},
+  volume    = {2},
+  number    = {4},
+  pages     = {303--314},
+  year      = {1989},
+  doi       = {10.1007/BF02551274}
+}
+
+@article{hornik1989multilayer,
+  author    = {Kurt Hornik and Maxwell Stinchcombe and Halbert White},
+  title     = {Multilayer Feedforward Networks are Universal Approximators},
+  journal   = {Neural Networks},
+  volume    = {2},
+  number    = {5},
+  pages     = {359--366},
+  year      = {1989},
+  doi       = {10.1016/0893-6080(89)90020-8}
+}
+
+@article{mnih2013playing,
+  author    = {Volodymyr Mnih and Koray Kavukcuoglu and David Silver and Alex Graves and Ioannis Antonoglou and Daan Wierstra and Martin Riedmiller},
+  title     = {Playing {Atari} with Deep Reinforcement Learning},
+  journal   = {arXiv preprint arXiv:1312.5602},
+  year      = {2013},
+  note      = {NIPS Deep Learning Workshop 2013}
+}
+
+@article{mnih2015human,
+  author    = {Volodymyr Mnih and Koray Kavukcuoglu and David Silver and Andrei A. Rusu and Joel Veness and Marc G. Bellemare and Alex Graves and Martin Riedmiller and Andreas K. Fidjeland and Georg Ostrovski and Stig Petersen and Charles Beattie and Amir Sadik and Ioannis Antonoglou and Helen King and Dharshan Kumaran and Daan Wierstra and Shane Legg and Demis Hassabis},
+  title     = {Human-level Control through Deep Reinforcement Learning},
+  journal   = {Nature},
+  volume    = {518},
+  number    = {7540},
+  pages     = {529--533},
+  year      = {2015},
+  doi       = {10.1038/nature14236}
+}
+
+% ============================================================
+% Step 6: 策略梯度 + Actor-Critic
+% ============================================================
+
+@article{williams1992simple,
+  author    = {Ronald J. Williams},
+  title     = {Simple Statistical Gradient-Following Algorithms for Connectionist Reinforcement Learning},
+  journal   = {Machine Learning},
+  volume    = {8},
+  number    = {3},
+  pages     = {229--256},
+  year      = {1992},
+  doi       = {10.1007/BF00992696}
+}
+
+@inproceedings{sutton1999policy,
+  author    = {Richard S. Sutton and David McAllester and Satinder Singh and Yishay Mansour},
+  title     = {Policy Gradient Methods for Reinforcement Learning with Function Approximation},
+  booktitle = {Advances in Neural Information Processing Systems (NeurIPS)},
+  volume    = {12},
+  pages     = {1057--1063},
+  year      = {1999},
+  publisher = {MIT Press}
+}
+
+% ============================================================
+% Step 7: GAE (Generalized Advantage Estimation)
+% ============================================================
+
+@inproceedings{schulman2016gae,
+  author    = {John Schulman and Philipp Moritz and Sergey Levine and Michael I. Jordan and Pieter Abbeel},
+  title     = {High-Dimensional Continuous Control Using Generalized Advantage Estimation},
+  booktitle = {International Conference on Learning Representations (ICLR)},
+  year      = {2016},
+  note      = {arXiv:1506.02438}
+}
+
+% ============================================================
+% Step 8: 重要性采样与 Off-Policy 学习
+% ============================================================
+
+@inproceedings{precup2000eligibility,
+  author    = {Doina Precup and Richard S. Sutton and Satinder Singh},
+  title     = {Eligibility Traces for Off-Policy Policy Evaluation},
+  booktitle = {Proceedings of the 17th International Conference on Machine Learning (ICML)},
+  pages     = {759--766},
+  year      = {2000},
+  publisher = {Morgan Kaufmann}
+}
+
+@inproceedings{degris2012offpac,
+  author    = {Thomas Degris and Martha White and Richard S. Sutton},
+  title     = {Off-Policy Actor-Critic},
+  booktitle = {Proceedings of the 29th International Conference on Machine Learning (ICML)},
+  pages     = {457--464},
+  year      = {2012},
+  publisher = {Omnipress},
+  note      = {arXiv:1205.4839}
+}
+
+% ============================================================
+% Step 9: TRPO / PPO
+% ============================================================
+
+@inproceedings{schulman2015trpo,
+  author    = {John Schulman and Sergey Levine and Pieter Abbeel and Michael I. Jordan and Philipp Moritz},
+  title     = {Trust Region Policy Optimization},
+  booktitle = {Proceedings of the 32nd International Conference on Machine Learning (ICML)},
+  volume    = {37},
+  pages     = {1889--1897},
+  year      = {2015},
+  publisher = {PMLR},
+  note      = {arXiv:1502.05477}
+}
+
+@article{schulman2017ppo,
+  author    = {John Schulman and Filip Wolski and Prafulla Dhariwal and Alec Radford and Oleg Klimov},
+  title     = {Proximal Policy Optimization Algorithms},
+  journal   = {arXiv preprint arXiv:1707.06347},
+  year      = {2017}
+}
+
+% ============================================================
+% 补充: 多智能体强化学习 (MARL)
+% ============================================================
+
+@inproceedings{lowe2017maddpg,
+  author    = {Ryan Lowe and Yi Wu and Aviv Tamar and Jean Harb and Pieter Abbeel and Igor Mordatch},
+  title     = {Multi-Agent Actor-Critic for Mixed Cooperative-Competitive Environments},
+  booktitle = {Advances in Neural Information Processing Systems (NeurIPS)},
+  volume    = {30},
+  pages     = {6379--6390},
+  year      = {2017},
+  note      = {arXiv:1706.02275}
+}
+
+@inproceedings{rashid2018qmix,
+  author    = {Tabish Rashid and Mikayel Samvelyan and Christian Schroeder de Witt and Gregory Farquhar and Jakob Foerster and Shimon Whiteson},
+  title     = {{QMIX}: Monotonic Value Function Factorisation for Deep Multi-Agent Reinforcement Learning},
+  booktitle = {Proceedings of the 35th International Conference on Machine Learning (ICML)},
+  volume    = {80},
+  pages     = {4295--4304},
+  year      = {2018},
+  publisher = {PMLR},
+  note      = {arXiv:1803.11485}
+}
+
+@article{dewitt2020ippo,
+  author    = {Christian Schroeder de Witt and Tarun Gupta and Denys Makoviichuk and Viktor Makoviychuk and Philip H. S. Torr and Mingfei Sun and Shimon Whiteson},
+  title     = {Is Independent Learning All You Need in the {StarCraft} Multi-Agent Challenge?},
+  journal   = {arXiv preprint arXiv:2011.09533},
+  year      = {2020}
+}
+
+% ============================================================
+% 补充: PBRS 奖励塑形
+% ============================================================
+
+@inproceedings{ng1999policy,
+  author    = {Andrew Y. Ng and Daishi Harada and Stuart J. Russell},
+  title     = {Policy Invariance Under Reward Transformations: Theory and Application to Reward Shaping},
+  booktitle = {Proceedings of the 16th International Conference on Machine Learning (ICML)},
+  pages     = {278--287},
+  year      = {1999},
+  publisher = {Morgan Kaufmann}
+}

@@ -212,7 +212,9 @@ class CustomSegmentedModel(TorchModelV2, nn.Module):
       - 各段的 hiddens 配置
     """
 
-    def __init__(self, obs_space, action_space, num_outputs, model_config, name):
+    def __init__(self, obs_space, action_space, num_outputs, model_config, name, **kwargs):
+        # RLlib 2.40+ 会尝试将 custom_model_config 的键展开为 kwargs 传入,
+        # 我们通过 **kwargs 接收并静默忽略, 同时保持 backward compatible.
         TorchModelV2.__init__(self, obs_space, action_space, num_outputs,model_config, name)
         nn.Module.__init__(self)
 
@@ -523,12 +525,8 @@ def _parse_args():
     """解析命令行参数。"""
     parser = argparse.ArgumentParser(allow_abbrev=False)
     parser.add_argument(
-        "--config_file", default="D:\\schoolTour\\softwares\\multi-agent-gameplay\\Python\\training\\rllib_s1_config.yaml",
+        "--config_file", default="Python\\training\\rllib_s1_config.yaml",
         type=str, help="The yaml config file",
-    )
-    parser.add_argument(
-        "--restore", default=None, type=str,
-        help="Deprecated alias for --resume_experiment.",
     )
     parser.add_argument(
         "--resume_experiment", default=None, type=str,
@@ -559,17 +557,9 @@ class RLLibTrainingPipeline:
         experiment_dir: str,
         resume_experiment: Optional[str] = None,
         resume_checkpoint: Optional[str] = None,
-        restore: Optional[str] = None,
     ):
         self._config_path = config_path
         self._experiment_dir = experiment_dir
-        if restore and resume_experiment:
-            raise ValueError("Use only one of --restore or --resume_experiment.")
-        if restore:
-            print("[Resume] --restore is deprecated; treating it as --resume_experiment.")
-            resume_experiment = restore
-        if resume_experiment and resume_checkpoint:
-            raise ValueError("Use only one of --resume_experiment or --resume_checkpoint.")
 
         self._resume_experiment = resume_experiment
         self._resume_checkpoint = resume_checkpoint
@@ -895,6 +885,5 @@ if __name__ == "__main__":
         experiment_dir=args.experiment_dir,
         resume_experiment=args.resume_experiment,
         resume_checkpoint=args.resume_checkpoint,
-        restore=args.restore,
     )
     pipeline.execute()
