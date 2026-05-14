@@ -776,8 +776,9 @@ class RLLibTrainingPipeline:
     def _configure_agent_mode(self) -> None:
         """根据 is_multiagent 注入 policies 或 num_envs_per_env_runner。"""
         if self._is_multiagent:
-            def policy_mapping_fn(agent_id: int, _episode=None, _worker=None, **_kwargs) -> str:
-                return self._policy_names[agent_id]
+            _policy_names = self._policy_names  # 捕获值而非 self，避免 Ray 序列化整个 pipeline
+            def policy_mapping_fn(agent_id, _episode=None, _worker=None, **_kwargs):
+                return _policy_names[agent_id]
 
             self._exp["config"]["multiagent"] = {
                 "policies": {
@@ -867,6 +868,7 @@ class RLLibTrainingPipeline:
         ray.init(
             _temp_dir=os.path.abspath(self._experiment_dir),
             runtime_env={"env_vars": {"PYTHONPATH": training_dir}},
+            include_dashboard=False,
         )
 
         # 训练

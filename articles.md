@@ -13,4 +13,4 @@
 - Trust Region Policy Optimization：PPO前身TRPO
 -  An Empirical Comparison of Neural Architectures for Reinforcement Learning in Partially Observable Environments：GRU网络用于强化学习
 - RLBenchNet: The Right Network for the Right Reinforcement Learning Task：循环神经网络用于强化学习，GRU在部分可观测场景效果稳健：[RLBenchNet: The Right Network for the Right Reinforcement Learning Task](https://arxiv.org/html/2505.15040v1)
-- 
+- A new Potential-Based Reward Shaping for Reinforcement Learning Agent：动态势能

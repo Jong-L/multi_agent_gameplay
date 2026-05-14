@@ -59,7 +59,7 @@ config:
     #godot端每个回合步数为reset_after/8 -1
     num_sgd_iter: 6 #how many times the past experiences is used to update the neural network
     batch_mode: complete_episodes
-    # batch_mode: truncated_episodes
+    # batch_mode: truncate_episodes
 
     num_gpus: 1
 
