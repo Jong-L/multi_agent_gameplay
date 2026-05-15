@@ -18,11 +18,12 @@ const PLAYER_SLOT_DIM: int = 9     #rel_x, rel_y, hp_ratio, flip_h, dist_ratio, 
 const BALL_SLOT_DIM: int = 4    
 const ENEMY_SLOT_DIM: int = 9   #rel_x, rel_y, hp_ratio, flip_h, dist_ratio, is_attack_animating, skill_cooldown_ratio, vel_x, vel_y
 
-## 速度观测占用的维度（vel_x, vel_y）
-const VELOCITY_DIMS: int = 2  
+## 玩家额外观测维度
+const PLAYER_EXTRA_DIM: int = 1  #player_id
 
 ## ---- 自身状态维度 ----
-const SELF_STATE_DIM: int = 6   #pos_x, pos_y, hp_ratio, flip_h, is_attack_animating, skill_cooldown_ratio
+## pos_x, pos_y, hp_ratio, flip_h, is_attack_animating, skill_cooldown_ratio, vel_x, vel_y
+const SELF_STATE_DIM: int = 8
 
 
 ## 扫描指定玩家视野内所有实体
@@ -32,56 +33,30 @@ func scan(
 	all_enemies: Array[Enemy],
 	all_balls: Array[RewardBall],
 	arena_length: float,
-	use_valid_mask: bool = false,
-	use_velocity_obs: bool = true,
+	arena_center: Vector2 = Vector2.ZERO,
+	use_valid_mask: bool = true,
 ) -> Dictionary:
 	var half_arena := arena_length / 2.0
 	var player_pos := player.global_position
 
-	# 计算有效槽位维度
-	var _eff_player_dim := PLAYER_SLOT_DIM - (0 if use_velocity_obs else VELOCITY_DIMS)
-	var _eff_enemy_dim := ENEMY_SLOT_DIM - (0 if use_velocity_obs else VELOCITY_DIMS)
-	# 自身状态 
+	# 自身状态 — 相对于竞技场中心归一化到[-1,1]
+	var self_vel := player.get_normalized_velocity()
 	var self_state: Array = [
 		#player.player_id, #调试时用，但智能体不需要管"我是谁"
-		player_pos.x / half_arena,#归一化到[-1,1]
-		player_pos.y / half_arena,
+		(player_pos.x - arena_center.x) / half_arena,
+		(player_pos.y - arena_center.y) / half_arena,
 		player.current_health / player.max_health,#归一化到[0,1]
 		int(player.animated_sprite.flip_h),#是否翻转影响攻击范围
 		int(player.is_attack_animating()),#自身攻击动画状态 [0,1]
 		player.get_skill_cooldown_ratio(),#自身技能冷却比例 [0,1]
+		clampf(self_vel.x,-1.0,1.0),#自身归一化速度 [-1,1]
+		clampf(self_vel.y,-1.0,1.0),
 	]
-	# 视野内其他玩家
-	var nearby_players_data: Array = []
-	for other in all_players:
-		if other.player_id == player.player_id:
-			continue  # 跳过自己
-		if not is_instance_valid(other):
-			continue
-		if other.is_dead:
-			continue
-		
-		var dist :float= player_pos.distance_to(other.global_position)#距离
-		if dist > vision_radius:
-			continue
-		
-		var rel := (other.global_position - player_pos) / vision_radius#向量距离
-		var _slot: Array = [
-			rel.x,#[-1,1]
-			rel.y,
-			other.current_health / other.max_health,#归一化到[0,1]
-			int(other.animated_sprite.flip_h),
-			dist / vision_radius,
-			int(other.is_attack_animating()),#是否正在播放攻击动画 [0,1]
-			other.get_skill_cooldown_ratio(),#技能冷却比例 [0,1]
-		]
-		if use_velocity_obs:
-			_slot.append(other.get_normalized_velocity().x)
-			_slot.append(other.get_normalized_velocity().y)
-		nearby_players_data.append({
-			"dist": dist,
-			"slot": _slot,
-		})
+	# 视野内其他玩家 — 按 player_id 固定槽位
+	var nearby_players := _fill_player_slots_fixed(player, all_players, use_valid_mask)
+
+	# 视野内敌人 — 按数组索引固定槽位
+	var nearby_enemies := _fill_enemy_slots_fixed(player, all_enemies, use_valid_mask)
 
 	# 视野内奖励球
 	var nearby_balls_data: Array = []
@@ -104,40 +79,8 @@ func scan(
 			]
 		})
 
-	# 视野内敌人
-	var nearby_enemies_data: Array = []
-	for enemy in all_enemies:
-		if not is_instance_valid(enemy):
-			continue
-		if enemy.is_dead:
-			continue
-		if enemy.is_respawning:
-			continue
-		var dist := player_pos.distance_to(enemy.global_position)
-		if dist > vision_radius:
-			continue
-		var rel := (enemy.global_position - player_pos) / vision_radius
-		var _slot: Array = [
-			rel.x,
-			rel.y,
-			enemy.current_health / enemy.max_health,#归一化到[0,1]
-			float(enemy.animated_sprite.flip_h),
-			dist / vision_radius,
-			int(enemy.is_attack_animating()),#是否正在播放攻击动画 [0,1]
-			enemy.get_skill_cooldown_ratio(),#技能冷却比例 [0,1]
-		]
-		if use_velocity_obs:
-			_slot.append(enemy.get_normalized_velocity().x)
-			_slot.append(enemy.get_normalized_velocity().y)
-		nearby_enemies_data.append({
-			"dist": dist,
-			"slot": _slot,
-		})
-
-	# 按距离排序并填充固定维度 slot
-	var nearby_players := _fill_slots(nearby_players_data, MAX_NEARBY_PLAYERS, _eff_player_dim, use_valid_mask)
+	# 奖励球按距离排序填充
 	var nearby_balls := _fill_slots(nearby_balls_data, MAX_NEARBY_BALLS, BALL_SLOT_DIM, use_valid_mask)
-	var nearby_enemies := _fill_slots(nearby_enemies_data, MAX_NEARBY_ENEMIES, _eff_enemy_dim, use_valid_mask)
 
 	var obs := {
 		"self_state": self_state,
@@ -165,5 +108,91 @@ static func _fill_slots(data_list: Array, max_slots: int, slot_dim: int, use_val
 			result[i * output_slot_dim + j] = slot[j]
 		if use_valid_mask:
 			result[i * output_slot_dim + slot_dim] = 1.0#有效
+
+	return result
+
+
+# 玩家槽位按 player_id 固定填充
+func _fill_player_slots_fixed(player: Player, all_players: Array,  use_valid_mask: bool) -> Array:
+	var player_pos := player.global_position
+	var n_players := maxf(1.0, float(all_players.size()))
+	var slot_dim := PLAYER_SLOT_DIM + PLAYER_EXTRA_DIM
+	var output_slot_dim := slot_dim + (1 if use_valid_mask else 0)
+	var result: Array = []
+	result.resize(MAX_NEARBY_PLAYERS * output_slot_dim)
+	result.fill(0.0)
+
+	for other in all_players:
+		if other.player_id == player.player_id:
+			continue
+		if not is_instance_valid(other) or other.is_dead:
+			continue
+
+		var dist := player_pos.distance_to(other.global_position)
+		if dist > vision_radius:
+			continue
+
+		var slot_idx :int= other.player_id if other.player_id < player.player_id else other.player_id - 1
+		var rel :Vector2= (other.global_position - player_pos) / vision_radius
+		var other_vel :Vector2= other.get_normalized_velocity()
+		var slot_data: Array = [
+			other.player_id / (n_players - 1.0),  # 归一化玩家ID [0,1]
+			rel.x,#相对位置
+			rel.y,
+			other.current_health / other.max_health,
+			int(other.animated_sprite.flip_h),#翻转决定攻击范围
+			dist / vision_radius,
+			int(other.is_attack_animating()),
+			other.get_skill_cooldown_ratio(),
+			clampf(other_vel.x, -1.0, 1.0),
+			clampf(other_vel.y, -1.0, 1.0),
+		]
+
+		var base_idx := slot_idx * output_slot_dim #起始索引
+		for j in slot_data.size():
+			result[base_idx + j] = slot_data[j]
+		if use_valid_mask:
+			result[base_idx + slot_dim] = 1.0
+
+	return result
+
+
+# 敌人槽位按数组索引固定填充
+func _fill_enemy_slots_fixed(player: Player, all_enemies: Array, use_valid_mask: bool) -> Array:
+	var player_pos := player.global_position
+	var output_slot_dim := ENEMY_SLOT_DIM + (1 if use_valid_mask else 0)
+	var result: Array = []
+	result.resize(MAX_NEARBY_ENEMIES * output_slot_dim)
+	result.fill(0.0)
+
+	var num_enemies := mini(all_enemies.size(), MAX_NEARBY_ENEMIES) #场景中敌人数量
+	for i in num_enemies:
+		var enemy = all_enemies[i]
+		if not is_instance_valid(enemy) or enemy.is_dead or enemy.is_respawning:
+			continue
+
+		var dist := player_pos.distance_to(enemy.global_position)
+		if dist > vision_radius:
+			continue
+
+		var rel :Vector2= (enemy.global_position - player_pos) / vision_radius #相对距离
+		var enemy_vel :Vector2= enemy.get_normalized_velocity() #速度
+		var slot_data: Array = [
+			rel.x,
+			rel.y,
+			enemy.current_health / enemy.max_health,
+			float(enemy.animated_sprite.flip_h),
+			dist / vision_radius,
+			int(enemy.is_attack_animating()),
+			enemy.get_skill_cooldown_ratio(),
+			clampf(enemy_vel.x, -1.0, 1.0),
+			clampf(enemy_vel.y, -1.0, 1.0),
+		]
+
+		var base_idx := i * output_slot_dim
+		for j in slot_data.size():
+			result[base_idx + j] = slot_data[j]
+		if use_valid_mask:
+			result[base_idx + ENEMY_SLOT_DIM] = 1.0
 
 	return result

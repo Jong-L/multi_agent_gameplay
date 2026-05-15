@@ -13,7 +13,7 @@ note：
 p0(Blue)，p2(Red)：好战型  （p2未来会在回放模型时用随机策略代替，与其他训练过的智能体对抗作为对比，因此主要设计3种性格）
 
 ```
-collect_ball_A = 2
+collect_ball_A = 6
 collect_ball_B = 4
 cause_damage_to_enemy =8.0
 cause_damage_to_player = 10.0
@@ -31,8 +31,8 @@ p1(Black):避战吃球型
 
 ```
 # 避战吃球型	
-collect_ball_A = 10.0
-collect_ball_B = 12.0
+collect_ball_A = 12.0
+collect_ball_B = 10.0
 cause_damage_to_enemy = 3.0
 cause_damage_to_player = 4.0
 kill_enemy = 6.0
@@ -49,8 +49,8 @@ p3(Yellow):吃球和战斗奖励持平，但是完美主义
 
 ```
 
-collect_ball_A = 4
-collect_ball_B = 6
+collect_ball_A = 6
+collect_ball_B = 4
 cause_damage_to_enemy = 4-attack #抵消攻击惩罚
 cause_damage_to_player = 6-attack
 kill_enemy = 8

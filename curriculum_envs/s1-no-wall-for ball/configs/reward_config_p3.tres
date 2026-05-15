@@ -4,8 +4,8 @@
 
 [resource]
 script = ExtResource("1_y2fv5")
-collect_ball_A = 4
-collect_ball_B = 6
+collect_ball_A = 6.0
+collect_ball_B = 4.0
 bear_damage = -8
 cause_damage_to_enemy = 4.05
 cause_damage_to_player = 6.05

@@ -1,7 +1,22 @@
-[gd_resource type="Resource" script_class="RewardConfig" format=3]
+[gd_resource type="Resource" script_class="RewardConfig" format=3 uid="uid://rox8wancd1vf"]
 
-[ext_resource type="Script" path="res://scripts/config/reward_config.gd" id="1_y2fv5"]
+[ext_resource type="Script" uid="uid://dnh5hksiuuxko" path="res://scripts/config/reward_config.gd" id="1_y2fv5"]
 
 [resource]
 script = ExtResource("1_y2fv5")
-starve_time = 10.0
+collect_ball_A = 12.0
+collect_ball_B = 10.0
+bear_damage = -10.0
+cause_damage_to_enemy = 3.0
+cause_damage_to_player = 4.0
+kill_enemy = 6.0
+kill_player = 8.0
+run = 0.001
+idle = -0.005
+attack = -0.06
+died = -20.0
+starve_time = 1500.0
+ball_potential_scale = 0.5
+distance_reward_scale = 0.02
+center_reward = 0.001
+wall_collision_penalty = -0.5
