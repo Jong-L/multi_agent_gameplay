@@ -50,12 +50,10 @@ config:
     clip_actions: True # During onnx inference we simply clip the actions to [-1.0, 1.0] range, set here to match
 
     rollout_fragment_length: 512       
-    sgd_minibatch_size: 1024           # 必须 > max_seq_len(128) 且 > rollout 中实际最大seq长度(512)
-    num_workers: 1                     # Number of parallel processes
+    sgd_minibatch_size: 256           # 必须 > max_seq_len(128) 且 > rollout 中实际最大seq长度(512)
+    num_workers: 2                     # Number of parallel processes
     num_envs_per_env_runner: 2         # Number of env instances per worker
-    # train_batch_size = rollout_fragment_length * num_workers * num_envs_per_env_runner * num_agents
-    # 512 * 1 * 2 * 4 = 4096; train_batch_size 自动推导，显式设为 4096 保证 >= sgd_minibatch_size
-    train_batch_size: 4096
+    train_batch_size: 2048
     #godot端每个回合步数为reset_after/8 -1
     num_sgd_iter: 6 #how many times the past experiences is used to update the neural network
     # batch_mode: complete_episodes

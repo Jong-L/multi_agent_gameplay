@@ -33,8 +33,9 @@ class GodotDiscreteEnvWrapper:
         self._env = CleanRLGodotEnv(
             env_path=env_path, n_parallel=n_parallel, seed=seed, **kwargs
         )
-        raw_act = self._env.envs[0].action_space
+        raw_act = self._env.single_action_space
         if isinstance(raw_act, gym.spaces.MultiDiscrete) and len(raw_act.nvec) == 1:
+            # print(f"MultiDiscrete action space with single value converted to Discrete.")
             self._act_space = gym.spaces.Discrete(int(raw_act.nvec[0]))
         else:
             self._act_space = raw_act
@@ -61,7 +62,7 @@ class GodotDiscreteEnvWrapper:
 
     def step(self, actions):
         if isinstance(self._act_space, gym.spaces.Discrete):
-            if isinstance(self._env.envs[0].action_space, gym.spaces.MultiDiscrete):
+            if isinstance(self._env.single_action_space, gym.spaces.MultiDiscrete):
                 actions = np.asarray(actions,dtype=np.int64).reshape(-1, 1)
         return self._env.step(actions)
 
@@ -264,6 +265,14 @@ def init_training_setup(args):
         envs.single_action_space, gym.spaces.Discrete
     ), "只支持 Discrete 动作空间"
 
+    # envs=CleanRLGodotEnv(
+    #     env_path=args.env_path,
+    #     show_window=args.show_window,
+    #     speedup=args.speedup,
+    #     seed=args.seed,
+    #     n_parallel=args.n_parallel,
+    # )
+
     # 观测维度分段
     seg = ObsSegmentDims.from_config(args.config_path)
 
@@ -276,6 +285,8 @@ def save_pt_model(save_path: str, state_dicts: dict, args, reward_normalizer=Non
     save_path = pathlib.Path(save_path).with_suffix(".pt")
     if reward_normalizer is not None:
         state_dicts["reward_normalizer"] = reward_normalizer.state_dict()
+    
+    save_path.parent.mkdir(parents=True, exist_ok=True) # 创建保存目录
     torch.save({"args": vars(args), **state_dicts},str(save_path),)
     print(f"[Save] Model saved to {save_path}")
 
