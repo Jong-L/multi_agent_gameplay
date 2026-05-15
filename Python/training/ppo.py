@@ -215,7 +215,7 @@ class Args:
     """实验名称, 在 TensorBoard 中显示。"""
     experiment_dir: str = "logs/cleanrl_ppo"
     """TensorBoard 日志目录。"""
-    save_model_path: Optional[str] = "savedmodels/cleanrl_ppo_mlp"
+    save_model_path: Optional[str] = "savedmodels/cleanrl_ppo_gru_mlp"
     """模型保存路径 (不加后缀)。"""
     onnx_export_path: Optional[str] = None
     """导出 ONNX 模型的路径。"""
@@ -227,7 +227,7 @@ class Args:
     """W&B 团队 / 实体名称。"""
 
     # PPO 算法超参数
-    total_timesteps: int = 1_000_000
+    total_timesteps: int = 2_000_000
     """总训练步数，所有环境（智能体）的步数之和，多环境（智能体）时消耗加倍"""
     learning_rate: float = 3e-4
     """Adam 优化器学习率。"""
@@ -269,21 +269,22 @@ class Args:
     """奖励归一化裁剪范围 (仅在 reward_norm=True 时生效)。"""
 
     # 网络结构
-    network_type: NetworkType = NetworkType.MLP
+    network_type: NetworkType = NetworkType.GRU_MLP
 
     # segmented mlp
-    self_hidden: int = 16
+    self_hidden: int = 32
     player_hidden: int = 64
     ball_hidden: int = 64
-    enemy_hidden: int = 32
-    map_hidden: int = 36
-    trunk_hidden: tuple = (128, 64)
+    enemy_hidden: int = 64
+    map_hidden: int = 64
+    trunk_hidden: tuple = (96,64)#gru使用
+    # trunk_hidden: tuple = (196, 96, 48)#seg mlp
 
     # mlp
     mlp_hiddens: tuple = (256, 128,64)
 
     # gru
-    gru_hidden: int = 128
+    gru_hidden: int = 96
     gru_num_layers: int = 1
     gru_input_layernorm: bool = True
 
@@ -688,13 +689,13 @@ def log_ppo(
             elapsed_time = time.time() - start_time
             hours = int(elapsed_time // 3600)
             minutes = int((elapsed_time % 3600) // 60)
-            seconds = elapsed_time % 60
+            seconds = int(elapsed_time % 60)
             print(
                 f"[Update {update:4d}/{num_updates}] "
                 # f"SPS: {sps:5d}  "
                 f"return: {mean_return:8.2f}  "
                 f"kl: {approx_kl.item():.4f}"
-                f"training time: {hours:02d}:{minutes:02d}:{seconds:05.2f}"
+                f"   training time: {hours:02d}:{minutes:02d}:{seconds:02d}"
             )
         writer.add_scalar("charts/SPS", sps, global_step)
         writer.add_scalar("charts/episodic_return", mean_return, global_step)

@@ -249,9 +249,9 @@ def init_training_setup(args):
     torch.backends.cudnn.deterministic = args.torch_deterministic
 
     # 计算设备
-    device = torch.device(
-        "cuda" if torch.cuda.is_available() and args.cuda else "cpu"
-    )
+    device = torch.device("cuda" if torch.cuda.is_available() and args.cuda else "cpu")
+    if torch.cuda.is_available() and args.cuda:
+        print("Using CUDA:", torch.cuda.get_device_name(0))
 
     # Godot 环境
     envs = GodotDiscreteEnvWrapper(
