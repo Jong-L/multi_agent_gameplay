@@ -38,7 +38,7 @@ def load_and_aggregate_ball_data(file_path):
     return episode_totals
 
 
-def smooth_curve(y, window=10):
+def smooth_curve(y, window=5):
     """Apply moving average smoothing"""
     if len(y) < window:
         return y
@@ -64,9 +64,13 @@ def plot_single_training(episode_data, title, save_path, smooth_window=10):
     # Plot reward curve
     sns.lineplot(x=smoothed_episodes, y=smoothed_rewards,
                 color='#0173B2',
-                linewidth=2,
+                linewidth=1.5,
                 label='Total Ball Reward',
                 ax=ax)
+    
+    # 添加淡色填充以增强水墨效果
+    ax.fill_between(smoothed_episodes, smoothed_rewards - 8, smoothed_rewards + 8, 
+                  alpha=0.3, color='#0173B2', zorder=1)
     
     # Plot mean reference line
     ax.axhline(y=mean_reward, 
@@ -140,7 +144,7 @@ def main():
         fig = plot_single_training(episode_data, 
                                    f'Single Training: {name}', 
                                    info['output'],
-                                   smooth_window=10)
+                                   smooth_window=5)
     
     print("\n" + "="*60)
     print("Analysis Complete!")

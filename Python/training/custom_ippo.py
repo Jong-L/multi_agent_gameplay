@@ -217,12 +217,6 @@ class AgentConfig:
     enemy_hidden: int = 64
     map_hidden: int = 64
     trunk_hidden: tuple = (256, 128)
-    self_hiddens: Optional[tuple] = None
-    player_hiddens: Optional[tuple] = None
-    ball_hiddens: Optional[tuple] = None
-    enemy_hiddens: Optional[tuple] = None
-    map_hiddens: Optional[tuple] = None
-    trunk_hiddens: Optional[tuple] = None
 
     # mlp
     mlp_hiddens: tuple = (400, 150)
@@ -977,7 +971,7 @@ def train(
             "Expected 'env_steps' or 'agent_steps'."
         )
 
-    episode_returns = [deque(maxlen=100) for _ in range(n_agents)] #每个智能体最近100个回合的奖励
+    episode_returns = [deque(maxlen=20) for _ in range(n_agents)] #每个智能体最近20个回合的奖励
     accum_rewards = np.zeros(n_agents, dtype=np.float64)#每个智能体每回合累计奖励
     rnn_states = [agent.get_initial_state(1, device) for agent in agents] #每个智能体的初始 RNN 状态
 

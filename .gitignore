@@ -8,6 +8,9 @@
 
 logs/
 experiment_data/
+saved_models/
+runs/
+assets/
 
 # Python cache files
 __pycache__/

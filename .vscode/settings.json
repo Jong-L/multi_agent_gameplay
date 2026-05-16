@@ -81,5 +81,11 @@
         "*.log",
         "*.fdb_latexmk"
     ],
+    // 抑制 LaTeX Workshop 对 .bbl 文件的语法检查（避免中文字体误报）
+    "files.associations": {
+        "*.bbl": "bibtex"
+    },
+    // LaTeX Workshop 内置 parser 对 .bbl 文件的中文条目存在误报
+    // 上面 files.associations 已将 .bbl 映射为 bibtex，禁用 LaTeX parser 诊断
     "Codegeex.RepoIndex": true,
 }

@@ -8,6 +8,7 @@ import time
 from collections import deque
 from dataclasses import dataclass
 from enum import Enum
+from tkinter import N
 from typing import Optional
 
 import gymnasium as gym
@@ -197,9 +198,9 @@ class Args:
     """训练配置"""
     # 环境 
     # env_path: Optional[str] = None
-    env_path: Optional[str] = "curriculum_envs/s1-no-wall-for ball/build/game.exe"
+    env_path: Optional[str] = "curriculum_envs\\s4-enemy-only\\build2\\game.exe"
     """Godot环境路径"""
-    config_path: str = "godot-game/configs/game_config.tres"
+    config_path: str = "curriculum_envs\\s4-enemy-only\\configs\\game_config.tres"
     """game_config.tres 路径, 用于读取观测维度配置"""
     n_parallel: int = 4
     """并行 Godot 进程数量"""
@@ -215,7 +216,7 @@ class Args:
     """实验名称, 在 TensorBoard 中显示。"""
     experiment_dir: str = "logs/cleanrl_ppo"
     """TensorBoard 日志目录。"""
-    save_model_path: Optional[str] = "savedmodels/cleanrl_ppo_gru_mlp"
+    save_model_path: Optional[str] = None
     """模型保存路径 (不加后缀)。"""
     onnx_export_path: Optional[str] = None
     """导出 ONNX 模型的路径。"""
@@ -277,14 +278,14 @@ class Args:
     ball_hidden: int = 64
     enemy_hidden: int = 64
     map_hidden: int = 64
-    trunk_hidden: tuple = (96,64)#gru使用
-    # trunk_hidden: tuple = (196, 96, 48)#seg mlp
+    # trunk_hidden: tuple = (128,64)#gru使用
+    trunk_hidden: tuple = (196, 96, 48)#seg mlp
 
     # mlp
     mlp_hiddens: tuple = (256, 128,64)
 
     # gru
-    gru_hidden: int = 96
+    gru_hidden: int = 128
     gru_num_layers: int = 1
     gru_input_layernorm: bool = True
 
@@ -395,7 +396,7 @@ class PPOAgent(nn.Module):
         rnn_state: Optional[torch.Tensor] = None,
         return_state: bool = False,
     ):
-        """根据观测采样动作并计算相关统计量
+        """根据观测计算当前价值、采样动作并计算相关统计量
         """
         features, next_rnn_state = self._forward_features(obs, rnn_state)
         logits = self.actor(features)
@@ -428,9 +429,8 @@ class RolloutData:
     values: torch.Tensor    #shape(num_steps, num_envs)
     next_obs: torch.Tensor  #shape(num_envs, obs_dim)   — 最后一步后的观测
     next_done: torch.Tensor #shape(num_envs,)   — 最后一步后的 done 标志
-    rnn_states: Optional[torch.Tensor] = None
+    rnn_states: Optional[torch.Tensor] = None #shape(num_steps, num_envs, recurrent_state_size)
     next_rnn_state: Optional[torch.Tensor] = None
-
 
 #  经验收集 (rollout)
 def collect_rollout(
@@ -462,7 +462,7 @@ def collect_rollout(
     rnn_states = None
     if agent.is_recurrent:
         rnn_states = torch.zeros((num_steps, num_envs, agent.recurrent_state_size)).to(device)
-        if rnn_state is None:
+        if rnn_state is None:#初始状态
             rnn_state = agent.get_initial_state(num_envs, device)#shape(num_envs,L*H)
 
     for step in range(num_steps):
@@ -501,7 +501,7 @@ def collect_rollout(
         next_obs = torch.tensor(np.array(next_obs_raw, dtype=np.float32)).to(device)
         next_done = torch.tensor(done, dtype=torch.float32).to(device)
 
-        # 追踪回合奖励 (使用原始奖励)
+        # 追踪平均回合奖励 (使用原始奖励)
         accum_rewards += np.asarray(reward, dtype=np.float64)
         for i, d in enumerate(np.asarray(done)):
             if d:
@@ -512,7 +512,6 @@ def collect_rollout(
         RolloutData(obs, actions, logprobs, rewards, dones, values,next_obs, next_done, rnn_states, rnn_state),
         global_step,
     )
-
 
 #  GAE 优势估计
 def compute_gae(
@@ -551,7 +550,6 @@ def compute_gae(
     target_values = advantages + values
     return advantages, target_values # (num_steps, num_envs)
 
-
 #  PPO 损失函数
 def compute_actor_loss(
     new_logprob: torch.Tensor,
@@ -580,7 +578,6 @@ def compute_actor_loss(
     pg_loss = torch.max(pg_loss1, pg_loss2).mean()
 
     return pg_loss, approx_kl, clipfrac
-
 
 def compute_critic_loss(
     new_value: torch.Tensor,
@@ -627,11 +624,10 @@ def evaluate_recurrent_sequences(
         start_t = int(start_t)
         end_t = int(end_t)
         env_i = int(env_i)
-        state = rollout.rnn_states[start_t, env_i].unsqueeze(0).detach()
+        state = rollout.rnn_states[start_t, env_i].unsqueeze(0).detach()#序列初始隐藏态
 
         #遍历序列中的每个时间步
         for t in range(start_t, end_t):
-            #计算样本动作在当前策略的概率和当前网络估计的价值
             _, logprob, entropy, value, state = agent.get_action_and_value(
                 rollout.obs[t, env_i].unsqueeze(0),
                 rollout.actions[t, env_i].unsqueeze(0),
@@ -643,7 +639,7 @@ def evaluate_recurrent_sequences(
             entropies.append(entropy)
             values.append(value.view(-1))
 
-            if t + 1 < end_t:
+            if t + 1 < end_t:#回合结束隐藏态重置
                 state = state * (1.0 - rollout.dones[t + 1, env_i]).view(1, 1).to(device)
 
     return (
@@ -681,15 +677,15 @@ def log_ppo(
     writer.add_scalar("losses/clipfrac", np.mean(clipfracs), global_step)
     writer.add_scalar("losses/explained_variance", explained_var, global_step)
 
+    #时间统计
+    elapsed_time = time.time() - start_time
+    hours = int(elapsed_time // 3600)
+    minutes = int((elapsed_time % 3600) // 60)
+    seconds = int(elapsed_time % 60)
     if len(episode_returns) > 0:
         sps = int(global_step / (time.time() - start_time))
         mean_return = np.mean(np.array(episode_returns))
         if update > 0 and num_updates > 0:
-            #时间统计
-            elapsed_time = time.time() - start_time
-            hours = int(elapsed_time // 3600)
-            minutes = int((elapsed_time % 3600) // 60)
-            seconds = int(elapsed_time % 60)
             print(
                 f"[Update {update:4d}/{num_updates}] "
                 # f"SPS: {sps:5d}  "
@@ -699,6 +695,13 @@ def log_ppo(
             )
         writer.add_scalar("charts/SPS", sps, global_step)
         writer.add_scalar("charts/episodic_return", mean_return, global_step)
+    else:
+        if update > 0 and num_updates > 0:
+            print(
+                f"[Update {update:4d}/{num_updates}]"
+                f"kl: {approx_kl.item():.4f}"
+                f"   training time: {hours:02d}:{minutes:02d}:{seconds:02d}"
+                )
 
 
 def export_ppo_onnx(agent: PPOAgent, onnx_path: str, obs_shape: tuple) -> None:
@@ -755,15 +758,15 @@ def train(
     device: torch.device,
     writer,
     reward_normalizer: Optional[RewardNormalizer],
-    next_obs: torch.Tensor,
-    next_done: torch.Tensor,
-    next_rnn_state: Optional[torch.Tensor],
+    next_obs: torch.Tensor,#初始观测
+    next_done: torch.Tensor,#初始 done 标志
+    next_rnn_state: Optional[torch.Tensor],#初始隐藏态
 ) -> None:
     """PPO 主训练循环。"""
     global_step = 0
     start_time = time.time()
     num_updates = args.total_timesteps // args.batch_size
-    episode_returns = deque(maxlen=100)#最近100个回合的奖励
+    episode_returns = deque(maxlen=20)#最近20个回合的奖励
     accum_rewards: np.ndarray = np.zeros(args.num_envs)#每回合累计奖励
 
     for update in range(1, num_updates + 1):

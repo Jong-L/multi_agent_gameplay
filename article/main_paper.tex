@@ -1,81 +1,463 @@
-% 毕业论文
-\documentclass[12pt,a4paper,UTF8]{ctexart}
-%导入宏包
-\usepackage[top=2.5cm, bottom=2.5cm, left=3cm, right=2.5cm]{geometry}
-\usepackage{setspace} % 行距
-\usepackage{titlesec} % 标题格式
-\usepackage{tabularx} % 自动表格
-\usepackage{array}    % 表格
-\usepackage{enumitem} % 列表
-\usepackage[hidelinks]{hyperref}   % 超链接
-\usepackage{bookmark} % 修复 rerunfilecheck 警告
-\usepackage{float}    % 图片浮动
-\usepackage{booktabs}   % 三线表
-\usepackage{graphicx}   % 图片插入（封面需要实际渲染图片）
-\usepackage{amsmath}    % 提供数学公式及 \numberwithin 命令支持
-\usepackage{amssymb}    % 提供数学符号如 \mathbb
+% ============================================================
+% 华北电力大学本科毕业设计（论文）模板
+% 优先兼容 pdflatex，也可使用 xelatex 编译
+% 编译方式：pdflatex -> bibtex -> pdflatex*2
+% ============================================================
+\documentclass[12pt, a4paper, UTF8]{ctexart}
+
+% === 页面设置 ===
+\usepackage[top=2.5cm, bottom=2cm, left=2.5cm, right=2cm, a4paper]{geometry}
+
+% === 基础宏包 ===
+\usepackage{setspace}       % 行距
+\usepackage{titlesec}       % 标题格式
+\usepackage{titletoc}       % 目录格式
+\usepackage{tocloft}        % 目录条目控制
+\usepackage{fancyhdr}       % 页眉页脚
+\usepackage{booktabs}       % 三线表
+\usepackage{graphicx}       % 图片插入
+\usepackage{float}          % 图片浮动
+\usepackage{caption}        % 图表标题
+\usepackage{subcaption}     % 子图标题
+\usepackage{amsmath}        % 数学公式
+\usepackage{amssymb}        % 数学符号
+\usepackage{enumitem}       % 列表
+\usepackage{tabularx}       % 自动表格
+\usepackage{array}          % 表格增强
+\usepackage{longtable}      % 跨页表格
+\usepackage{multirow}       % 合并行
 \usepackage[normalem]{ulem} % 下划线
+\usepackage{listings}       % 代码段
+\usepackage{xcolor}         % 颜色
+\usepackage{chngcntr}       % 计数器控制
 
-% 参考文献样式
-\bibliographystyle{plain}
+% === 超链接（放最后） ===
+\usepackage[hidelinks]{hyperref}
+\usepackage{bookmark}       % 修复 rerunfilecheck 警告
 
-%将图片引用名改为中文
-\renewcommand{\figureautorefname}{图}
+% === 参考文献（GB/T 7714-2005 顺序编码制） ===
+\usepackage[sort&compress]{gbt7714}
+\bibliographystyle{gbt7714-numerical}
 
-\begin{document}
-\pagestyle{empty}  % 去掉页眉页脚
+% === 字体设置（pdflatex 兼容） ===
+% ctex 已自动处理中文字体；英文使用 Times New Roman 风格
+\usepackage{mathptmx}       % Times 风格数学字体（pdflatex 可用）
+\usepackage[T1]{fontenc}    % 保证英文字体加粗有效
+
+% === 行距：Word 1.25 倍行距 ===
+\setstretch{1.354}          % = 1.25 * 1.3 / 1.2
+
+% === 段落设置 ===
+\setlength{\parskip}{0pt}   % 段间距为 0
+\sloppy                     % 宽松断行
+\emergencystretch=3em       % 应急拉伸
+
+% === 英文断行（xelatex 需要，pdflatex 忽略） ===
+\usepackage{ifxetex}
+\ifxetex
+    \XeTeXlinebreaklocale "zh"
+    \XeTeXlinebreakskip = 0pt plus 1pt
+\fi
 
 % ============================================================
-% 第一页：封面
+% 标题格式设置（四级层次）
 % ============================================================
-\begin{center}
-    % 校徽 + 校名（ncepu.png 包含校徽和"华北电力大学"书法字）
-    \includegraphics[width=0.55\textwidth]{imgs/ncepu.png}
 
-    \vspace{2em}
+% 一级标题：第X章，黑体小二，居中，段后1行
+\titleformat{\section}[block]
+  {\zihao{-2}\heiti\centering}
+  {第\thesection 章}{1em}{}
+  [\vspace{1\baselineskip}]
+\titlespacing{\section}{0pt}{0pt}{1\baselineskip}
 
-    % 大标题：毕业设计（论文）
-    {\zihao{-0}\heiti 毕业设计（论文）}
+% 二级标题：1.1，黑体小三，顶格，段前段后0.5行
+\titleformat{\subsection}[hang]
+  {\zihao{-3}\heiti}
+  {\thesubsection}{1em}{}
+\titlespacing{\subsection}{0pt}{0.5\baselineskip}{0.5\baselineskip}
 
-    \vspace{4em}
+% 三级标题：1.1.1，黑体四号，顶格，段前段后0.5行
+\titleformat{\subsubsection}[hang]
+  {\zihao{4}\heiti}
+  {\thesubsubsection}{1em}{}
+\titlespacing{\subsubsection}{0pt}{0.5\baselineskip}{0.5\baselineskip}
 
-    % 信息表单
-    {\zihao{3}\heiti
-    \setlength{\tabcolsep}{6pt}
-    \renewcommand{\arraystretch}{1.8}
-    \begin{tabularx}{0.85\textwidth}{r@{\hspace{0.5em}}X}
-        论文题目： & \uline{基于机器学习的无人机博弈对抗研究} \\[0.2ex]
-        院~~~~~系： & \uline{控计学院} \\[0.2ex]
-        专~~~~~业： & \uline{计算机科学与技术} \\[0.2ex]
-        班~~~~~级： & \uline{计算2202} \\[0.2ex]
-        姓~~~~~名： & \uline{蒋伦吉} \\[0.2ex]
-        学~~~~~号： & \uline{120221080514} \\[0.2ex]
-        指导教师： & \uline{刘春阳} \\
-    \end{tabularx}
-    }
-\end{center}
+% 四级标题：1.1.1.1，黑体小四，顶格
+\titleformat{\paragraph}[hang]
+  {\zihao{-4}\heiti}
+  {\theparagraph}{1em}{}
 
-%单独的年月
-\vspace*{\fill}
-\begin{center}
-    {\zihao{3}\songti 2026年5月}
-\end{center}
-\vspace*{\fill}
+% ============================================================
+% 页眉页脚
+% ============================================================
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[C]{\zihao{-5}华北电力大学本科毕业设计（论文）}
+\fancyfoot[C]{\zihao{-5}\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
 
-\newpage
-\pagestyle{plain}  % 正文恢复页码
-
-12321\cite{bellman1957dynamic}
-% 参考文献
-{
-    \zihao{5}           % 五号字
-    \
-    \songti             % 宋体
-    \setstretch{1.625}   % 1.5 倍行距
-    \bibliography{references}
+% plain 样式（章节首页）也使用页眉
+\fancypagestyle{plain}{
+  \fancyhf{}
+  \fancyhead[C]{\zihao{-5}华北电力大学本科毕业设计（论文）}
+  \fancyfoot[C]{\zihao{-5}\thepage}
+  \renewcommand{\headrulewidth}{0.4pt}
 }
 
+% ============================================================
+% 图表公式编号（按章编号）
+% ============================================================
+\counterwithin{figure}{section}
+\counterwithin{table}{section}
+\numberwithin{equation}{section}
 
+% 图编号格式：图1-1
+\renewcommand{\thefigure}{\thesection-\arabic{figure}}
+\renewcommand{\thetable}{\thesection-\arabic{table}}
+\renewcommand{\theequation}{\thesection-\arabic{equation}}
 
+% 图表标题格式：五号字，居中
+\captionsetup[figure]{font=small,skip=6pt,position=bottom,justification=centering}
+\captionsetup[table]{font=small,skip=6pt,position=top,justification=centering}
+
+% 自动引用名改为中文
+\renewcommand{\figureautorefname}{图}
+\renewcommand{\tableautorefname}{表}
+\renewcommand{\equationautorefname}{式}
+
+% ============================================================
+% 目录格式
+% ============================================================
+\renewcommand{\contentsname}{目\quad 录}
+
+% 目录行距：单倍行距
+\renewcommand{\cftbeforesecskip}{0pt}
+\renewcommand{\cftbeforesubsecskip}{0pt}
+
+% 目录字体：小四宋体
+\renewcommand{\cftsecfont}{\zihao{-4}\bfseries\songti}
+\renewcommand{\cftsubsecfont}{\zihao{-4}\songti}
+\renewcommand{\cftsubsubsecfont}{\zihao{-4}\songti}
+\renewcommand{\cftsecpagefont}{\zihao{-4}\bfseries}
+\renewcommand{\cftsubsecpagefont}{\zihao{-4}}
+\renewcommand{\cftsubsubsecpagefont}{\zihao{-4}}
+
+% 目录缩进：一级顶格，二级缩2字符，三级缩4字符
+\setlength{\cftsecindent}{0pt}
+\setlength{\cftsubsecindent}{2em}
+\setlength{\cftsubsubsecindent}{4em}
+
+% ============================================================
+% 自定义命令
+% ============================================================
+
+% 中文摘要环境（含关键词）
+\newenvironment{cnabstract}[1]{
+  \def\@cnkeywords{#1}
+  \clearpage
+  \begin{center}
+    {\zihao{-2}\heiti 摘\quad 要}
+  \end{center}
+  \vspace{1\baselineskip}
+  \zihao{-4}\songti
+  \setstretch{1.354}
+}{
+  \par\vspace{1\baselineskip}
+  \noindent\textbf{关键词：}\@cnkeywords
+  \clearpage
+}
+
+% 英文摘要环境（含 KEY WORDS）
+\newenvironment{enabstract}[1]{
+  \def\@enkeywords{#1}
+  \clearpage
+  \begin{center}
+    {\zihao{-2}\bfseries ABSTRACT}
+  \end{center}
+  \vspace{1\baselineskip}
+  \zihao{-4}\rmfamily
+  \setstretch{1.438}  % Word 英文 1.5 倍 = 1.5*1.15/1.2
+}{
+  \par\vspace{1\baselineskip}
+  \noindent\textbf{KEY WORDS: }\@enkeywords
+  \clearpage
+}
+
+% 无编号章节（前言、结论），加入目录
+\newcommand{\unnumberedsection}[1]{
+  \section*{#1}
+  \addcontentsline{toc}{section}{#1}
+  \markboth{#1}{#1}
+}
+
+% 致谢章节
+\newcommand{\acknowledgment}[1]{
+  \clearpage
+  \section*{致\quad 谢}
+  \addcontentsline{toc}{section}{致谢}
+  #1
+}
+
+% ============================================================
+% 文档开始
+% ============================================================
+\begin{document}
+
+% ----------------------------------------------------------
+% 封面（无页眉页脚）
+% ----------------------------------------------------------
+\thispagestyle{empty}
+\begin{center}
+  % 校徽 + 校名
+  \includegraphics[width=0.55\textwidth]{imgs/ncepu.png}
+
+  \vspace{2em}
+
+  % 大标题：毕业设计（论文）
+  {\zihao{-0}\heiti 毕业设计（论文）}
+
+  \vspace{4em}
+
+  % 信息表单
+  {\zihao{3}\heiti
+  \setlength{\tabcolsep}{6pt}
+  \renewcommand{\arraystretch}{1.8}
+  \begin{tabularx}{0.85\textwidth}{r@{\hspace{0.5em}}X}
+    论文题目： & \uline{基于机器学习的无人机博弈对抗研究} \\[0.2ex]
+    院~~~~~系： & \uline{控计学院} \\[0.2ex]
+    专~~~~~业： & \uline{计算机科学与技术} \\[0.2ex]
+    班~~~~~级： & \uline{计算2202} \\[0.2ex]
+    姓~~~~~名： & \uline{蒋伦吉} \\[0.2ex]
+    学~~~~~号： & \uline{120221080514} \\[0.2ex]
+    指导教师： & \uline{刘春阳} \\
+  \end{tabularx}
+  }
+
+  % 年月
+  \vspace*{\fill}
+  {\zihao{3}\heiti 2026年5月}
+  \vspace*{\fill}
+\end{center}
+
+% ----------------------------------------------------------
+% 中文摘要
+% ----------------------------------------------------------
+\begin{cnabstract}{多智能体强化学习；独立近端策略优化；博弈对抗；奖励塑形；循环神经网络}
+
+这里是中文摘要内容。摘要应概括论文的主要研究内容、方法、结果和结论，
+字数在400字左右。摘要应简明扼要，突出论文的创新点和主要贡献。
+
+多智能体强化学习（Multi-Agent Reinforcement Learning, MARL）是人工智能领域的重要研究方向，
+在无人机博弈对抗等复杂决策场景中具有广泛的应用前景。
+本文基于 Godot 引擎构建了二维多智能体博弈环境《Tiny Swords》，
+采用独立近端策略优化（Independent Proximal Policy Optimization, IPPO）算法训练智能体，
+研究了不同奖励函数设计和观测空间配置对智能体策略学习的影响。
+实验结果表明，经过奖励塑形和循环神经网络增强的智能体能够涌现出复杂的博弈与协作行为。
+
+\end{cnabstract}
+
+% ----------------------------------------------------------
+% 英文摘要
+% ----------------------------------------------------------
+\begin{enabstract}{Multi-Agent Reinforcement Learning; Independent PPO; Game-Theoretic Adversarial; Reward Shaping; Recurrent Neural Network}
+
+This is the English abstract. It should correspond to the Chinese abstract,
+with approximately the same content and length.
+
+Multi-Agent Reinforcement Learning (MARL) is an important research direction in artificial intelligence,
+with broad application prospects in complex decision-making scenarios such as unmanned aerial vehicle (UAV) adversarial games.
+This paper constructs a 2D multi-agent game environment called "Tiny Swords" based on the Godot engine,
+and employs the Independent Proximal Policy Optimization (IPPO) algorithm to train agents.
+The influence of different reward function designs and observation space configurations on agent strategy learning is studied.
+Experimental results show that agents enhanced with reward shaping and recurrent neural networks
+are able to emerge complex game-theoretic and cooperative behaviors.
+
+\end{enabstract}
+
+% ----------------------------------------------------------
+% 目录
+% ----------------------------------------------------------
+\clearpage
+\thispagestyle{empty}
+\begin{center}
+  {\zihao{-2}\heiti 目\quad 录}
+\end{center}
+\vspace{1\baselineskip}
+
+% 目录使用单倍行距
+\begin{spacing}{1.0}
+  \tableofcontents
+\end{spacing}
+
+\clearpage
+
+% ----------------------------------------------------------
+% 正文开始（恢复页眉页脚，从第1页开始编号）
+% ----------------------------------------------------------
+\setcounter{page}{1}
+\pagestyle{fancy}
+
+% ==================== 前言 ====================
+\unnumberedsection{前言}
+
+前言部分说明研究背景、目的和意义，介绍论文的主要研究内容和结构安排。
+注意前言不编"第*章"号。
+
+近年来，人工智能技术在实时对抗领域的应用日益广泛，
+机器博弈对抗作为智能决策的典型场景，已成为各国研究的热点方向。
+强化学习（Reinforcement Learning, RL）为序列决策问题提供了一套系统的解决框架，
+智能体通过与环境的交互，以试错的方式学习从状态到动作的最优映射\cite{sutton2018reinforcement}。
+
+% ==================== 第1章 ====================
+\section{绪论}
+
+\subsection{研究背景与意义}
+
+介绍本课题的研究背景，阐述研究的重要性和实际应用价值。
+
+\subsection{国内外研究现状}
+
+综述国内外相关领域的研究进展，分析现有方法的优缺点。
+
+\subsection{研究内容与创新点}
+
+概述本文的主要研究内容、技术路线和创新之处。
+
+\subsection{论文组织结构}
+
+介绍论文各章节的内容安排。
+
+% ==================== 第2章 ====================
+\section{相关理论与技术基础}
+
+\subsection{强化学习基础}
+
+介绍马尔可夫决策过程（MDP）、贝尔曼方程、值函数与策略梯度等基本概念。
+
+\begin{equation}
+  V^{*}(s) = \max_a \left[ R(s, a) + \gamma \sum_{s'} P(s'|s, a) V^{*}(s') \right]
+  \label{eq:bellman}
+\end{equation}
+
+\autoref{eq:bellman} 为贝尔曼最优方程。
+
+\subsection{多智能体强化学习}
+
+介绍多智能体系统的形式化描述、IPPO 算法原理等\cite{dewitt2020independentlearningneedstarcraft}。
+
+\subsection{循环神经网络}
+
+介绍 GRU/LSTM 在策略网络中的应用，说明时序信息建模的重要性。
+
+% ==================== 第3章 ====================
+\section{博弈环境设计与实现}
+
+\subsection{环境总体设计}
+
+介绍基于 Godot 引擎的《Tiny Swords》游戏环境设计，
+包括游戏规则、状态空间、动作空间和奖励函数设计。
+
+\subsection{观测空间设计}
+
+详细描述108维观测向量的构成：76维实体特征 + 32维射线检测。
+
+\begin{table}[htbp]
+  \centering
+  \caption{\zihao{5} 观测空间组成}
+  \label{tab:observation}
+  \begin{tabular}{ccc}
+    \toprule
+    特征类别 & 维度 & 说明 \\
+    \midrule
+    自身状态 & 8 & 位置、速度、生命值等 \\
+    其他智能体 & 48 & 相对位置、状态等（3个 × 16维） \\
+    野怪/得分球 & 20 & 最近目标信息 \\
+    射线检测 & 32 & 8方向 × 4类物体 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\subsection{奖励函数设计}
+
+介绍基于 PBRS 的奖励塑形方法\cite{Ng1999PolicyIU}，
+对比分析不同奖励函数对学习效果的影响。
+
+% ==================== 第4章 ====================
+\section{智能体训练与实验}
+
+\subsection{训练框架设计}
+
+介绍基于 Clean RL 风格的 IPPO 算法实现，
+包括网络架构（default / segmented\_mlp / gru\_mlp）和训练流程。
+
+\subsection{实验设置}
+
+说明实验环境、超参数设置和评估指标。
+
+\subsection{实验结果与分析}
+
+展示训练曲线、对比实验结果，分析智能体的博弈行为。
+
+\begin{figure}[htbp]
+  \centering
+  % \includegraphics[width=0.8\linewidth]{imgs/training_curve.png}
+  \fbox{\parbox{0.6\textwidth}{\centering\vspace{3em}训练曲线占位图\vspace{3em}}}
+  \caption{\zihao{5} 智能体训练回报曲线}
+  \label{fig:training_curve}
+\end{figure}
+
+% ==================== 第5章 ====================
+\section{总结与展望}
+
+\subsection{工作总结}
+
+总结论文的主要研究工作和取得的成果。
+
+\subsection{未来展望}
+
+指出研究的不足之处和未来可以改进的方向。
+
+% ==================== 结论 ====================
+\unnumberedsection{结论}
+
+结论部分对全文进行总结，强调主要研究成果和贡献。
+注意结论也不编"第*章"号。
+
+% ----------------------------------------------------------
+% 参考文献
+% ----------------------------------------------------------
+\clearpage
+{
+  \zihao{5}           % 五号字
+  \songti             % 宋体
+  \setstretch{1.083}  % 单倍行距（参考文献用单倍）
+  \bibliography{references}
+}
+
+% ----------------------------------------------------------
+% 附录
+% ----------------------------------------------------------
+\clearpage
+\appendix
+\section{附录A\quad 核心算法伪代码}
+
+附录内容放在这里。如有多个附录，依次编号为附录A、附录B……
+
+\section{附录B\quad 实验补充数据}
+
+其他补充材料。
+
+% ----------------------------------------------------------
+% 致谢
+% ----------------------------------------------------------
+\acknowledgment{
+
+致谢部分感谢在毕业设计过程中给予帮助的老师、同学和家人。
+
+首先，我要衷心感谢我的指导教师刘春阳老师在选题、研究和论文撰写过程中给予的悉心指导。
+
+……
+
+}
 
 \end{document}
