@@ -13,7 +13,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
 from training.godot_env_wrapper import (
     GodotDiscreteEnvWrapper, ObsSegmentDims, parse_godot_tres, layer_init,
 )
-from training.clean_rl_dqn import (
+from training.custom_dqn import (
     QNetwork,
 )
 

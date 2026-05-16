@@ -102,8 +102,12 @@ def plot_player_comparison(data, save_path=None, smooth_window=5):
             sns.lineplot(x=smoothed_episodes, y=smoothed_rewards,
                         label=FUNC_NAMES[func_key],
                         color=FUNC_COLORS[func_key],
-                        linewidth=2,
+                        linewidth=1.5,
                         ax=ax)
+            
+            # 添加淡色填充以增强水墨效果
+            ax.fill_between(smoothed_episodes, smoothed_rewards - 5, smoothed_rewards + 5, 
+                          alpha=0.3, color=FUNC_COLORS[func_key], zorder=1)
         
         ax.set_xlabel('Episode', fontsize=11)
         ax.set_ylabel('Average Ball Reward', fontsize=11)
@@ -147,8 +151,12 @@ def plot_total_comparison(data, save_path=None, smooth_window=5):
         sns.lineplot(x=smoothed_episodes, y=smoothed_rewards,
                     label=FUNC_NAMES[func_key],
                     color=FUNC_COLORS[func_key],
-                    linewidth=2.5,
+                    linewidth=1.5,
                     ax=ax)
+        
+        # 添加淡色填充以增强水墨效果
+        ax.fill_between(smoothed_episodes, smoothed_rewards - 8, smoothed_rewards + 8, 
+                      alpha=0.3, color=FUNC_COLORS[func_key], zorder=1)
     
     ax.set_xlabel('Episode', fontsize=12)
     ax.set_ylabel('Total Average Ball Reward', fontsize=12)
@@ -228,12 +236,12 @@ def main():
     # Window 1: Player comparison
     fig1 = plot_player_comparison(data, 
                                   save_path=f"{base_dir}\\player_ball_reward_comparison.png",
-                                  smooth_window=10)
+                                  smooth_window=5)
     
     # Window 2: Total comparison
     fig2 = plot_total_comparison(data, 
                                  save_path=f"{base_dir}\\total_ball_reward_comparison.png",
-                                 smooth_window=10)
+                                 smooth_window=5)
     
     print("\n" + "="*60)
     print("Plots generated!")

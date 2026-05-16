@@ -49,20 +49,20 @@ config:
     normalize_actions: False
     clip_actions: True # During onnx inference we simply clip the actions to [-1.0, 1.0] range, set here to match
 
-    rollout_fragment_length: 512       
-    sgd_minibatch_size: 256           # 必须 > max_seq_len(128) 且 > rollout 中实际最大seq长度(512)
+    rollout_fragment_length: 128       
+    sgd_minibatch_size: 128           # 必须 > max_seq_len(128) 且 > rollout 中实际最大seq长度(512)
     num_workers: 2                     # Number of parallel processes
     num_envs_per_env_runner: 2         # Number of env instances per worker
-    train_batch_size: 2048
+    train_batch_size: 512
     #godot端每个回合步数为reset_after/8 -1
-    num_sgd_iter: 6 #how many times the past experiences is used to update the neural network
+    num_sgd_iter: 8 #how many times the past experiences is used to update the neural network
     # batch_mode: complete_episodes
     batch_mode: truncate_episodes
 
     num_gpus: 1
 
     # 网络类型: default (RLlib 内置) / segmented_mlp (分段 MLP) / gru_mlp (GRU-MLP 混合)
-    model: default
+    model: gru_mlp
 
 # 各网络类型的结构参数
 model_config:
@@ -77,7 +77,7 @@ model_config:
         map_hiddens: [64]
         trunk_hiddens: [256, 128, 64]
     gru_mlp:
-        max_seq_len: 128     
+        max_seq_len: 127     
         gru_hidden: 128             # GRU 隐藏层维度
         gru_num_layers: 1           # GRU 层数
         gru_input_layernorm: False    # GRU 输入 LayerNorm

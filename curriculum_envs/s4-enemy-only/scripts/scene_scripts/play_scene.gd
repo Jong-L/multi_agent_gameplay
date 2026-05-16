@@ -195,9 +195,6 @@ func _setup_camera_switch_ui() -> void:
 	var button_configs := [
 		["主相机", 0],
 		["玩家{color}".format({"color":players[0].skin_color}), 1],
-		["玩家{color}".format({"color":players[1].skin_color}), 2],
-		["玩家{color}".format({"color":players[2].skin_color}), 3],
-		["玩家{color}".format({"color":players[3].skin_color}), 4],
 	]
 	
 	camera_buttons.clear()
