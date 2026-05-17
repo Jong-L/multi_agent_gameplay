@@ -6,6 +6,7 @@ Godot 强化学习环境包装器
   - layer_init             : 正交权重初始化
 """
 import pathlib
+from enum import Enum
 import random
 import time
 from collections import deque
@@ -265,28 +266,49 @@ def init_training_setup(args):
         envs.single_action_space, gym.spaces.Discrete
     ), "只支持 Discrete 动作空间"
 
-    # envs=CleanRLGodotEnv(
-    #     env_path=args.env_path,
-    #     show_window=args.show_window,
-    #     speedup=args.speedup,
-    #     seed=args.seed,
-    #     n_parallel=args.n_parallel,
-    # )
-
     # 观测维度分段
     seg = ObsSegmentDims.from_config(args.config_path)
 
     return writer, device, envs, seg, run_name
 
 
+def _serialize_args(args) -> dict:
+    """将 dataclass args 序列化为纯 Python 字面量 dict。
+
+    递归处理:
+      - Enum → 字符串 (value)
+      - tuple of Enum → tuple of 字符串
+      - dataclass 对象 (含 list[dataclass]) → dict (含 list[dict])
+    避免 torch.save / pickle 序列化后反序列化时找不到类的错误。
+    """
+    def _convert(value):
+        if isinstance(value, Enum):
+            return value.value
+        if isinstance(value, tuple) and value and isinstance(value[0], Enum):
+            return tuple(x.value for x in value)
+        if isinstance(value, list):
+            return [_convert(item) for item in value]
+        if isinstance(value, dict):
+            return {k: _convert(v) for k, v in value.items()}
+        # dataclass instance (非 Enum、非 list、非 dict)
+        if hasattr(value, "__dataclass_fields__"):
+            return {k: _convert(v) for k, v in vars(value).items()}
+        return value
+
+    return {k: _convert(v) for k, v in vars(args).items()}
+
+
 def save_pt_model(save_path: str, state_dicts: dict, args, reward_normalizer=None) -> None:
     """保存 PyTorch 模型检查点
+
+    Args 中的 Enum 等非字面量值会被安全地转为字符串后保存,
+    避免回放时 pickle 反序列化失败。
     """
     save_path = pathlib.Path(save_path).with_suffix(".pt")
     if reward_normalizer is not None:
         state_dicts["reward_normalizer"] = reward_normalizer.state_dict()
-    
+
     save_path.parent.mkdir(parents=True, exist_ok=True) # 创建保存目录
-    torch.save({"args": vars(args), **state_dicts},str(save_path),)
+    torch.save({"args": _serialize_args(args), **state_dicts},str(save_path),)
     print(f"[Save] Model saved to {save_path}")
 

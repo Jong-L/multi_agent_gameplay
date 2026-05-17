@@ -157,9 +157,7 @@ class _TemporalGRU(nn.Module):
 
 
 def parse_network_type(value) -> NetworkType:
-    """将字符串或枚举值解析为 NetworkType。"""
-    if isinstance(value, NetworkType):
-        return value
+    """将字符串解析为 NetworkType。"""
     text = str(value or NetworkType.SEGMENTED_MLP.value).lower()
     for nt in NetworkType:
         if text in (nt.value, nt.name.lower()):
