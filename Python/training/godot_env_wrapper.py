@@ -298,17 +298,72 @@ def _serialize_args(args) -> dict:
     return {k: _convert(v) for k, v in vars(args).items()}
 
 
-def save_pt_model(save_path: str, state_dicts: dict, args, reward_normalizer=None) -> None:
+def save_pt_model(
+    save_path: str,
+    state_dicts: dict,
+    args,
+    reward_normalizer=None,
+    extra: Optional[dict] = None,
+) -> None:
     """保存 PyTorch 模型检查点
 
-    Args 中的 Enum 等非字面量值会被安全地转为字符串后保存,
-    避免回放时 pickle 反序列化失败。
+    扩展格式（额外字段通过 extra 传入，向后兼容）:
+    {
+        "args": {str values},
+        "agent_state_dict": ...,
+        "optimizer_state_dict": ... (可选),
+        "reward_normalizer": {...}, (可选)
+        "global_step": int, (可选)
+        "update": int, (可选)
+        "next_obs": np.ndarray, (可选)
+        "next_done": np.ndarray, (可选)
+        "next_rnn_state": np.ndarray, (可选)
+        "episode_returns": list, (可选)
+    }
     """
     save_path = pathlib.Path(save_path).with_suffix(".pt")
     if reward_normalizer is not None:
         state_dicts["reward_normalizer"] = reward_normalizer.state_dict()
 
-    save_path.parent.mkdir(parents=True, exist_ok=True) # 创建保存目录
-    torch.save({"args": _serialize_args(args), **state_dicts},str(save_path),)
+    save_path.parent.mkdir(parents=True, exist_ok=True)
+    payload = {"args": _serialize_args(args), **state_dicts}
+    if extra:
+        payload.update(extra)
+    torch.save(payload, str(save_path))
     print(f"[Save] Model saved to {save_path}")
+
+
+def make_interrupt_save_path(base_path: str, global_step: int) -> str:
+    """根据基础路径和当前 global_step 生成中断保存文件名。"""
+    p = pathlib.Path(base_path)
+    stem = p.stem
+    parent = p.parent
+    return str(parent / f"{stem}_interrupt_globalstep{global_step}.pt")
+
+
+def safe_close(env: GodotDiscreteEnvWrapper) -> None:
+    """静默关闭环境，忽略所有异常。"""
+    try:
+        env.close()
+    except Exception:
+        pass
+
+
+def load_full_checkpoint(
+    model_path: str, device: torch.device
+) -> dict:
+    """加载扩展格式 checkpoint。
+
+    返回 dict，包含:
+      - args (dict): 序列化后的训练配置
+      - agent_state_dict: 模型参数
+      - optimizer_state_dict (可选): 优化器状态
+      - reward_normalizer (可选): 奖励归一化器状态
+      - global_step (可选): 全局步数
+      - update (可选): 已完成的 update 数
+      - next_obs / next_done / next_rnn_state (可选): 环境恢复状态
+      - episode_returns (可选): 最近回合奖励
+    """
+    checkpoint = torch.load(model_path, map_location=device, weights_only=False)
+    return dict(checkpoint)
 

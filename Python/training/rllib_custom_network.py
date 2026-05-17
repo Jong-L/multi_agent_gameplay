@@ -16,6 +16,7 @@ import ray
 import torch
 import torch.nn as nn
 import yaml
+from collections import defaultdict, deque
 from ray import train, tune
 from ray.rllib.algorithms.algorithm import Algorithm
 from ray.rllib.algorithms.callbacks import DefaultCallbacks
@@ -546,6 +547,129 @@ def _parse_args():
     return args
 
 
+# 训练监控回调
+class _EpisodeStatsCallback(DefaultCallbacks):
+    """打印每智能体最近 N 回合平均奖励与 PPO KL 散度。
+
+    - on_episode_end: 通过 episode.agent_rewards 累加每智能体每回合总奖励,
+      存入滚动窗口 (maxlen=N)。
+    - on_train_result: 每轮训练结束后, 打印各智能体最近 N 回合平均奖励及当前
+      KL 散度 / policy_loss / vf_loss / entropy。
+
+    适用配置: RLlib 2.40, PPO old API stack (enable_env_runner_and_connector_v2=False),
+    多智能体 (env_is_multiagent=True)。
+    """
+
+    def __init__(self, window_size: int = 20):
+        super().__init__()
+        self._window = window_size
+        # {agent_id: deque([episode_reward, ...], maxlen=window_size)}
+        self._recent_rewards: dict[str, deque] = defaultdict(
+            lambda: deque(maxlen=window_size)
+        )
+
+    def on_episode_end(
+        self,
+        *,
+        episode,
+        env_runner=None,
+        metrics_logger=None,
+        env=None,
+        env_index: int,
+        rl_module=None,
+        worker=None,
+        base_env=None,
+        policies=None,
+        **kwargs,
+    ):
+        # EpisodeV2.agent_rewards: Dict[(AgentID, PolicyID), float]
+        for (agent_id, _policy_id), total_reward in episode.agent_rewards.items():
+            self._recent_rewards[agent_id].append(float(total_reward))
+
+    def on_train_result(
+        self,
+        *,
+        algorithm,
+        metrics_logger=None,
+        result: dict,
+        **kwargs,
+    ):
+        iter_idx = result.get("training_iteration", "?")
+        print(f"\n{'='*70}")
+        print(f"  Training Iteration {iter_idx} — Per-Agent Stats "
+              f"(last {self._window} episodes)")
+        print(f"{'='*70}")
+
+        # --- 最近 N 回合平均奖励 ---
+        any_data = False
+        for agent_id in sorted(self._recent_rewards.keys()):
+            buf = self._recent_rewards[agent_id]
+            if buf:
+                avg = sum(buf) / len(buf)
+                print(f"  [{agent_id}] reward  last{len(buf)}ep_avg={avg:+.2f}  "
+                      f"(history={list(buf)})")
+                any_data = True
+
+        if not any_data:
+            print("  (no episode rewards collected yet)")
+
+        # --- KL 散度 / 其他训练指标 (per-policy) ---
+        # RLlib 2.40 old API: result["info"]["learner"] = {policy_id: {learner_stats: {...}}}
+        # 顶层不直接暴露 policy_id。
+        print()
+        learner_info = result.get("info", {}).get("learner", {})
+        if learner_info:
+            printed_header = False
+            for pid in sorted(learner_info.keys()):
+                raw = learner_info[pid]
+                # learner_info[pid] 本身非 dict (不太可能, 保护一下)
+                if not isinstance(raw, dict):
+                    continue
+                stats = raw.get("learner_stats", raw)
+                kl = stats.get("kl", float("nan"))
+                pl = stats.get("policy_loss", float("nan"))
+                vf = stats.get("vf_loss", float("nan"))
+                ent = stats.get("entropy", float("nan"))
+
+                if not printed_header:
+                    print(f"  {'Policy':<20} {'KL':>10} {'PolicyLoss':>12} "
+                          f"{'VFLoss':>10} {'Entropy':>10}")
+                    printed_header = True
+                print(f"  {pid:<20} {kl:>10.4f} {pl:>12.4f} "
+                      f"{vf:>10.4f} {ent:>10.4f}")
+
+            if not printed_header:
+                print("  (info.learner found but no per-policy stats)")
+        else:
+            # 极少数版本 result 直接以 policy_id 为顶层 key
+            policy_ids = [k for k in result if k not in {
+                "training_iteration", "time_this_iter_s", "time_total_s",
+                "pid", "hostname", "date", "timestamp", "node_ip",
+                "done", "timesteps_total", "episodes_total",
+                "config", "counters", "custom_metrics", "env_runners",
+                "episode_media", "info", "perf", "timers", "agent_timesteps_total",
+            } and isinstance(result[k], dict)]
+            if policy_ids:
+                printed_header = False
+                for pid in sorted(policy_ids):
+                    stats = result.get(pid, {})
+                    if "kl" not in stats and "learner_stats" in stats:
+                        stats = stats["learner_stats"]
+                    kl = stats.get("kl", float("nan"))
+                    pl = stats.get("policy_loss", float("nan"))
+                    vf = stats.get("vf_loss", float("nan"))
+                    ent = stats.get("entropy", float("nan"))
+                    if not printed_header:
+                        print(f"  {'Policy':<20} {'KL':>10} {'PolicyLoss':>12} "
+                              f"{'VFLoss':>10} {'Entropy':>10}")
+                        printed_header = True
+                    print(f"  {pid:<20} {kl:>10.4f} {pl:>12.4f} "
+                          f"{vf:>10.4f} {ent:>10.4f}")
+            else:
+                print("  (no per-policy stats found in result)")
+        print(f"{'='*70}\n")
+
+
 class RLLibTrainingPipeline:
     """RLlib 训练流水线
     """
@@ -787,6 +911,10 @@ class RLLibTrainingPipeline:
         else:
             self._exp["config"]["num_envs_per_env_runner"] = self._num_envs
 
+    def _configure_callbacks(self) -> None:
+        """注入训练监控回调: 每智能体最近 N 回合平均奖励 + KL 散度。"""
+        self._exp["config"]["callbacks"] = _EpisodeStatsCallback
+
     #训练
     def _run_training(self) -> tune.ResultGrid:
         """执行 RLlib 训练 (新建或恢复)。"""
@@ -860,6 +988,9 @@ class RLLibTrainingPipeline:
 
         # 多/单智能体配置注入
         self._configure_agent_mode()
+
+        # 训练监控回调注入 (每智能体最近 N 回合平均奖励 + KL)
+        self._configure_callbacks()
 
         # 初始化 Ray (注入 PYTHONPATH 使 worker 进程能找到本地模块)
         training_dir = os.path.dirname(os.path.abspath(__file__))

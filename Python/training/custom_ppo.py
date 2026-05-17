@@ -217,7 +217,7 @@ class Args:
     experiment_dir: str = "logs/cleanrl_ppo"
     """TensorBoard 日志目录。"""
     # save_model_path: Optional[str] = None
-    save_model_path:Optional[str] = "saved_models/ppo_mlp"
+    save_model_path:Optional[str] = "saved_models/ppo_gru_mlp"
     """模型保存路径 (不加后缀)。"""
     track: bool = False
     """是否使用 Weights & Biases 追踪实验。"""
@@ -241,7 +241,7 @@ class Args:
     """小批量数量"""
     update_epochs: int = 8
     """每次更新遍历数据的轮数，即同一批经验的使用次数"""
-    recurrent_seq_len: int = 128
+    recurrent_seq_len: int = 32
     """GRU_MLP 训练时的连续序列长度，用于 truncated BPTT。"""
     clip_coef: float = 0.2
     """PPO 裁剪系数 ε。"""
@@ -269,7 +269,7 @@ class Args:
     """奖励归一化裁剪范围 (仅在 reward_norm=True 时生效)。"""
 
     # 网络结构
-    network_type: NetworkType = NetworkType.MLP
+    network_type: NetworkType = NetworkType.GRU_MLP
 
     # segmented mlp
     self_hidden: int = 32
@@ -277,8 +277,8 @@ class Args:
     ball_hidden: int = 64
     enemy_hidden: int = 64
     map_hidden: int = 64
-    # trunk_hidden: tuple = (128,64)#gru使用
-    trunk_hidden: tuple = (196, 96, 48)#seg mlp
+    trunk_hidden: tuple = (128,64)#gru使用
+    # trunk_hidden: tuple = (196, 96, 48)#seg mlp
 
     # mlp
     mlp_hiddens: tuple = (256, 128,64)
@@ -924,16 +924,23 @@ def main():
             args, agent, envs, optimizer, device, writer,
             reward_normalizer, next_obs, next_done, next_rnn_state,
         )
-    except KeyboardInterrupt:
-        print("\n[Interrupt] 训练被手动中断")
+    except (KeyboardInterrupt, ConnectionResetError) as e:
+        print(f"\n[Interrupt] 训练中断 ({type(e).__name__})")
         if args.save_model_path is not None:
             print(f"[Interrupt] 保存检查点到 {args.save_model_path} ...")
             save_dict = {"agent_state_dict": agent.state_dict()}
             save_pt_model(args.save_model_path, save_dict, args, reward_normalizer)
         return
     finally:
-        envs.close()
-        writer.close()
+        # Godot 进程在 Ctrl+C 时可能已退出，close 必然失败，加防护防止二次报错
+        try:
+            envs.close()
+        except Exception:
+            pass
+        try:
+            writer.close()
+        except Exception:
+            pass
 
     # 正常训练结束后的保存与导出
     if args.save_model_path is not None:
