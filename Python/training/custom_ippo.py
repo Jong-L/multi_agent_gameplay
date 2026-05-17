@@ -24,6 +24,7 @@ from godot_env_wrapper import (
     GodotDiscreteEnvWrapper,
     ObsSegmentDims,
     RewardNormalizer,
+    _serialize_args,
     init_training_setup,
     save_pt_model,
     layer_init,
@@ -767,7 +768,7 @@ def save_ippo_model(
             agent_states[f"agent_{i}_reward_norm"] = reward_normalizers[i].state_dict() #奖励归一化器参数
 
     save_path.parent.mkdir(parents=True, exist_ok=True) # 创建保存目录
-    torch.save({"args": vars(args), **agent_states},str(save_path))
+    torch.save({"args": _serialize_args(args), **agent_states},str(save_path))
     print(f"[Save] IPPO model saved to {save_path}")
 
 
