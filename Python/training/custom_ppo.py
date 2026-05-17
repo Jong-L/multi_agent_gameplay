@@ -198,7 +198,7 @@ class Args:
     """训练配置"""
     # 环境 
     # env_path: Optional[str] = None
-    env_path: Optional[str] = "curriculum_envs\\s4-enemy-only\\build2\\game.exe"
+    env_path: Optional[str] = "curriculum_envs\\s4-enemy-only\\build\\game.exe"
     """Godot环境路径"""
     config_path: str = "curriculum_envs\\s4-enemy-only\\configs\\game_config.tres"
     """game_config.tres 路径, 用于读取观测维度配置"""
@@ -216,10 +216,9 @@ class Args:
     """实验名称, 在 TensorBoard 中显示。"""
     experiment_dir: str = "logs/cleanrl_ppo"
     """TensorBoard 日志目录。"""
-    save_model_path: Optional[str] = None
+    # save_model_path: Optional[str] = None
+    save_model_path:Optional[str] = "saved_models/ppo_mlp"
     """模型保存路径 (不加后缀)。"""
-    onnx_export_path: Optional[str] = None
-    """导出 ONNX 模型的路径。"""
     track: bool = False
     """是否使用 Weights & Biases 追踪实验。"""
     wandb_project_name: str = "cleanRL"
@@ -270,7 +269,7 @@ class Args:
     """奖励归一化裁剪范围 (仅在 reward_norm=True 时生效)。"""
 
     # 网络结构
-    network_type: NetworkType = NetworkType.SEGMENTED_MLP
+    network_type: NetworkType = NetworkType.MLP
 
     # segmented mlp
     self_hidden: int = 32
@@ -703,53 +702,7 @@ def log_ppo(
                 f"   training time: {hours:02d}:{minutes:02d}:{seconds:02d}"
                 )
 
-
-def export_ppo_onnx(agent: PPOAgent, onnx_path: str, obs_shape: tuple) -> None:
-    """将 PPO 智能体导出为 ONNX 模型 (确定性策略)。
-
-    导出时会包装一层 OnnxPolicy, 只输出动作 logits,
-    用于 Godot 端的推理 (不需要概率采样)
-    """
-    path_onnx = pathlib.Path(onnx_path).with_suffix(".onnx")
-    print(f"[Export] Exporting ONNX to {path_onnx}")
-
-    agent.eval().to("cpu")
-
-    class OnnxPolicy(torch.nn.Module):
-        def __init__(self, ppo_agent):
-            super().__init__()
-            self.ppo_agent = ppo_agent
-
-        def forward(self, obs, state_ins):
-            features, state_outs = self.ppo_agent._forward_features(obs, state_ins)
-            logits = self.ppo_agent.actor(features)
-            if state_outs is None:
-                state_outs = state_ins
-            return logits, state_outs
-
-    onnx_policy = OnnxPolicy(agent)
-    dummy_input = torch.randn(1, int(np.prod(obs_shape)))
-    dummy_state = torch.zeros(1, agent.recurrent_state_size).float() if agent.is_recurrent else torch.zeros(1).float()
-
-    torch.onnx.export(
-        onnx_policy,
-        args=(dummy_input, dummy_state),
-        f=str(path_onnx),
-        opset_version=15,
-        input_names=["obs", "state_ins"],
-        output_names=["output", "state_outs"],
-        dynamic_axes={
-            "obs": {0: "batch_size"},
-            "state_ins": {0: "batch_size"},
-            "output": {0: "batch_size"},
-            "state_outs": {0: "batch_size"},
-        },
-    )
-    print(f"[Export] Done: {path_onnx}")
-
-
 #  主训练循环
-
 def train(
     args: Args,
     agent: PPOAgent,
@@ -986,10 +939,6 @@ def main():
     if args.save_model_path is not None:
         save_dict = {"agent_state_dict": agent.state_dict()}
         save_pt_model(args.save_model_path, save_dict, args, reward_normalizer)
-
-    if args.onnx_export_path is not None:
-        export_ppo_onnx(agent, args.onnx_export_path,
-                        envs.single_observation_space.shape)
 
 if __name__ == "__main__":
     main()
