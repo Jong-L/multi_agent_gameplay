@@ -41,7 +41,7 @@ from custom_ppo import (
 class ReplayConfig:
     """PPO 模型回放配置 — 直接修改默认值即可。"""
 
-    model_path: str = "savedmodels/cleanrl_ppo_mlp.pt"
+    model_path: str = "saved_models/ppo_mlp.pt"
     """要加载的模型文件路径 (.pt)。"""
 
     env_path: Optional[str] = "curriculum_envs/s4-enemy-only/build/game.exe"
@@ -94,7 +94,9 @@ def build_replay_args(checkpoint_data: dict):
     from custom_ppo import Args as TrainArgs
 
     # checkpoint 中保存的 args 即为完整 TrainArgs 字段
-    merged = dict(checkpoint_data)
+    # 过滤掉不属于 Args 的运行时字段（如 reward_normalizer）
+    args_fields = {f.name for f in TrainArgs.__dataclass_fields__.values()}
+    merged = {k: v for k, v in checkpoint_data.items() if k in args_fields}
 
     # network_type 保存为字符串，转为 NetworkType 枚举
     nt = merged.get("network_type", "segmented_mlp")
