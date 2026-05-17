@@ -48,7 +48,7 @@ class Config:
     """实验名称。"""
 
     # ---- 训练 ----
-    timesteps: int = 1_000_000
+    timesteps: int = 2_000_000
     """总训练步数。"""
     linear_lr_schedule: bool = False
     """使用线性 LR 退火。"""
@@ -240,9 +240,9 @@ if args.resume_model_path is None:
     model: PPO = PPO(
         "MultiInputPolicy",
         env,
-        ent_coef=0.001,
+        ent_coef=0.005,
         verbose=1,
-        n_steps=32,
+        n_steps=128,
         tensorboard_log=args.experiment_dir,
         learning_rate=learning_rate,
         gamma=args.gamma,
