@@ -7,10 +7,6 @@ ppo_gru_fast.py — GRU-MLP 优化版 PPO
 2. PPOAgent 新增 evaluate_sequence() 方法，封装整段序列的 actor+critic 评估。
 3. evaluate_recurrent_sequences 改为按 done 边界切分子序列，
    每段调用一次 evaluate_sequence()，彻底消除原 batch=1 的逐点循环。
-
-进一步优化（2026-05-16）：
-4. torch.compile 加速 forward_sequence / evaluate_sequence（方案1）。
-5. 向量化索引收集，消去 evaluate_recurrent_sequences 中的 Python 逐元素循环（方案3）。
 """
 
 import os
