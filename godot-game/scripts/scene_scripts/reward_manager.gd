@@ -733,8 +733,11 @@ func _is_player_pressing_wall(player: Player) -> bool:
 
 	if player.is_on_wall():
 		var wall_normal: Vector2 = player.get_wall_normal() #碰撞法线
-		if wall_normal != Vector2.ZERO and desired.dot(wall_normal) < -0.001:
+		#if player.player_id==0:
+			#print(wall_normal)
+		if (wall_normal.x>0.9 and desired.x<0.0) or (wall_normal.x<-0.9 and desired.x>0.0):
 			return true
+			
 	if player.is_on_floor():
 		return desired.y > 0.001
 	if player.is_on_ceiling():

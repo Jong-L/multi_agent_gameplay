@@ -270,7 +270,7 @@ class Args:
     """奖励归一化裁剪范围 (仅在 reward_norm=True 时生效)。"""
 
     # 网络结构
-    network_type: NetworkType = NetworkType.GRU_MLP
+    network_type: NetworkType = NetworkType.SEGMENTED_MLP
 
     # segmented mlp
     self_hidden: int = 32
