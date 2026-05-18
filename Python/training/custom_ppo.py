@@ -192,6 +192,29 @@ class GruMlpEncoder(nn.Module):
         h_new = h_new.transpose(0, 1).reshape(batch_size, self.recurrent_state_size)#(B, L*H)
         return features, h_new
 
+    def forward_sequence(
+        self,
+        obs_seq: torch.Tensor,       # (seq_len, obs_dim)
+        rnn_state: torch.Tensor,     # (1, L*H)
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+        """整序列前向传播：一次 GRU 调用处理全部时间步。"""
+        s, p, b, e, m = self.obs.split(obs_seq)
+
+        gru_input = torch.cat([s, p, e, m], dim=1).unsqueeze(0)#(1, seq_len, H)
+        gru_input = self.gru_ln(gru_input)
+
+        h0 = rnn_state.view(1, self.gru_num_layers, self.gru_hidden)#(1, L, H)
+        h0 = h0.transpose(0, 1).contiguous()#(L, 1, H)
+
+        gru_out, h_new = self.gru(gru_input, h0)#out:(1, seq_len, H), h_new:(L, 1, H)
+
+        ball_features = self.ball_net(b)
+        fused = torch.cat([gru_out.squeeze(0), ball_features], dim=1)
+        features = self.trunk(fused)
+
+        h_new = h_new.transpose(0, 1).reshape(1, self.recurrent_state_size)#(1, L*H)
+        return features, h_new
+
 #  训练配置
 @dataclass
 class Args:
@@ -241,7 +264,7 @@ class Args:
     """小批量数量"""
     update_epochs: int = 8
     """每次更新遍历数据的轮数，即同一批经验的使用次数"""
-    recurrent_seq_len: int = 32
+    recurrent_seq_len: int = 128
     """GRU_MLP 训练时的连续序列长度，用于 truncated BPTT。"""
     clip_coef: float = 0.2
     """PPO 裁剪系数 ε。"""
@@ -413,6 +436,22 @@ class PPOAgent(nn.Module):
         if return_state:
             return (*result, next_rnn_state)
         return result
+
+    def evaluate_sequence(
+        self,
+        obs_seq: torch.Tensor,       # (seq_len, obs_dim)
+        action_seq: torch.Tensor,    # (seq_len,)
+        rnn_state: torch.Tensor,     # (1, L*H)
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+        """整段序列评估：计算每个时间步的 logprob / 熵 / 价值。"""
+        features_seq, next_state = self.encoder.forward_sequence(obs_seq, rnn_state)
+        logits_seq = self.actor(features_seq)
+        probs = Categorical(logits=logits_seq)
+        logprobs = probs.log_prob(action_seq)
+        entropies = probs.entropy()
+        values = self.critic(features_seq).squeeze(-1)
+
+        return logprobs, entropies, values, next_state
 
 #  Rollout 数据结构
 @dataclass
@@ -608,44 +647,54 @@ def evaluate_recurrent_sequences(
     seq_envs: np.ndarray,
     device: torch.device,
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
-    """Evaluate contiguous rollout chunks while preserving GRU state flow."""
+    """按 done 边界切分子序列，整段批量前向传播。"""
     if rollout.rnn_states is None:
         raise ValueError("Recurrent PPO update requires rollout.rnn_states.")
 
     num_envs = rollout.obs.shape[1]
-    indices = []
-    logprobs = []
-    entropies = []
-    values = []
+    all_indices = []
+    all_logprobs = []
+    all_entropies = []
+    all_values = []
 
-    #遍历指定的每个序列
     for start_t, end_t, env_i in zip(seq_starts, seq_ends, seq_envs):
         start_t = int(start_t)
         end_t = int(end_t)
         env_i = int(env_i)
-        state = rollout.rnn_states[start_t, env_i].unsqueeze(0).detach()#序列初始隐藏态
 
-        #遍历序列中的每个时间步
-        for t in range(start_t, end_t):
-            _, logprob, entropy, value, state = agent.get_action_and_value(
-                rollout.obs[t, env_i].unsqueeze(0),
-                rollout.actions[t, env_i].unsqueeze(0),
-                rnn_state=state,
-                return_state=True,
+        seq_len = end_t - start_t
+        done_seq = rollout.dones[start_t:end_t, env_i]
+        done_positions = torch.where(done_seq > 0.5)[0].cpu().tolist()
+        split_points = [0] + [int(p) for p in done_positions] + [seq_len]
+
+        for i in range(len(split_points) - 1):
+            sub_start = split_points[i]
+            sub_end = split_points[i + 1]
+            if sub_start >= sub_end:
+                continue
+
+            abs_start = start_t + sub_start
+            abs_end = start_t + sub_end
+
+            state = rollout.rnn_states[abs_start, env_i].unsqueeze(0).detach()
+            sub_obs = rollout.obs[abs_start:abs_end, env_i]
+            sub_actions = rollout.actions[abs_start:abs_end, env_i]
+
+            logprobs, entropies, values, state = agent.evaluate_sequence(
+                sub_obs, sub_actions, state,
             )
-            indices.append(t * num_envs + env_i)
-            logprobs.append(logprob)
-            entropies.append(entropy)
-            values.append(value.view(-1))
 
-            if t + 1 < end_t:#回合结束隐藏态重置
-                state = state * (1.0 - rollout.dones[t + 1, env_i]).view(1, 1).to(device)
+            sub_indices = torch.arange(abs_start, abs_end, device=device) * num_envs + env_i
+            all_indices.append(sub_indices)
+            all_logprobs.append(logprobs)
+            all_entropies.append(entropies)
+            all_values.append(values)
 
     return (
-        torch.tensor(indices, dtype=torch.long, device=device),
-        torch.cat(logprobs, dim=0),
-        torch.cat(entropies, dim=0),
-        torch.cat(values, dim=0),
+        torch.cat(all_indices, dim=0),
+        torch.cat(all_logprobs, dim=0),
+        torch.cat(all_entropies, dim=0),
+        torch.cat(all_values, dim=0),
     )
 
 #  日志 + 模型导出
@@ -780,7 +829,6 @@ def train(
 
             for epoch in range(args.update_epochs):
                 np.random.shuffle(seq_inds)#打乱序列索引
-                epoch_kls = []
 
                 #对每个minibatch中的所有子序列
                 for start in range(0, len(seq_inds), seqs_per_minibatch):
@@ -803,7 +851,6 @@ def train(
                         args.norm_adv,
                     )
                     clipfracs.append(clipfrac)
-                    epoch_kls.append(approx_kl.item())
 
                     # Critic loss
                     v_loss = compute_critic_loss(
@@ -823,7 +870,7 @@ def train(
                     optimizer.step()
 
                 # KL散度过大时结束本轮更新
-                if args.target_kl is not None and float(np.mean(epoch_kls)) > args.target_kl:
+                if args.target_kl is not None and approx_kl > args.target_kl:
                     break
         else:
             b_inds = np.arange(args.batch_size)#batch_indices
