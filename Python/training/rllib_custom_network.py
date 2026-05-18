@@ -549,12 +549,12 @@ def _parse_args():
 
 # 训练监控回调
 class _EpisodeStatsCallback(DefaultCallbacks):
-    """打印每智能体最近 N 回合平均奖励与 PPO KL 散度。
+    """训练监控回调：打印每智能体最近 N 回合平均奖励与 PPO KL 散度。
 
-    - on_episode_end: 通过 episode.agent_rewards 累加每智能体每回合总奖励,
-      存入滚动窗口 (maxlen=N)。
-    - on_train_result: 每轮训练结束后, 打印各智能体最近 N 回合平均奖励及当前
-      KL 散度 / policy_loss / vf_loss / entropy。
+    - on_episode_end: 在 RolloutWorker 上通过 episode.agent_rewards 收集奖励
+      （仅 worker 侧有效，不会同步到主进程）。
+    - on_train_result: 主进程上从 result 字典提取已聚合的 per-policy 奖励，
+      维护滚动窗口，并与 KL / policy_loss / vf_loss / entropy 合并打印。
 
     适用配置: RLlib 2.40, PPO old API stack (enable_env_runner_and_connector_v2=False),
     多智能体 (env_is_multiagent=True)。
@@ -567,6 +567,22 @@ class _EpisodeStatsCallback(DefaultCallbacks):
         self._recent_rewards: dict[str, deque] = defaultdict(
             lambda: deque(maxlen=window_size)
         )
+
+    def on_episode_start(
+        self,
+        *,
+        episode,
+        env_runner=None,
+        metrics_logger=None,
+        env=None,
+        env_index: int,
+        rl_module=None,
+        worker=None,
+        base_env=None,
+        policies=None,
+        **kwargs,
+    ):
+        pass  # RolloutWorker 侧触发，主进程不感知
 
     def on_episode_end(
         self,
@@ -582,8 +598,13 @@ class _EpisodeStatsCallback(DefaultCallbacks):
         policies=None,
         **kwargs,
     ):
-        # EpisodeV2.agent_rewards: Dict[(AgentID, PolicyID), float]
-        for (agent_id, _policy_id), total_reward in episode.agent_rewards.items():
+        """RolloutWorker 上执行；数据不会自动同步到主进程。
+
+        真正的 per-policy 奖励统计在 on_train_result 中通过 result 字典获取。
+        """
+        # 保留调试打印（如需要可注释掉）
+        agent_rewards = getattr(episode, "agent_rewards", {})
+        for (agent_id, _policy_id), total_reward in agent_rewards.items():
             self._recent_rewards[agent_id].append(float(total_reward))
 
     def on_train_result(
@@ -595,34 +616,43 @@ class _EpisodeStatsCallback(DefaultCallbacks):
         **kwargs,
     ):
         iter_idx = result.get("training_iteration", "?")
-        print(f"\n{'='*70}")
+        print(f"\n{'='*80}")
         print(f"  Training Iteration {iter_idx} — Per-Agent Stats "
-              f"(last {self._window} episodes)")
-        print(f"{'='*70}")
+              f"(last {self._window} episodes/iterations)")
+        print(f"{'='*80}")
 
-        # --- 最近 N 回合平均奖励 ---
+        # --- 收集 per-policy 奖励数据到滚动窗口 ---
+        # RLlib 回调实例是进程隔离的：RolloutWorker 侧的 _recent_rewards
+        # 不会同步到主进程。因此必须从 result 字典提取已聚合的指标。
         any_data = False
-        for agent_id in sorted(self._recent_rewards.keys()):
-            buf = self._recent_rewards[agent_id]
-            if buf:
-                avg = sum(buf) / len(buf)
-                print(f"  [{agent_id}] reward  last{len(buf)}ep_avg={avg:+.2f}  "
-                      f"(history={list(buf)})")
+
+        # 1) 尝试从 hist_stats 读取 per-policy episode 奖励列表（old API stack）
+        hist_stats = result.get("hist_stats", {})
+        if hist_stats:
+            for key, values in hist_stats.items():
+                if key.startswith("policy_") and key.endswith("_reward"):
+                    if isinstance(values, (list, tuple)) and values:
+                        policy_id = key[len("policy_"):-len("_reward")]
+                        for v in values:
+                            self._recent_rewards[policy_id].append(float(v))
+                        any_data = True
+
+        # 2) 若 hist_stats 没有 per-policy 数据，退而使用 policy_reward_mean
+        if not any_data:
+            sampler_results = result.get("sampler_results") or result.get("env_runners", {})
+            policy_reward_mean = sampler_results.get("policy_reward_mean", {})
+            if policy_reward_mean:
+                for policy_id, avg_reward in sorted(policy_reward_mean.items()):
+                    self._recent_rewards[policy_id].append(float(avg_reward))
                 any_data = True
 
-        if not any_data:
-            print("  (no episode rewards collected yet)")
-
-        # --- KL 散度 / 其他训练指标 (per-policy) ---
-        # RLlib 2.40 old API: result["info"]["learner"] = {policy_id: {learner_stats: {...}}}
-        # 顶层不直接暴露 policy_id。
+        # --- KL 散度 / 其他训练指标 (per-policy)，与奖励合并到一张表 ---
         print()
         learner_info = result.get("info", {}).get("learner", {})
         if learner_info:
             printed_header = False
             for pid in sorted(learner_info.keys()):
                 raw = learner_info[pid]
-                # learner_info[pid] 本身非 dict (不太可能, 保护一下)
                 if not isinstance(raw, dict):
                     continue
                 stats = raw.get("learner_stats", raw)
@@ -631,11 +661,14 @@ class _EpisodeStatsCallback(DefaultCallbacks):
                 vf = stats.get("vf_loss", float("nan"))
                 ent = stats.get("entropy", float("nan"))
 
+                buf = self._recent_rewards.get(pid)
+                reward_str = f"{sum(buf)/len(buf):+.2f}" if buf else "N/A"
+
                 if not printed_header:
-                    print(f"  {'Policy':<20} {'KL':>10} {'PolicyLoss':>12} "
+                    print(f"  {'Policy':<12} {'Reward':>10} {'KL':>10} {'PolicyLoss':>12} "
                           f"{'VFLoss':>10} {'Entropy':>10}")
                     printed_header = True
-                print(f"  {pid:<20} {kl:>10.4f} {pl:>12.4f} "
+                print(f"  {pid:<12} {reward_str:>10} {kl:>10.4f} {pl:>12.4f} "
                       f"{vf:>10.4f} {ent:>10.4f}")
 
             if not printed_header:
@@ -659,15 +692,19 @@ class _EpisodeStatsCallback(DefaultCallbacks):
                     pl = stats.get("policy_loss", float("nan"))
                     vf = stats.get("vf_loss", float("nan"))
                     ent = stats.get("entropy", float("nan"))
+
+                    buf = self._recent_rewards.get(pid)
+                    reward_str = f"{sum(buf)/len(buf):+.2f}" if buf else "N/A"
+
                     if not printed_header:
-                        print(f"  {'Policy':<20} {'KL':>10} {'PolicyLoss':>12} "
+                        print(f"  {'Policy':<12} {'Reward':>10} {'KL':>10} {'PolicyLoss':>12} "
                               f"{'VFLoss':>10} {'Entropy':>10}")
                         printed_header = True
-                    print(f"  {pid:<20} {kl:>10.4f} {pl:>12.4f} "
+                    print(f"  {pid:<12} {reward_str:>10} {kl:>10.4f} {pl:>12.4f} "
                           f"{vf:>10.4f} {ent:>10.4f}")
             else:
                 print("  (no per-policy stats found in result)")
-        print(f"{'='*70}\n")
+        print(f"{'='*80}\n")
 
 
 class RLLibTrainingPipeline:
@@ -1008,7 +1045,6 @@ class RLLibTrainingPipeline:
 
 
 #入口
-
 if __name__ == "__main__":
     args = _parse_args()
     pipeline = RLLibTrainingPipeline(

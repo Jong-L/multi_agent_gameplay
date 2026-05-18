@@ -9,8 +9,6 @@ import os
 import pathlib
 import time
 from collections import deque
-from dataclasses import dataclass, field
-from enum import Enum
 from typing import Optional
 
 import gymnasium as gym
@@ -26,19 +24,10 @@ from godot_env_wrapper import (
     RewardNormalizer,
     _serialize_args,
     init_training_setup,
-    save_pt_model,
     layer_init,
 )
 
-
-
-
-class NetworkType(str, Enum):
-    """Supported feature extractors for each IPPO policy."""
-
-    SEGMENTED_MLP = "segmented_mlp"
-    MLP = "mlp"
-    GRU_MLP = "gru_mlp"
+from custom_ppo_dataclass import AgentConfig, IppoArgs, NetworkType, RolloutData
 
 def as_hidden_tuple(value, default: tuple) -> tuple:
     """Normalize None/int/iterable hidden-size config into a tuple[int, ...]."""
@@ -204,101 +193,8 @@ class GruMlpEncoder(nn.Module):
         return features, h_new
 
 
-@dataclass
-class AgentConfig:
-    agent_id: int
-    train: bool = True
-
-    network_type: NetworkType = NetworkType.MLP
-
-    # segmented mlp
-    self_hidden: int = 32
-    player_hidden: int = 64
-    ball_hidden: int = 64
-    enemy_hidden: int = 64
-    map_hidden: int = 64
-    trunk_hidden: tuple = (256, 128)
-
-    # mlp
-    mlp_hiddens: tuple = (400, 150)
-
-    # gru
-    gru_hidden: int = 128
-    gru_num_layers: int = 1
-    gru_input_layernorm: bool = True
-
-    learning_rate: float = 3e-4
-
-    gamma: float = 0.99
-    gae_lambda: float = 0.95
-    clip_coef: float = 0.2
-    ent_coef: float = 0.005
-    vf_coef: float = 0.5
-    max_grad_norm: float = 4.0
-
-    reward_norm: bool = True
-    reward_clip: float = 5.0
-
-
-@dataclass
-class IppoArgs:
-    """全局训练配置。
-    """
-
-    #环境
-    # env_path: Optional[str] = None
-    env_path: Optional[str] = "godot-game/build/game.exe"
-    config_path: str = "godot-game/configs/game_config.tres"
-    n_parallel: int = 1 #只能为1
-    seed: int = 1
-    show_window: bool = True
-    speedup: int = 10
-
-    # 训练
-    total_timesteps: int = 5_000_000
-    count_steps_by: str = "agent_steps"
-    """训练步数计数方式: "agent_steps" (智能体步数) 或 "env_steps" (环境步数)"""
-    batch_size: int = 1024
-    """每个智能体每个 rollout 的步数（也是每个 rollout 的环境步数）"""
-    num_minibatches: int = 4
-    update_epochs: int = 8
-    recurrent_seq_len: int = 64
-    """GRU_MLP 训练时的连续序列长度，用于 truncated BPTT。"""
-    norm_adv: bool = True # 是否归一化优势函数
-    clip_vloss: bool = True
-    anneal_lr: bool = False
-    target_kl: Optional[float] = None
-    torch_deterministic: bool = True
-    cuda: bool = True
-
-    #智能体配置
-    agent_configs: list[AgentConfig] = field(default_factory=lambda: [
-        AgentConfig(agent_id=0, train=True),
-        AgentConfig(agent_id=1,train=True),
-        AgentConfig(agent_id=2,train=False),
-        AgentConfig(agent_id=3,train=True),
-    ])
-
-    #日志 + 保存
-    exp_name: str = os.path.basename(__file__)[: -len(".py")]
-    experiment_dir: str = "logs/cleanrl_ippo"
-    save_model_path: Optional[str] = "saved-models/clean_rl_ippo"
-    # save_model_path: Optional[str] = None
-    track: bool = False
-    wandb_project_name: str = "cleanRL"
-    wandb_entity: Optional[str] = None
-
-    #运行时衍生数据
-    num_agents: int = 0
-    """智能体数量"""
-    num_envs: int = 0
-    """环境数量"""
-    minibatch_size: int = 0
-    """每个智能体每个小批量的样本数量 (batch_size // num_minibatches)"""
-
 class IPPOAgent(nn.Module):
     """Policy/value module with pluggable MLP, segmented MLP, or GRU-MLP encoder."""
-
     def __init__(
         self,
         n_actions: int,
@@ -311,13 +207,13 @@ class IPPOAgent(nn.Module):
         self.seg = seg
         obs_helper = SegmentedObsHelper(seg)
 
-        self_hiddens = as_hidden_tuple(cfg.self_hiddens, (cfg.self_hidden,))
-        player_hiddens = as_hidden_tuple(cfg.player_hiddens, (cfg.player_hidden,))
-        ball_hiddens = as_hidden_tuple(cfg.ball_hiddens, (cfg.ball_hidden,))
-        enemy_hiddens = as_hidden_tuple(cfg.enemy_hiddens, (cfg.enemy_hidden,))
-        map_hiddens = as_hidden_tuple(cfg.map_hiddens, (cfg.map_hidden,))
-        trunk_hiddens = as_hidden_tuple(cfg.trunk_hiddens, cfg.trunk_hidden)
-        mlp_hiddens = as_hidden_tuple(cfg.mlp_hiddens, ())
+        self_hiddens = as_hidden_tuple(cfg.self_hidden, (cfg.self_hidden,))
+        player_hiddens = as_hidden_tuple(cfg.player_hidden, (cfg.player_hidden,))
+        ball_hiddens = as_hidden_tuple(cfg.ball_hidden, (cfg.ball_hidden,))
+        enemy_hiddens = as_hidden_tuple(cfg.enemy_hidden, (cfg.enemy_hidden,))
+        map_hiddens = as_hidden_tuple(cfg.map_hidden, (cfg.map_hidden,))
+        trunk_hiddens = as_hidden_tuple(cfg.trunk_hiddens, cfg.trunk_hiddens)
+        mlp_hiddens = as_hidden_tuple(cfg.mlp_hiddens, cfg.mlp_hiddens)
 
         if self.network_type == NetworkType.SEGMENTED_MLP:
             self.encoder = SegmentedMlpEncoder(
@@ -402,21 +298,6 @@ class IPPOAgent(nn.Module):
         return result
 
 
-@dataclass
-class AgentRolloutData:
-    obs: torch.Tensor
-    actions: torch.Tensor
-    logprobs: torch.Tensor
-    rewards: torch.Tensor
-    dones: torch.Tensor
-    values: torch.Tensor
-    next_obs: torch.Tensor
-    next_done: torch.Tensor
-    next_value: Optional[float] = None
-    rnn_states: Optional[torch.Tensor] = None
-    next_rnn_state: Optional[torch.Tensor] = None
-
-
 #  GAE
 def compute_gae(
     rewards: torch.Tensor,
@@ -499,7 +380,7 @@ def compute_critic_loss(
 
 def evaluate_recurrent_sequences(
     agent: IPPOAgent,
-    rollout: AgentRolloutData,
+    rollout: RolloutData,
     seq_starts: np.ndarray,
     seq_ends: np.ndarray,
     device: torch.device,
@@ -551,7 +432,7 @@ def collect_rollout_ippo(
     accum_rewards: list,
     reward_normalizers: list[Optional[RewardNormalizer]],
     rnn_states: list[Optional[torch.Tensor]],
-) -> tuple[list[AgentRolloutData], int, list[Optional[torch.Tensor]]]:
+) -> tuple[list[RolloutData], int, list[Optional[torch.Tensor]], list[list[float]]]:
     """实际包括rollout_steps+1步"""
     n_agents = len(agents_cfg)
     obs_dim = envs.single_observation_space.shape
@@ -578,6 +459,7 @@ def collect_rollout_ippo(
 
     next_obs_all = next_obs_all.clone()#所有智能体的观测
     next_done_all = next_done_all.clone()
+    new_episode_returns: list[list[float]] = [[] for _ in range(n_agents)]
 
     for step in range(rollout_steps):
         global_step += 1
@@ -641,13 +523,15 @@ def collect_rollout_ippo(
             if agents_cfg[i].train:
                 accum_rewards[i] += float(rewards_raw[i])
                 if dones_raw[i]:
-                    episode_returns[i].append(accum_rewards[i])
+                    ep_ret = float(accum_rewards[i])
+                    episode_returns[i].append(ep_ret)
+                    new_episode_returns[i].append(ep_ret)
                     accum_rewards[i] = 0.0
 
         next_obs_all = next_obs_tensor
         next_done_all = next_done_tensor 
 
-    #包装为 AgentRolloutData
+    #包装为 RolloutData
     rollouts = []
     for i in range(n_agents):
         next_val = None
@@ -658,7 +542,7 @@ def collect_rollout_ippo(
                     next_obs_all[i].unsqueeze(0),
                     rnn_state=rnn_states[i],
                 ).item()
-        rollouts.append(AgentRolloutData(
+        rollouts.append(RolloutData(
             obs=buffers[i]["obs"],
             actions=buffers[i]["actions"],
             logprobs=buffers[i]["logprobs"],
@@ -672,7 +556,7 @@ def collect_rollout_ippo(
             next_rnn_state=rnn_states[i],
         ))
 
-    return rollouts, global_step, rnn_states
+    return rollouts, global_step, rnn_states, new_episode_returns
 
 
 #  日志系统
@@ -687,6 +571,7 @@ def log_ippo(
     start_time: float,
     update: int = -1,
     num_updates: int = -1,
+    new_episode_returns: Optional[list[list[float]]] = None,
 ) -> None:
     """将 IPPO 训练指标写入 TensorBoard 并打印终端日志。"""
     # 全局指标
@@ -715,8 +600,9 @@ def log_ippo(
 
         # Episode return
         if len(episode_returns[i]) > 0:
-            mean_ret = np.mean(np.array(episode_returns[i]))
-            writer.add_scalar(f"{tag}/charts/episodic_return", mean_ret, global_step)
+            # 仅在新 episode 完成时写入，否则保持上一回合结果不变
+            if new_episode_returns is not None and len(new_episode_returns[i]) > 0:
+                writer.add_scalar(f"{tag}/charts/episodic_return", new_episode_returns[i][-1], global_step)
 
     # 终端日志
     if update > 0 and num_updates > 0:
@@ -776,7 +662,7 @@ def save_ippo_model(
 def train_agent_update(
     agent: IPPOAgent,
     optimizer: optim.Optimizer,
-    rollout: AgentRolloutData,
+    rollout: RolloutData,
     cfg: AgentConfig,
     args: IppoArgs,
     device: torch.device,
@@ -985,7 +871,7 @@ def train(
                     optimizers[i].param_groups[0]["lr"] = progress * args.agent_configs[i].learning_rate
 
         # 经验采集
-        rollouts, global_step, rnn_states = collect_rollout_ippo(
+        rollouts, global_step, rnn_states, new_episode_returns = collect_rollout_ippo(
             args.agent_configs, agents, envs, args.batch_size, device,
             next_obs, next_done, global_step,
             episode_returns, accum_rewards, reward_normalizers,
@@ -1014,6 +900,7 @@ def train(
             losses, explained_vars,
             episode_returns, start_time,
             update=update, num_updates=num_updates,
+            new_episode_returns=new_episode_returns,
         )
 
 
@@ -1021,6 +908,9 @@ def train(
 def main():
     # 初始化
     args = IppoArgs()
+    if not args.is_multi_agent:
+        raise ValueError("custom_ippo.py requires is_multi_agent=True; IPPO config is disabled.")
+
     writer, device, envs, seg, run_name = init_training_setup(args)
 
     if args.n_parallel != 1:
