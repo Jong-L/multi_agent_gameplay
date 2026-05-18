@@ -1,17 +1,11 @@
 """
 离散动作 PPO (Proximal Policy Optimization)
 """
-
 import os
-import pathlib
 import time
 from collections import deque
-from dataclasses import dataclass
-from enum import Enum
-from tkinter import N
 from typing import Optional
 
-import gymnasium as gym
 import numpy as np
 import torch
 import torch.nn as nn
@@ -24,15 +18,11 @@ from godot_env_wrapper import (
     RewardNormalizer,
     init_training_setup,
     layer_init,
+    load_full_checkpoint,
     save_pt_model,
 )
 
-class NetworkType(str, Enum):
-    """Supported feature extractors for PPO policy."""
-
-    SEGMENTED_MLP = "segmented_mlp"
-    MLP = "mlp"
-    GRU_MLP = "gru_mlp"
+from custom_ppo_dataclass import Args, NetworkType, RolloutData
 
 def as_hidden_tuple(value, default: tuple) -> tuple:
     """
@@ -216,108 +206,6 @@ class GruMlpEncoder(nn.Module):
         return features, h_new
 
 #  训练配置
-@dataclass
-class Args:
-    """训练配置"""
-    # 环境 
-    # env_path: Optional[str] = None
-    env_path: Optional[str] = "curriculum_envs\\s4-enemy-only\\build\\game.exe"
-    """Godot环境路径"""
-    config_path: str = "curriculum_envs\\s4-enemy-only\\configs\\game_config.tres"
-    """game_config.tres 路径, 用于读取观测维度配置"""
-    n_parallel: int = 4
-    """并行 Godot 进程数量"""
-    seed: int = 1
-    """随机种子。"""
-    show_window: bool = False
-    """是否显示游戏窗口。"""
-    speedup: int = 16
-    """物理引擎加速倍数"""
-
-    #记录
-    exp_name: str = os.path.basename(__file__)[: -len(".py")]
-    """实验名称, 在 TensorBoard 中显示。"""
-    experiment_dir: str = "logs/cleanrl_ppo"
-    """TensorBoard 日志目录。"""
-    # save_model_path: Optional[str] = None
-    save_model_path:Optional[str] = "saved_models/ppo_gru_mlp"
-    """模型保存路径 (不加后缀)。"""
-    track: bool = False
-    """是否使用 Weights & Biases 追踪实验。"""
-    wandb_project_name: str = "cleanRL"
-    """W&B 项目名称。"""
-    wandb_entity: Optional[str] = None
-    """W&B 团队 / 实体名称。"""
-
-    # PPO 算法超参数
-    total_timesteps: int = 2_000_000
-    """总训练步数，所有环境（智能体）的步数之和，多环境（智能体）时消耗加倍"""
-    learning_rate: float = 3e-4
-    """Adam 优化器学习率。"""
-    num_steps: int = 128
-    """每个智能体（环境）每个 rollout 的步数"""
-    gamma: float = 0.99
-    """折扣因子"""
-    gae_lambda: float = 0.95
-    """GAE 的 λ 参数"""
-    num_minibatches: int = 4
-    """小批量数量"""
-    update_epochs: int = 8
-    """每次更新遍历数据的轮数，即同一批经验的使用次数"""
-    recurrent_seq_len: int = 128
-    """GRU_MLP 训练时的连续序列长度，用于 truncated BPTT。"""
-    clip_coef: float = 0.2
-    """PPO 裁剪系数 ε。"""
-    ent_coef: float = 0.005
-    """熵系数, 鼓励探索。"""
-    vf_coef: float = 0.5
-    """价值函数损失系数。"""
-    max_grad_norm: float = 4.0
-    """梯度裁剪最大范数。"""
-    norm_adv: bool = True
-    """对优势函数进行标准化。"""
-    clip_vloss: bool = True
-    """对价值函数损失使用裁剪。"""
-    anneal_lr: bool = False
-    """对学习率进行线性退火。"""
-    target_kl: Optional[float] = None
-    """目标 KL 散度阈值, 用于早停 (None = 不启用)"""
-    torch_deterministic: bool = True
-    """启用 PyTorch 确定性模式。"""
-    cuda: bool = True
-    """启用 CUDA 加速。"""
-    reward_norm: bool = True
-    """是否对奖励做 running z-score 归一化。"""
-    reward_clip: float = 5.0
-    """奖励归一化裁剪范围 (仅在 reward_norm=True 时生效)。"""
-
-    # 网络结构
-    network_type: NetworkType = NetworkType.GRU_MLP
-
-    # segmented mlp
-    self_hidden: int = 32
-    player_hidden: int = 64
-    ball_hidden: int = 64
-    enemy_hidden: int = 64
-    map_hidden: int = 64
-    trunk_hidden: tuple = (128,64)#gru使用
-    # trunk_hidden: tuple = (196, 96, 48)#seg mlp
-
-    # mlp
-    mlp_hiddens: tuple = (256, 128,64)
-
-    # gru
-    gru_hidden: int = 128
-    gru_num_layers: int = 1
-    gru_input_layernorm: bool = True
-
-    # 运行时计算的衍生值
-    num_envs: int = 0
-    batch_size: int = 0
-    """每次所有环境采样的样本数量总和"""
-    minibatch_size: int = 0
-
-#  PPO 网络
 class PPOAgent(nn.Module):
     """离散 PPO 智能体
     输入: 观测向量 (obs_dim,):
@@ -342,7 +230,7 @@ class PPOAgent(nn.Module):
         ball_hiddens = as_hidden_tuple(args.ball_hidden, (args.ball_hidden,))
         enemy_hiddens = as_hidden_tuple(args.enemy_hidden, (args.enemy_hidden,))
         map_hiddens = as_hidden_tuple(args.map_hidden, (args.map_hidden,))
-        trunk_hiddens = as_hidden_tuple(args.trunk_hidden, args.trunk_hidden)
+        trunk_hiddens = as_hidden_tuple(args.trunk_hiddens, args.trunk_hiddens)
         mlp_hiddens = as_hidden_tuple(args.mlp_hiddens, args.mlp_hiddens)
 
         # 创建不同网络结构
@@ -453,23 +341,6 @@ class PPOAgent(nn.Module):
 
         return logprobs, entropies, values, next_state
 
-#  Rollout 数据结构
-@dataclass
-class RolloutData:
-    """单次 rollout 收集的经验数据。
-    所有张量均在指定 device
-    """
-    obs: torch.Tensor   #shape(num_steps, num_envs, obs_dim)
-    actions: torch.Tensor   #shape(num_steps, num_envs)
-    logprobs: torch.Tensor  #shape(num_steps, num_envs)
-    rewards: torch.Tensor   #shape(num_steps, num_envs)
-    dones: torch.Tensor #shape(num_steps, num_envs)
-    values: torch.Tensor    #shape(num_steps, num_envs)
-    next_obs: torch.Tensor  #shape(num_envs, obs_dim)   — 最后一步后的观测
-    next_done: torch.Tensor #shape(num_envs,)   — 最后一步后的 done 标志
-    rnn_states: Optional[torch.Tensor] = None #shape(num_steps, num_envs, recurrent_state_size)
-    next_rnn_state: Optional[torch.Tensor] = None
-
 #  经验收集 (rollout)
 def collect_rollout(
     agent: PPOAgent,
@@ -483,7 +354,7 @@ def collect_rollout(
     accum_rewards: np.ndarray,
     reward_normalizer: Optional[RewardNormalizer] = None,
     rnn_state: Optional[torch.Tensor] = None,
-) -> tuple[RolloutData, int]:
+) -> tuple[RolloutData, int, list[float]]:
     """使用当前策略收集 num_steps 步经验。
     加上最后一步，实际包括num_steps+1步
     """
@@ -541,14 +412,21 @@ def collect_rollout(
 
         # 追踪平均回合奖励 (使用原始奖励)
         accum_rewards += np.asarray(reward, dtype=np.float64)
+        new_episode_returns: list[float] = []
         for i, d in enumerate(np.asarray(done)):
             if d:
-                episode_returns.append(accum_rewards[i])
+                ep_ret = float(accum_rewards[i])
+                episode_returns.append(ep_ret)
+                new_episode_returns.append(ep_ret)
                 accum_rewards[i] = 0.0
 
+    with torch.no_grad():
+        next_value = agent.get_value(next_obs, rnn_state).reshape(1, -1)
+
     return (
-        RolloutData(obs, actions, logprobs, rewards, dones, values,next_obs, next_done, rnn_states, rnn_state),
+        RolloutData(obs, actions, logprobs, rewards, dones, values,next_obs, next_done, rnn_states, rnn_state, next_value),
         global_step,
+        new_episode_returns,
     )
 
 #  GAE 优势估计
@@ -712,12 +590,11 @@ def log_ppo(
     start_time: float,
     update: int = -1,
     num_updates: int = -1,
+    new_episode_returns: Optional[list[float]] = None,
 ) -> None:
     """将 PPO 训练指标写入 TensorBoard 并打印终端日志。
     """
-    writer.add_scalar(
-        "charts/learning_rate", optimizer.param_groups[0]["lr"], global_step
-    )
+    writer.add_scalar("charts/learning_rate", optimizer.param_groups[0]["lr"], global_step)
     writer.add_scalar("losses/value_loss", v_loss.item(), global_step)
     writer.add_scalar("losses/policy_loss", pg_loss.item(), global_step)
     writer.add_scalar("losses/entropy", entropy_loss.item(), global_step)
@@ -742,7 +619,9 @@ def log_ppo(
                 f"   training time: {hours:02d}:{minutes:02d}:{seconds:02d}"
             )
         writer.add_scalar("charts/SPS", sps, global_step)
-        writer.add_scalar("charts/episodic_return", mean_return, global_step)
+        # 有新 episode 完成时用最新单个回合奖励；否则保持上一次记录值
+        if new_episode_returns is not None and len(new_episode_returns) > 0:
+            writer.add_scalar("charts/episodic_return", new_episode_returns[-1], global_step)
     else:
         if update > 0 and num_updates > 0:
             print(
@@ -750,6 +629,140 @@ def log_ppo(
                 f"kl: {approx_kl.item():.4f}"
                 f"   training time: {hours:02d}:{minutes:02d}:{seconds:02d}"
                 )
+
+def _count_completed_episodes(rollout: RolloutData) -> int:
+    """统计本次 rollout 中完成的 episode 数量。"""
+    done_rows = [rollout.next_done.unsqueeze(0)]
+    if rollout.dones.shape[0] > 1:
+        done_rows.insert(0, rollout.dones[1:])
+    dones = torch.cat(done_rows, dim=0)
+    return int(torch.any(dones > 0.5, dim=1).sum().item())
+
+def _build_train_state(
+    global_step: int,
+    update: int,
+    episode_count: int,
+    optimizer: optim.Optimizer,
+    episode_returns: deque,
+) -> dict:
+    """打包当前训练状态，用于 checkpoint 保存。"""
+    state: dict = dict(
+        global_step=int(global_step),
+        update=int(update),
+        episode_count=int(episode_count),
+        lr=float(optimizer.param_groups[0]["lr"]),
+    )
+    state["episode_returns"] = list(episode_returns)
+    return state
+
+def _load_train_state(ckpt: dict) -> tuple[int, int, int, deque]:
+    """从 checkpoint dict 恢复训练运行时变量。"""
+    global_step = int(ckpt.get("global_step", 0))
+    update = int(ckpt.get("update", 0))
+    episode_count = int(ckpt.get("episode_count", 0))
+    episode_returns = deque(ckpt.get("episode_returns", []), maxlen=20)
+    return global_step, update, episode_count, episode_returns
+
+def _restore_reward_normalizer(
+    ckpt: dict,
+    reward_normalizer: Optional[RewardNormalizer],
+) -> None:
+    """从 checkpoint 恢复奖励归一化器状态。"""
+    if reward_normalizer is not None and "reward_normalizer" in ckpt:
+        reward_normalizer.load_state_dict(ckpt["reward_normalizer"])
+
+def _make_checkpoint_path(base_path: Optional[str], episode_count: int) -> Optional[str]:
+    """生成带 episode 编号的 checkpoint 路径。"""
+    if base_path is None:
+        return None
+    base, ext = os.path.splitext(base_path)
+    if not ext:
+        ext = ".pt"
+    return f"{base}_episode{episode_count}{ext}"
+
+def _cleanup_old_checkpoints(base_path: Optional[str], max_keep: int) -> None:
+    """删除超出保留数量的旧 checkpoint。"""
+    if base_path is None or max_keep <= 0:
+        return
+    base, ext = os.path.splitext(base_path)
+    if not ext:
+        ext = ".pt"
+    prefix = os.path.basename(base) + "_episode"
+    dir_name = os.path.dirname(base_path) or "."
+
+    if not os.path.isdir(dir_name):
+        return
+
+    checkpoints: list[tuple[int, str]] = []
+    for f in os.listdir(dir_name):
+        if f.startswith(prefix) and f.endswith(ext):
+            try:
+                num_str = f[len(prefix):-len(ext)]
+                episode_num = int(num_str)
+                checkpoints.append((episode_num, os.path.join(dir_name, f)))
+            except ValueError:
+                continue
+
+    checkpoints.sort(key=lambda x: x[0])
+    while len(checkpoints) > max_keep:
+        _, old_path = checkpoints.pop(0)
+        try:
+            os.remove(old_path)
+        except OSError:
+            pass
+
+def _save_checkpoint(
+    ckpt_path: str,
+    agent: PPOAgent,
+    optimizer: optim.Optimizer,
+    args: Args,
+    reward_normalizer: Optional[RewardNormalizer],
+    extra: dict,
+) -> None:
+    """保存模型 + optimizer + 训练状态到 checkpoint 文件。"""
+    save_pt_model(
+        ckpt_path,
+        {
+            "agent_state_dict": agent.state_dict(),
+            "optimizer_state_dict": optimizer.state_dict(),
+        },
+        args,
+        reward_normalizer=reward_normalizer,
+        extra=extra,
+    )
+
+def load_checkpoint_if_requested(
+    resume_path: Optional[str],
+    is_resume: bool,
+    agent: PPOAgent,
+    optimizer: optim.Optimizer,
+    reward_normalizer: Optional[RewardNormalizer],
+    device: torch.device,
+) -> tuple[int, int, int, deque]:
+    """按需恢复模型 / optimizer / 归一化器 / 训练计数。"""
+    if not resume_path:
+        return 0, 1, 0, deque(maxlen=20)
+
+    print(f"[Resume] 加载 checkpoint: {resume_path}")
+    ckpt = load_full_checkpoint(resume_path, device)
+    agent.load_state_dict(ckpt["agent_state_dict"])
+
+    if is_resume:
+        if "optimizer_state_dict" in ckpt:
+            optimizer.load_state_dict(ckpt["optimizer_state_dict"])
+            print("[Resume] optimizer state restored")
+        _restore_reward_normalizer(ckpt, reward_normalizer)
+        start_global_step, start_update, start_episode_count, episode_returns = _load_train_state(ckpt)
+        start_update += 1
+        print(
+            f"[Resume] 从 update {start_update} / step {start_global_step} "
+            f"/ episode {start_episode_count} 继续"
+        )
+    else:
+        print("[Load] 仅加载模型参数，其余从头初始化")
+        return 0, 1, 0, deque(maxlen=20)
+
+    return start_global_step, start_update, start_episode_count, episode_returns
 
 #  主训练循环
 def train(
@@ -763,22 +776,35 @@ def train(
     next_obs: torch.Tensor,#初始观测
     next_done: torch.Tensor,#初始 done 标志
     next_rnn_state: Optional[torch.Tensor],#初始隐藏态
-) -> None:
+    start_global_step: int = 0,
+    start_update: int = 1,
+    start_episode_count: int = 0,
+    start_episode_returns: Optional[deque] = None,
+) -> dict:
     """PPO 主训练循环。"""
-    global_step = 0
+    global_step = start_global_step
     start_time = time.time()
     num_updates = args.total_timesteps // args.batch_size
-    episode_returns = deque(maxlen=20)#最近20个回合的奖励
+    episode_count = start_episode_count
+    episode_returns = deque(start_episode_returns or [], maxlen=20)#最近20个回合的奖励
     accum_rewards: np.ndarray = np.zeros(args.num_envs)#每回合累计奖励
+    next_checkpoint_episode = None
+    if args.save_every_n_episodes > 0:
+        interval = int(args.save_every_n_episodes)
+        next_checkpoint_episode = ((episode_count // interval) + 1) * interval
+    train.last_train_state = _build_train_state(
+        global_step, start_update - 1, episode_count,
+        optimizer, episode_returns,
+    )
 
-    for update in range(1, num_updates + 1):
+    for update in range(start_update, num_updates + 1):
         # 学习率退火
         if args.anneal_lr:
             progress = 1.0 - (update - 1.0) / num_updates
             optimizer.param_groups[0]["lr"] = progress * args.learning_rate
 
         # 收集经验
-        rollout, global_step = collect_rollout(
+        rollout, global_step, new_episode_returns = collect_rollout(
             agent, envs, args.num_steps, device,
             next_obs, next_done, global_step,
             episode_returns, accum_rewards,
@@ -788,14 +814,13 @@ def train(
         next_obs = rollout.next_obs
         next_done = rollout.next_done
         next_rnn_state = rollout.next_rnn_state
+        episode_count += _count_completed_episodes(rollout)
 
         # GAE 优势估计
         with torch.no_grad():
-            next_value = agent.get_value(rollout.next_obs, rollout.next_rnn_state).reshape(1, -1)
-
             advantages, target_values = compute_gae(
                 rollout.rewards, rollout.values, rollout.dones,
-                next_value, rollout.next_done,
+                rollout.next_value, rollout.next_done,
                 args.gamma, args.gae_lambda,
             )
 
@@ -935,7 +960,33 @@ def train(
             approx_kl, clipfracs, explained_var,
             episode_returns, start_time,
             update=update, num_updates=num_updates,
+            new_episode_returns=new_episode_returns,
         )
+
+        train.last_train_state = _build_train_state(
+            global_step, update, episode_count,
+            optimizer, episode_returns,
+        )
+
+        if next_checkpoint_episode is not None and episode_count >= next_checkpoint_episode:
+            ckpt_path = _make_checkpoint_path(args.save_model_path, episode_count)
+            if ckpt_path:
+                _save_checkpoint(
+                    ckpt_path, agent, optimizer,
+                    args, reward_normalizer, train.last_train_state,
+                )
+                print(
+                    f"[Checkpoint] episode={episode_count}, "
+                    f"update={update}, step={global_step} -> {ckpt_path}"
+                )
+                _cleanup_old_checkpoints(args.save_model_path, args.max_checkpoints)
+            while episode_count >= next_checkpoint_episode:
+                next_checkpoint_episode += int(args.save_every_n_episodes)
+
+    return _build_train_state(
+        global_step, num_updates, episode_count,
+        optimizer, episode_returns,
+    )
 
 #  主训练入口
 def main():
@@ -960,23 +1011,43 @@ def main():
         reward_normalizer = RewardNormalizer(clip=args.reward_clip)
         print(f"[RewardNorm] enabled, clip={args.reward_clip}")
 
+    resume_path = args.resume_from or args.load_model_path
+    is_resume = bool(args.resume_from)
+    start_global_step, start_update, start_episode_count, episode_returns = (
+        load_checkpoint_if_requested(
+            resume_path, is_resume,
+            agent, optimizer, reward_normalizer,
+            device,
+        )
+    )
+
     # 初始观测
     next_obs_array, _ = envs.reset(seed=args.seed)
     next_obs = torch.tensor(np.array(next_obs_array, dtype=np.float32)).to(device)#(num_envs,obs_dim)
     next_done = torch.zeros(args.num_envs).to(device)#(num_envs,)
     next_rnn_state = agent.get_initial_state(args.num_envs, device)#(num_envs,rec_state_size)
 
+    final_state = None
     try:
-        train(
+        final_state = train(
             args, agent, envs, optimizer, device, writer,
             reward_normalizer, next_obs, next_done, next_rnn_state,
+            start_global_step, start_update, start_episode_count,
+            episode_returns,
         )
     except (KeyboardInterrupt, ConnectionResetError) as e:
         print(f"\n[Interrupt] 训练中断 ({type(e).__name__})")
         if args.save_model_path is not None:
             print(f"[Interrupt] 保存检查点到 {args.save_model_path} ...")
-            save_dict = {"agent_state_dict": agent.state_dict()}
-            save_pt_model(args.save_model_path, save_dict, args, reward_normalizer)
+            interrupt_state = getattr(
+                train,
+                "last_train_state",
+                _build_train_state(0, 0, 0, optimizer, deque(maxlen=20)),
+            )
+            _save_checkpoint(
+                args.save_model_path, agent, optimizer,
+                args, reward_normalizer, interrupt_state,
+            )
         return
     finally:
         # Godot 进程在 Ctrl+C 时可能已退出，close 必然失败，加防护防止二次报错
@@ -990,9 +1061,15 @@ def main():
             pass
 
     # 正常训练结束后的保存与导出
-    if args.save_model_path is not None:
-        save_dict = {"agent_state_dict": agent.state_dict()}
-        save_pt_model(args.save_model_path, save_dict, args, reward_normalizer)
+    if args.save_model_path is not None and final_state is not None:
+        save_dict = {
+            "agent_state_dict": agent.state_dict(),
+            "optimizer_state_dict": optimizer.state_dict(),
+        }
+        save_pt_model(
+            args.save_model_path, save_dict, args,
+            reward_normalizer, extra=final_state,
+        )
 
 if __name__ == "__main__":
     main()

@@ -248,8 +248,11 @@ func on_player_moved(player: Player) -> void:
 		#add_reward(player.player_id, _cfg(player.player_id).run, "run")
 		player.ai_controller.reward+=_cfg(player.player_id).run
 
-#待机惩罚
+#待机惩罚（中心区域待机豁免）
 func idle_penalty(player:Player)->void:
+	if is_in_center_arena(player):
+		return
+		
 	if not player.is_moving:
 		player.ai_controller.reward+=_cfg(player.player_id).idle
 

@@ -1,0 +1,2982 @@
+warning: in the working copy of 'Python/training/custom_ppo.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'Python/training/rllib_custom_network.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'Python/replay/ppo_replay_model.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'Python/training/ppo_resume_trainer.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'Python/replay/ppo_replay_model.py', LF will be replaced by CRLF the next time Git touches it
+diff --git a/Python/__pycache__/clean_rl_dqn_example.cpython-313.pyc b/Python/__pycache__/clean_rl_dqn_example.cpython-313.pyc
+deleted file mode 100644
+index 87c6b02..0000000
+Binary files a/Python/__pycache__/clean_rl_dqn_example.cpython-313.pyc and /dev/null differ
+diff --git a/Python/__pycache__/clean_rl_example.cpython-313.pyc b/Python/__pycache__/clean_rl_example.cpython-313.pyc
+deleted file mode 100644
+index f70657c..0000000
+Binary files a/Python/__pycache__/clean_rl_example.cpython-313.pyc and /dev/null differ
+diff --git a/Python/__pycache__/clean_rl_pqn_example.cpython-313.pyc b/Python/__pycache__/clean_rl_pqn_example.cpython-313.pyc
+deleted file mode 100644
+index ff0cfcf..0000000
+Binary files a/Python/__pycache__/clean_rl_pqn_example.cpython-313.pyc and /dev/null differ
+diff --git a/Python/__pycache__/dqn_replay_model.cpython-313.pyc b/Python/__pycache__/dqn_replay_model.cpython-313.pyc
+deleted file mode 100644
+index 6f6c98c..0000000
+Binary files a/Python/__pycache__/dqn_replay_model.cpython-313.pyc and /dev/null differ
+diff --git a/Python/__pycache__/dqn_stable_baselines3_example.cpython-313.pyc b/Python/__pycache__/dqn_stable_baselines3_example.cpython-313.pyc
+deleted file mode 100644
+index a50c248..0000000
+Binary files a/Python/__pycache__/dqn_stable_baselines3_example.cpython-313.pyc and /dev/null differ
+diff --git a/Python/__pycache__/ppo_single_agent_example.cpython-313.pyc b/Python/__pycache__/ppo_single_agent_example.cpython-313.pyc
+deleted file mode 100644
+index 08b59e7..0000000
+Binary files a/Python/__pycache__/ppo_single_agent_example.cpython-313.pyc and /dev/null differ
+diff --git a/Python/__pycache__/read_binary_log.cpython-313.pyc b/Python/__pycache__/read_binary_log.cpython-313.pyc
+deleted file mode 100644
+index 56cd162..0000000
+Binary files a/Python/__pycache__/read_binary_log.cpython-313.pyc and /dev/null differ
+diff --git a/Python/__pycache__/rllib_multi_agent_train.cpython-313.pyc b/Python/__pycache__/rllib_multi_agent_train.cpython-313.pyc
+deleted file mode 100644
+index 43d5681..0000000
+Binary files a/Python/__pycache__/rllib_multi_agent_train.cpython-313.pyc and /dev/null differ
+diff --git a/Python/__pycache__/sb3_infinite_resume_train.cpython-313.pyc b/Python/__pycache__/sb3_infinite_resume_train.cpython-313.pyc
+deleted file mode 100644
+index 722db26..0000000
+Binary files a/Python/__pycache__/sb3_infinite_resume_train.cpython-313.pyc and /dev/null differ
+diff --git a/Python/__pycache__/sb3_replay_model.cpython-313.pyc b/Python/__pycache__/sb3_replay_model.cpython-313.pyc
+deleted file mode 100644
+index c81f5dd..0000000
+Binary files a/Python/__pycache__/sb3_replay_model.cpython-313.pyc and /dev/null differ
+diff --git a/Python/__pycache__/stable_baselines3_example.cpython-313.pyc b/Python/__pycache__/stable_baselines3_example.cpython-313.pyc
+deleted file mode 100644
+index ac68c0d..0000000
+Binary files a/Python/__pycache__/stable_baselines3_example.cpython-313.pyc and /dev/null differ
+diff --git a/Python/__pycache__/stable_baselines3_example2.cpython-313.pyc b/Python/__pycache__/stable_baselines3_example2.cpython-313.pyc
+deleted file mode 100644
+index 322dcdd..0000000
+Binary files a/Python/__pycache__/stable_baselines3_example2.cpython-313.pyc and /dev/null differ
+diff --git a/Python/__pycache__/tcp_client.cpython-313.pyc b/Python/__pycache__/tcp_client.cpython-313.pyc
+deleted file mode 100644
+index 72af93e..0000000
+Binary files a/Python/__pycache__/tcp_client.cpython-313.pyc and /dev/null differ
+diff --git a/Python/replay/__pycache__/dqn_replay_model.cpython-313.pyc b/Python/replay/__pycache__/dqn_replay_model.cpython-313.pyc
+deleted file mode 100644
+index 79b965b..0000000
+Binary files a/Python/replay/__pycache__/dqn_replay_model.cpython-313.pyc and /dev/null differ
+diff --git a/Python/replay/ippo_replay_model.py b/Python/replay/ippo_replay_model.py
+new file mode 100644
+index 0000000..5ddb5e2
+--- /dev/null
++++ b/Python/replay/ippo_replay_model.py
+@@ -0,0 +1,321 @@
++"""
++IPPO 模型推理回放脚本
++======================
++加载 custom_ippo.py 训练产生的 .pt 模型文件，
++连接到 Godot 环境进行可视化推理回放。
++
++支持:
++  - MLP / SegmentedMLP / GRU_MLP 三种网络架构
++  - 多智能体: 从 checkpoint 的 agent_configs 重建每个 agent
++  - GRU_MLP 自动维护每个 agent 的 RNN 隐藏态
++  - --agent_ids 指定使用哪些 agent 的策略 (其余随机动作)
++
++注意: save_ippo_model 使用 vars(args) 直接 pickle 保存,
++Enum 对象保持原样, 无需额外反序列化。
++"""
++import pathlib
++import sys
++from dataclasses import dataclass, fields as dataclass_fields
++from typing import Optional
++
++import numpy as np
++import torch
++
++# 保证 training 目录下的模块可导入
++_TRAINING_DIR = str(pathlib.Path(__file__).resolve().parent.parent / "training")
++sys.path.insert(0, _TRAINING_DIR)
++
++from godot_env_wrapper import (
++    GodotDiscreteEnvWrapper,
++    ObsSegmentDims,
++)
++from custom_ippo import (
++    NetworkType,
++    IPPOAgent,
++    IppoArgs,
++    AgentConfig,
++    SegmentedObsHelper,
++)
++
++
++# ╔══════════════════════════════════════════════════════════╗
++# ║                    配  置                                ║
++# ╚══════════════════════════════════════════════════════════╝
++@dataclass
++class ReplayConfig:
++    """IPPO 模型回放配置 — 直接修改默认值即可。"""
++
++    model_path: str = "savedmodels/cleanrl_ippo.pt"
++    """要加载的模型文件路径 (.pt)。"""
++
++    env_path: Optional[str] = "godot-game/build/game.exe"
++    """Godot 可执行文件路径 (None 连接编辑器)。"""
++
++    config_path: str = "godot-game/configs/game_config.tres"
++    """game_config.tres 路径, 用于读取观测维度配置。"""
++
++    speedup: int = 10
++    """物理引擎加速倍数 (1=正常速度)。"""
++
++    show_window: bool = True
++    """显示游戏窗口。"""
++
++    deterministic: bool = True
++    """确定性推理 (argmax 而非采样)。"""
++
++    cuda: bool = False
++    """回放使用 GPU (默认 CPU)。"""
++
++    max_episodes: int = 0
++    """最大回放 episode 数 (0=无限, 按 Ctrl+C 停止)。"""
++
++    seed: int = 0
++    """随机种子。"""
++
++    agent_ids: Optional[str] = None
++    """指定使用的 agent ID, 逗号分隔 (如 "0,1"). None=全部使用训练策略。"""
++
++
++# ╔══════════════════════════════════════════════════════════╗
++# ║                  Checkpoint 加载                          ║
++# ╚══════════════════════════════════════════════════════════╝
++
++
++def load_checkpoint(model_path: pathlib.Path, device: torch.device) -> dict:
++    """加载 save_ippo_model() 保存的 .pt 模型文件。
++
++    格式: {"args": {...pickle objects...}, "agent_{i}_state_dict": ..., ...}
++    """
++    checkpoint = torch.load(str(model_path), map_location=device, weights_only=False)
++    result = dict(checkpoint.get("args", {}))
++    for key, value in checkpoint.items():
++        if key != "args" and "_state_dict" in key:
++            result[key] = value
++    if "reward_normalizer" in checkpoint:
++        result["reward_normalizer"] = checkpoint["reward_normalizer"]
++    return result
++
++
++def _ensure_network_type(value) -> NetworkType:
++    """将 checkpoint 中的 network_type 转为 NetworkType 枚举。"""
++    if isinstance(value, NetworkType):
++        return value
++    return NetworkType(str(value).lower())
++
++
++def build_replay_args_and_agents(checkpoint_data: dict) -> tuple[IppoArgs, list[AgentConfig]]:
++    """从 checkpoint 数据重建 IppoArgs 和 agent_configs。
++
++    save_ippo_model 使用 vars(args) 直接 pickle 保存,
++    Enum 等对象保持原样反序列化。
++    """
++    # ── agent_configs ──
++    raw_cfgs = checkpoint_data.get("agent_configs")
++    if raw_cfgs is None:
++        raise KeyError("checkpoint['args'] 缺少 'agent_configs' 字段.")
++
++    agent_configs: list[AgentConfig] = []
++    for i, raw_cfg in enumerate(raw_cfgs):
++        if isinstance(raw_cfg, AgentConfig):
++            agent_configs.append(raw_cfg)
++        elif isinstance(raw_cfg, dict):
++            # 从 dict 重建 AgentConfig
++            cfg_dict = dict(raw_cfg)
++            nt = cfg_dict.get("network_type", NetworkType.SEGMENTED_MLP)
++            cfg_dict["network_type"] = _ensure_network_type(nt)
++            agent_configs.append(AgentConfig(**cfg_dict))
++        else:
++            raise TypeError(f"agent_configs[{i}] 类型不支持: {type(raw_cfg)}")
++
++    # ── 仅使用 IppoArgs 中存在的字段重建 ──
++    ipo_fields = {f.name for f in dataclass_fields(IppoArgs) if f.init}
++    ckpt_args = {k: v for k, v in checkpoint_data.items()
++                 if k in ipo_fields and k != "agent_configs"}
++
++    args = IppoArgs(agent_configs=agent_configs, **ckpt_args)
++    return args, agent_configs
++
++
++# ╔══════════════════════════════════════════════════════════╗
++# ║                    主回放逻辑                             ║
++# ╚══════════════════════════════════════════════════════════╝
++def main():
++    replay_cfg = ReplayConfig()
++
++    device = torch.device("cuda" if torch.cuda.is_available() and replay_cfg.cuda else "cpu")
++
++    model_path = pathlib.Path(replay_cfg.model_path).resolve()
++    if not model_path.exists():
++        raise FileNotFoundError(f"模型文件不存在: {model_path}")
++
++    # ── 1. 加载 checkpoint ──
++    print(f"加载模型: {model_path}")
++    checkpoint_data = load_checkpoint(model_path, device)
++
++    # ── 2. 重建配置 + agents ──
++    args, agent_configs = build_replay_args_and_agents(checkpoint_data)
++    n_agents = len(agent_configs)
++    n_actions = 6  # Godot 游戏离散动作空间固定为 6
++
++    # 解析 --agent_ids
++    active_ids: set[int] = set()
++    if replay_cfg.agent_ids is not None:
++        try:
++            active_ids = {int(x.strip()) for x in replay_cfg.agent_ids.split(",")}
++        except ValueError:
++            raise ValueError(f"--agent_ids 格式错误: {replay_cfg.agent_ids!r}. 示例: '0,1'")
++    else:
++        active_ids = {cfg.agent_id for cfg in agent_configs}
++
++    # 确认 agent_id 合法
++    ckpt_ids = {cfg.agent_id for cfg in agent_configs}
++    invalid = active_ids - ckpt_ids
++    if invalid:
++        raise ValueError(f"checkpoint 中不存在 agent_id={invalid}, 可用: {sorted(ckpt_ids)}")
++
++    # 重建观测段维度
++    config_path = args.config_path or replay_cfg.config_path
++    seg = ObsSegmentDims.from_config(config_path)
++    print(f"[Obs] segments: self={seg.self_dim} player={seg.player_dim} "
++          f"ball={seg.ball_dim} enemy={seg.enemy_dim} map={seg.map_dim}")
++
++    # ── 3. 重建所有 agent 网络 ──
++    agents: list[IPPOAgent] = []
++    rnn_states: list[Optional[torch.Tensor]] = []
++
++    for cfg in agent_configs:
++        aid = cfg.agent_id
++        state_key = f"agent_{aid}_state_dict"
++
++        if state_key not in checkpoint_data:
++            print(f"[Warn] checkpoint 中缺少 {state_key}, agent_id={aid} 使用随机动作。")
++            agents.append(None)  # placeholder
++            rnn_states.append(None)
++            continue
++
++        agent = IPPOAgent(n_actions, seg, cfg).to(device)
++        agent.load_state_dict(checkpoint_data[state_key])
++        agent.eval()
++        agents.append(agent)
++
++        if agent.is_recurrent:
++            rnn_states.append(agent.get_initial_state(1, device))
++            print(f"[Agent {aid}] network_type={cfg.network_type}, "
++                  f"params={agent.num_params():,}, recurrent=True")
++        else:
++            rnn_states.append(None)
++            print(f"[Agent {aid}] network_type={cfg.network_type}, "
++                  f"params={agent.num_params():,}, recurrent=False")
++
++    # ── 4. 初始化环境 ──
++    print("初始化 Godot 环境...")
++    envs = GodotDiscreteEnvWrapper(
++        env_path=replay_cfg.env_path,
++        show_window=replay_cfg.show_window,
++        speedup=replay_cfg.speedup,
++        seed=replay_cfg.seed,
++        n_parallel=1,
++    )
++    num_envs = envs.num_envs
++
++    # 验证: env 槽位数应与 agent 数量匹配
++    if num_envs != n_agents:
++        print(f"[Warn] 环境槽位数(num_envs={num_envs}) != checkpoint agent数(n_agents={n_agents}). "
++              f"将只取前 {num_envs} 个 agent 的推理结果。")
++        # 截断到实际 env 槽位数
++        agents = agents[:num_envs]
++        rnn_states = rnn_states[:num_envs]
++        agent_configs = agent_configs[:num_envs]
++        active_ids = {cfg.agent_id for cfg in agent_configs}
++        n_agents = num_envs
++
++    # ── 5. 推理回放循环 ──
++    print("开始回放... 按 Ctrl+C 停止。")
++    next_obs, _ = envs.reset(seed=replay_cfg.seed)
++    next_obs = np.array(next_obs, dtype=np.float32)
++
++    episode_count = 0
++    episode_rewards = np.zeros(n_agents, dtype=np.float64)
++    step_count = 0
++
++    try:
++        while True:
++            actions = []
++
++            with torch.no_grad():
++                obs_t = torch.tensor(next_obs, dtype=torch.float32).to(device)
++
++                for i in range(n_agents):
++                    agent = agents[i]
++                    aid = agent_configs[i].agent_id
++
++                    if agent is None or aid not in active_ids:
++                        # 未加载模型的 agent: 随机动作
++                        actions.append(np.random.randint(0, n_actions))
++                        continue
++
++                    rnn_state = rnn_states[i]
++                    result = agent.get_action_and_value(
++                        obs_t[i].unsqueeze(0),
++                        rnn_state=rnn_state,
++                        return_state=agent.is_recurrent,
++                    )
++                    action = result[0]
++                    if agent.is_recurrent:
++                        rnn_states[i] = result[4]
++
++                    if replay_cfg.deterministic:
++                        features = (agent.encoder(obs_t[i].unsqueeze(0), rnn_state)[0]
++                                    if agent.is_recurrent
++                                    else agent.encoder(obs_t[i].unsqueeze(0))[0])
++                        logits = agent.actor(features)
++                        action = logits.argmax(dim=1)
++
++                    actions.append(int(action.item()))
++
++            next_obs, rewards, terms, truncs, infos = envs.step(
++                np.array(actions, dtype=np.int64)
++            )
++            next_obs = np.array(next_obs, dtype=np.float32)
++
++            rewards_arr = np.asarray(rewards, dtype=np.float32)
++            dones_arr = np.logical_or(
++                np.asarray(terms, dtype=bool),
++                np.asarray(truncs, dtype=bool),
++            )
++            episode_rewards += rewards_arr
++            step_count += 1
++
++            if dones_arr.any():
++                episode_count += 1
++                per_agent = " ".join(
++                    f"agent_{agent_configs[i].agent_id}={episode_rewards[i]:+.1f}"
++                    for i in range(n_agents)
++                )
++                print(
++                    f"[Ep {episode_count:4d}] "
++                    f"步数={step_count:6d}  "
++                    f"{per_agent}"
++                )
++                step_count = 0
++                episode_rewards[:] = 0.0
++
++                if 0 < replay_cfg.max_episodes <= episode_count:
++                    print(f"[Done] 达到最大 episode 数 {replay_cfg.max_episodes}, 结束回放。")
++                    break
++
++                # 新 episode 重置每个 agent 的 GRU 隐藏态
++                for i in range(n_agents):
++                    awarning: in the working copy of 'Python/replay/ppo_replay_model.py', LF will be replaced by CRLF the next time Git touches it
+gent = agents[i]
++                    if agent is not None and agent.is_recurrent:
++                        rnn_states[i] = agent.get_initial_state(1, device)
++
++    except KeyboardInterrupt:
++        print("\n回放被用户中断。")
++    finally:
++        envs.close()
++        print("环境已关闭。")
++
++
++if __name__ == "__main__":
++    main()
+diff --git a/Python/replay/ppo_replay_model.py b/Python/replay/ppo_replay_model.py
+new file mode 100644
+index 0000000..ed49bb0
+--- /dev/null
++++ b/Python/replay/ppo_replay_model.py
+@@ -0,0 +1,238 @@
++"""
++PPO 模型推理回放脚本
++========================
++加载 custom_ppo.py 训练产生的 .pt 模型文件，
++连接到 Godot 环境进行可视化推理回放。
++
++支持:
++  - MLP / SegmentedMLP / GRU_MLP 三种网络架构
++  - GRU_MLP 自动维护 RNN 隐藏态
++  - 自动从 checkpoint 的 args 恢复观测维度配置
++"""
++import pathlib
++import sys
++from dataclasses import dataclass
++from typing import Optional
++
++import numpy as np
++import torch
++
++# 保证 training 目录下的模块可导入
++_TRAINING_DIR = str(pathlib.Path(__file__).resolve().parent.parent / "training")
++sys.path.insert(0, _TRAINING_DIR)
++
++from godot_env_wrapper import (
++    GodotDiscreteEnvWrapper,
++    ObsSegmentDims,
++    layer_init,
++)
++from custom_ppo import (
++    NetworkType,
++    PPOAgent,
++    SegmentedObsHelper,
++    as_hidden_tuple,
++    make_mlp,
++)
++
++# ╔══════════════════════════════════════════════════════════╗
++# ║                    配  置                                ║
++# ╚══════════════════════════════════════════════════════════╝
++@dataclass
++class ReplayConfig:
++    """PPO 模型回放配置 — 直接修改默认值即可。"""
++
++    model_path: str = "saved_models/ppo_mlp.pt"
++    """要加载的模型文件路径 (.pt)。"""
++
++    env_path: Optional[str] = "curriculum_envs/s4-enemy-only/build/game.exe"
++    """Godot 可执行文件路径 (None 连接编辑器)。"""
++
++    config_path: str = "curriculum_envs/s4-enemy-only/configs/game_config.tres"
++    """game_config.tres 路径, 用于读取观测维度配置。"""
++
++    speedup: int = 2
++    """物理引擎加速倍数 (1=正常速度)。"""
++
++    show_window: bool = True
++    """显示游戏窗口。"""
++
++    deterministic: bool = True
++    """确定性推理 (argmax 而非采样)。"""
++
++    cuda: bool = False
++    """回放使用 GPU (默认 CPU)。"""
++
++    max_episodes: int = 0
++    """最大回放 episode 数 (0=无限, 按 Ctrl+C 停止)。"""
++
++    seed: int = 0
++    """随机种子。"""
++
++
++# ╔══════════════════════════════════════════════════════════╗
++# ║                  Checkpoint 加载                          ║
++# ╚══════════════════════════════════════════════════════════╝
++
++def load_checkpoint(model_path: pathlib.Path, device: torch.device) -> dict:
++    """加载 save_pt_model() 保存的 .pt 模型文件。
++    格式: {"args": {...str values...}, "agent_state_dict": state_dict}
++    """
++    checkpoint = torch.load(str(model_path), map_location=device, weights_only=False)
++    result = dict(checkpoint.get("args", {}))
++    result["agent_state_dict"] = checkpoint["agent_state_dict"]
++    if "reward_normalizer" in checkpoint:
++        result["reward_normalizer"] = checkpoint["reward_normalizer"]
++    return result
++
++
++def build_replay_args(checkpoint_data: dict):
++    """从 checkpoint 数据重建 PPO 训练 Args。
++
++    当前 save_pt_model 格式保证 args 中所有字段均为纯 Python 字面量。
++    若 checkpoint 缺字段直接报错，不提供 fallback。
++    """
++    from custom_ppo import Args as TrainArgs
++
++    # checkpoint 中保存的 args 即为完整 TrainArgs 字段
++    # 过滤掉不属于 Args 的运行时字段（如 reward_normalizer）
++    args_fields = {f.name for f in TrainArgs.__dataclass_fields__.values()}
++    merged = {k: v for k, v in checkpoint_data.items() if k in args_fields}
++
++    # network_type 保存为字符串，转为 NetworkType 枚举
++    nt = merged.get("network_type", "segmented_mlp")
++    if isinstance(nt, str):
++        merged["network_type"] = NetworkType(nt)
++
++    return TrainArgs(**merged)
++
++
++# ╔══════════════════════════════════════════════════════════╗
++# ║                    主回放逻辑                             ║
++# ╚══════════════════════════════════════════════════════════╝
++def main():
++    args = ReplayConfig()
++
++    device = torch.device("cuda" if torch.cuda.is_available() and args.cuda else "cpu")
++
++    model_path = pathlib.Path(args.model_path).resolve()
++    if not model_path.exists():
++        raise FileNotFoundError(f"模型文件不存在: {model_path}")
++
++    # ── 1. 加载 checkpoint ──
++    print(f"加载模型: {model_path}")
++    checkpoint_data = load_checkpoint(model_path, device)
++    state_dict = checkpoint_data.pop("agent_state_dict")
++
++    # ── 2. 重建网络配置 ──
++    replay_args = build_replay_args(checkpoint_data)
++
++    # 从 config_path 重建观测段维度
++    config_path = replay_args.config_path or args.config_path
++    seg = ObsSegmentDims.from_config(config_path)
++    print(f"[Obs] segments: self={seg.self_dim} player={seg.player_dim} "
++          f"ball={seg.ball_dim} enemy={seg.enemy_dim} map={seg.map_dim}")
++
++    # ── 3. 重建网络 ──
++    n_actions = 6  # Godot 游戏离散动作空间固定为 6
++    agent = PPOAgent(n_actions, seg, replay_args).to(device)
++    agent.load_state_dict(state_dict)
++    agent.eval()
++    print(f"[PPO] network_type={replay_args.network_type}, "
++          f"params={agent.num_params():,}, recurrent={agent.is_recurrent}")
++
++    # ── 4. 初始化环境 ──
++    print("初始化 Godot 环境...")
++    envs = GodotDiscreteEnvWrapper(
++        env_path=args.env_path,
++        show_window=args.show_window,
++        speedup=args.speedup,
++        seed=args.seed,
++        n_parallel=1,
++    )
++
++    num_envs = envs.num_envs
++
++    # ── 5. 初始化隐藏态 (GRU_MLP) ──
++    rnn_state = None
++    if agent.is_recurrent:
++        rnn_state = agent.get_initial_state(num_envs, device)
++        print(f"[GRU] hidden_state_size={agent.recurrent_state_size}")
++
++    # ── 6. 推理回放循环 ──
++    print("开始回放... 按 Ctrl+C 停止。")
++    next_obs, _ = envs.reset(seed=args.seed)
++    next_obs = np.array(next_obs, dtype=np.float32)
++
++    episode_count = 0
++    episode_reward = 0.0
++    step_count = 0
++
++    try:
++        while True:
++            with torch.no_grad():
++                obs_t = torch.tensor(next_obs, dtype=torch.float32).to(device)
++
++                if args.deterministic:
++                    # 确定性推理：一次前向取 logits → argmax，不采
++                    features, rnn_state = agent._forward_features(obs_t, rnn_state)
++                    logits = agent.actor(features)
++                    action = logits.argmax(dim=1)
++                else:
++                    # 随机推理：一条调用取采样动作 + 更新隐藏态
++                    result = agent.get_action_and_value(
++                        obs_t,
++                        rnn_state=rnn_state,
++                        return_state=agent.is_recurrent,
++                    )
++                    action = result[0]
++                    if agent.is_recurrent:
++                        rnn_state = result[4]
++
++                actions = [int(a.item()) for a in action]
++
++            next_obs, rewards, terms, truncs, infos = envs.step(
++                np.array(actions, dtype=np.int64)
++            )
++            next_obs = np.array(next_obs, dtype=np.float32)
++
++            # 统计奖励
++            reward_val = np.asarray(rewards, dtype=np.float32)
++            done = np.logical_or(
++                np.asarray(terms, dtype=bool),
++                np.asarray(truncs, dtype=bool),
++            )
++            episode_reward += float(reward_val.sum())
++            step_count += 1
++
++            if done.any():
++                episode_count += 1
++                per_env = " ".join(
++                    f"env_{i}={float(reward_val[i]):+.1f}"
++                    for i in range(num_envs)
++                )
++                print(
++                    f"[Ep {episode_count:4d}] "
++                    f"步数={step_count:6d}  "
++                    f"总奖励={episode_reward:+.1f}  "
++                    f"{per_env}"
++                )
++                step_count = 0
++                episode_reward = 0.0
++
++                if 0 < args.max_episodes <= episode_count:
++                    print(f"[Done] 达到最大 episode 数 {args.max_episodes}, 结束回放。")
++                    break
++
++                # 新 episode 重置 GRU 隐藏态
++                if agent.is_recurrent:
++                    rnn_state = agent.get_initial_state(num_envs, device)
++
++    except KeyboardInterrupt:
++        print("\n回放被用户中断。")
++    finally:
++        envs.close()
++        print("环境已关闭。")
++
++
++if __name__ == "__main__":
++    main()
+diff --git a/Python/test/test_ppo_resume_trainer.py b/Python/test/test_ppo_resume_trainer.py
+new file mode 100644
+index 0000000..c3c07d4
+--- /dev/null
++++ b/Python/test/test_ppo_resume_trainer.py
+@@ -0,0 +1,197 @@
++import pathlib
++import tempfile
++import unittest
++from collections import deque
++
++import gymnasium as gym
++import numpy as np
++import torch
++
++from godot_env_wrapper import ObsSegmentDims
++from ppo_resume_trainer import (
++    Args,
++    NetworkType,
++    RolloutData,
++    _build_train_state,
++    _count_completed_episodes,
++    _save_checkpoint,
++    create_agent_and_optimizer,
++    init_observation_state,
++    load_checkpoint_if_requested,
++    run_training_with_resume,
++)
++
++
++class DummyWriter:
++    def add_scalar(self, *args, **kwargs):
++        pass
++
++
++class FakeVecEnv:
++    def __init__(self, num_envs=2, obs_dim=3, episode_period=3):
++        self.num_envs = num_envs
++        self.single_observation_space = gym.spaces.Box(
++            low=-100.0,
++            high=100.0,
++            shape=(obs_dim,),
++            dtype=np.float32,
++        )
++        self.single_action_space = gym.spaces.Discrete(2)
++        self.episode_period = episode_period
++        self.step_count = 0
++
++    def reset(self, seed=None):
++        self.step_count = 0
++        return self._obs(), {}
++
++    def step(self, actions):
++        self.step_count += 1
++        obs = self._obs()
++        rewards = np.ones(self.num_envs, dtype=np.float32)
++        terminated = np.zeros(self.num_envs, dtype=bool)
++        truncated = np.zeros(self.num_envs, dtype=bool)
++        if self.step_count % self.episode_period == 0:
++            terminated[0] = True
++        return obs, rewards, terminated, truncated, {}
++
++    def _obs(self):
++        base = np.arange(self.num_envs * 3, dtype=np.float32).reshape(self.num_envs, 3)
++        return base + float(self.step_count)
++
++
++def tiny_args(save_model_path=None):
++    args = Args()
++    args.network_type = NetworkType.MLP
++    args.reward_norm = False
++    args.cuda = False
++    args.num_envs = 2
++    args.num_steps = 4
++    args.batch_size = args.num_envs * args.num_steps
++    args.num_minibatches = 2
++    args.minibatch_size = args.batch_size // args.num_minibatches
++    args.update_epochs = 1
++    args.total_timesteps = args.batch_size
++    args.save_every_n_episodes = 1
++    args.max_checkpoints = 2
++    args.save_model_path = save_model_path
++    args.mlp_hiddens = (8,)
++    args.anneal_lr = False
++    return args
++
++
++class PpoResumeTrainerTests(unittest.TestCase):
++    def setUp(self):
++        torch.manual_seed(0)
++        np.random.seed(0)
++        self.device = torch.device("cpu")
++        self.seg = ObsSegmentDims(
++            self_dim=1,
++            player_dim=1,
++            ball_dim=1,
++            enemy_dim=0,
++            map_dim=0,
++        )
++
++    def test_count_completed_episodes_counts_done_rows_once(self):
++        rollout = RolloutData(
++            obs=torch.zeros((4, 3, 3)),
++            actions=torch.zeros((4, 3), dtype=torch.long),
++            logprobs=torch.zeros((4, 3)),
++            rewards=torch.zeros((4, 3)),
++            dones=torch.tensor(
++                [
++                    [0.0, 0.0, 0.0],
++                    [1.0, 0.0, 0.0],
++                    [0.0, 0.0, 0.0],
++                    [0.0, 1.0, 0.0],
++                ]
++            ),
++            values=torch.zeros((4, 3)),
++            next_obs=torch.zeros((3, 3)),
++            next_done=torch.tensor([0.0, 0.0, 1.0]),
++        )
++        self.assertEqual(_count_completed_episodes(rollout), 3)
++
++    def test_checkpoint_round_trip_restores_training_state(self):
++        with tempfile.TemporaryDirectory() as tmpdir:
++            ckpt_path = str(pathlib.Path(tmpdir) / "ppo_ckpt.pt")
++            args = tiny_args(save_model_path=ckpt_path)
++            args.reward_norm = True
++            agent, optimizer, reward_normalizer = create_agent_and_optimizer(
++                2, self.seg, args, self.device
++            )
++            reward_normalizer.update_array(np.array([1.0, 2.0, 3.0], dtype=np.float32))
++
++            loss = sum(param.sum() for param in agent.parameters())
++            optimizer.zero_grad()
++            loss.backward()
++            optimizer.step()
++
++            saved_state = _build_train_state(
++                global_step=12,
++                update=3,
++                episode_count=5,
++                optimizer=optimizer,
++                reward_normalizer=reward_normalizer,
++                episode_returns=deque([1.5, 2.5], maxlen=20),
++            )
++            _save_checkpoint(ckpt_path, agent, optimizer, args, reward_normalizer, saved_state)
++
++            restored_agent, restored_optimizer, restored_reward_normalizer = (
++                create_agent_and_optimizer(2, self.seg, args, self.device)
++            )
++            global_step, start_update, episode_count = load_checkpoint_if_requested(
++                ckpt_path,
++                True,
++                restored_agent,
++                restored_optimizer,
++                restored_reward_normalizer,
++                self.device,
++            )
++
++            self.assertEqual((global_step, start_update, episode_count), (12, 4, 5))
++            self.assertEqual(
++                reward_normalizer.state_dict(),
++                restored_reward_normalizer.state_dict(),
++            )
++            self.assertTrue(restored_optimizer.state_dict()["state"])
++            for key, value in agent.state_dict().items():
++                self.assertTrue(torch.equal(value, restored_agent.state_dict()[key]))
++
++    def test_training_smoke_saves_episode_checkpoint(self):
++        with tempfile.TemporaryDirectory() as tmpdir:
++            base_path = str(pathlib.Path(tmpdir) / "ppo_smoke")
++            args = tiny_args(save_model_path=base_path)
++            env = FakeVecEnv(num_envs=args.num_envs, episode_period=2)
++            agent, optimizer, reward_normalizer = create_agent_and_optimizer(
++                2, self.seg, args, self.device
++            )
++            next_obs, next_done, next_rnn_state = init_observation_state(
++                args, env, agent, None, None, None, self.device
++            )
++
++            final_state = run_training_with_resume(
++                args,
++                agent,
++                env,
++                optimizer,
++                self.device,
++                DummyWriter(),
++                reward_normalizer,
++                next_obs,
++                next_done,
++                next_rnn_state,
++                start_global_step=0,
++                start_update=1,
++                start_episode_count=0,
++            )
++
++            self.assertEqual(final_state["global_step"], args.num_steps)
++            self.assertEqual(final_state["update"], 1)
++            self.assertGreaterEqual(final_state["episode_count"], 1)
++            checkpoints = list(pathlib.Path(tmpdir).glob("ppo_smoke_episode*.pt"))
++            self.assertEqual(len(checkpoints), 1)
++
++
++if __name__ == "__main__":
++    unittest.main()
+diff --git a/Python/training/__pycache__/__init__.cpython-310.pyc b/Python/training/__pycache__/__init__.cpython-310.pyc
+deleted file mode 100644
+index 7614449..0000000
+Binary files a/Python/training/__pycache__/__init__.cpython-310.pyc and /dev/null differ
+diff --git a/Python/training/__pycache__/clean_rl_dqn.cpython-310.pyc b/Python/training/__pycache__/clean_rl_dqn.cpython-310.pyc
+deleted file mode 100644
+index d0bba39..0000000
+Binary files a/Python/training/__pycache__/clean_rl_dqn.cpython-310.pyc and /dev/null differ
+diff --git a/Python/training/__pycache__/clean_rl_dqn.cpython-313.pyc b/Python/training/__pycache__/clean_rl_dqn.cpython-313.pyc
+deleted file mode 100644
+index d088971..0000000
+Binary files a/Python/training/__pycache__/clean_rl_dqn.cpython-313.pyc and /dev/null differ
+diff --git a/Python/training/__pycache__/clean_rl_ippo.cpython-313.pyc b/Python/training/__pycache__/clean_rl_ippo.cpython-313.pyc
+deleted file mode 100644
+index 85d7a9d..0000000
+Binary files a/Python/training/__pycache__/clean_rl_ippo.cpython-313.pyc and /dev/null differ
+diff --git a/Python/training/__pycache__/clean_rl_mappo.cpython-310.pyc b/Python/training/__pycache__/clean_rl_mappo.cpython-310.pyc
+deleted file mode 100644
+index d8939cb..0000000
+Binary files a/Python/training/__pycache__/clean_rl_mappo.cpython-310.pyc and /dev/null differ
+diff --git a/Python/training/__pycache__/clean_rl_mappo.cpython-313.pyc b/Python/training/__pycache__/clean_rl_mappo.cpython-313.pyc
+deleted file mode 100644
+index db1c17b..0000000
+Binary files a/Python/training/__pycache__/clean_rl_mappo.cpython-313.pyc and /dev/null differ
+diff --git a/Python/training/__pycache__/clean_rl_ppo.cpython-313.pyc b/Python/training/__pycache__/clean_rl_ppo.cpython-313.pyc
+deleted file mode 100644
+index c7dffa6..0000000
+Binary files a/Python/training/__pycache__/clean_rl_ppo.cpython-313.pyc and /dev/null differ
+diff --git a/Python/training/__pycache__/godot_env_wrapper.cpython-310.pyc b/Python/training/__pycache__/godot_env_wrapper.cpython-310.pyc
+deleted file mode 100644
+index f19c916..0000000
+Binary files a/Python/training/__pycache__/godot_env_wrapper.cpython-310.pyc and /dev/null differ
+diff --git a/Python/training/__pycache__/godot_env_wrapper.cpython-313.pyc b/Python/training/__pycache__/godot_env_wrapper.cpython-313.pyc
+index 993a3fe..c36d8bb 100644
+Binary files a/Python/training/__pycache__/godot_env_wrapper.cpython-313.pyc and b/Python/training/__pycache__/godot_env_wrapper.cpython-313.pyc differ
+diff --git a/Python/training/__pycache__/rllib_custom_network.cpython-313.pyc b/Python/training/__pycache__/rllib_custom_network.cpython-313.pyc
+deleted file mode 100644
+index ce6bcf1..0000000
+Binary files a/Python/training/__pycache__/rllib_custom_network.cpython-313.pyc and /dev/null differ
+diff --git a/Python/training/custom_ippo.py b/Python/training/custom_ippo.py
+index 3f4b069..aa50a9e 100644
+--- a/Python/training/custom_ippo.py
++++ b/Python/training/custom_ippo.py
+@@ -24,6 +24,7 @@ from godot_env_wrapper import (
+     GodotDiscreteEnvWrapper,
+     ObsSegmentDims,
+     RewardNormalizer,
++    _serialize_args,
+     init_training_setup,
+     save_pt_model,
+     layer_init,
+@@ -767,7 +768,7 @@ def save_ippo_model(
+             agent_states[f"agent_{i}_reward_norm"] = reward_normalizers[i].state_dict() #奖励归一化器参数
+ 
+     save_path.parent.mkdir(parents=True, exist_ok=True) # 创建保存目录
+-    torch.save({"args": vars(args), **agent_states},str(save_path))
++    torch.save({"args": _serialize_args(args), **agent_states},str(save_path))
+     print(f"[Save] IPPO model saved to {save_path}")
+ 
+ 
+diff --git a/Python/training/custom_ppo.py b/Python/training/custom_ppo.py
+index 97d8816..e9b58e4 100644
+--- a/Python/training/custom_ppo.py
++++ b/Python/training/custom_ppo.py
+@@ -192,13 +192,36 @@ class GruMlpEncoder(nn.Module):
+         h_new = h_new.transpose(0, 1).reshape(batch_size, self.recurrent_state_size)#(B, L*H)
+         return features, h_new
+ 
++    def forward_sequence(
++        self,
++        obs_seq: torch.Tensor,       # (seq_len, obs_dim)
++        rnn_state: torch.Tensor,     # (1, L*H)
++    ) -> tuple[torch.Tensor, torch.Tensor]:
++        """整序列前向传播：一次 GRU 调用处理全部时间步。"""
++        s, p, b, e, m = self.obs.split(obs_seq)
++
++        gru_input = torch.cat([s, p, e, m], dim=1).unsqueeze(0)#(1, seq_len, H)
++        gru_input = self.gru_ln(gru_input)
++
++        h0 = rnn_state.view(1, self.gru_num_layers, self.gru_hidden)#(1, L, H)
++        h0 = h0.transpose(0, 1).contiguous()#(L, 1, H)
++
++        gru_out, h_new = self.gru(gru_input, h0)#out:(1, seq_len, H), h_new:(L, 1, H)
++
++        ball_features = self.ball_net(b)
++        fused = torch.cat([gru_out.squeeze(0), ball_features], dim=1)
++        features = self.trunk(fused)
++
++        h_new = h_new.transpose(0, 1).reshape(1, self.recurrent_state_size)#(1, L*H)
++        return features, h_new
++
+ #  训练配置
+ @dataclass
+ class Args:
+     """训练配置"""
+     # 环境 
+     # env_path: Optional[str] = None
+-    env_path: Optional[str] = "curriculum_envs\\s4-enemy-only\\build2\\game.exe"
++    env_path: Optional[str] = "curriculum_envs\\s4-enemy-only\\build\\game.exe"
+     """Godot环境路径"""
+     config_path: str = "curriculum_envs\\s4-enemy-only\\configs\\game_config.tres"
+     """game_config.tres 路径, 用于读取观测维度配置"""
+@@ -217,14 +240,13 @@ class Args:
+     experiment_dir: str = "logs/cleanrl_ppo"
+     """TensorBoard 日志目录。"""
+     save_model_path: Optional[str] = None
++    # save_model_path:Optional[str] = "saved_models/ppo_gru_mlp"
+     """模型保存路径 (不加后缀)。"""
+-    onnx_export_path: Optional[str] = None
+-    """导出 ONNX 模型的路径。"""
+-    track: bool = False
++    track: bool = True
+     """是否使用 Weights & Biases 追踪实验。"""
+-    wandb_project_name: str = "cleanRL"
++    wandb_project_name: str = "cleanRL_ppo"
+     """W&B 项目名称。"""
+-    wandb_entity: Optional[str] = None
++    wandb_entity: Optional[str] = "lunjijiang-rl"
+     """W&B 团队 / 实体名称。"""
+ 
+     # PPO 算法超参数
+@@ -270,7 +292,7 @@ class Args:
+     """奖励归一化裁剪范围 (仅在 reward_norm=True 时生效)。"""
+ 
+     # 网络结构
+-    network_type: NetworkType = NetworkType.GRU_MLP
++    network_type: NetworkType = NetworkType.MLP
+ 
+     # segmented mlp
+     self_hidden: int = 32
+@@ -278,8 +300,8 @@ class Args:
+     ball_hidden: int = 64
+     enemy_hidden: int = 64
+     map_hidden: int = 64
+-    # trunk_hidden: tuple = (128,64)#gru使用
+-    trunk_hidden: tuple = (196, 96, 48)#seg mlp
++    trunk_hidden: tuple = (128,64)#gru使用
++    # trunk_hidden: tuple = (196, 96, 48)#seg mlp
+ 
+     # mlp
+     mlp_hiddens: tuple = (256, 128,64)
+@@ -415,6 +437,22 @@ class PPOAgent(nn.Module):
+             return (*result, next_rnn_state)
+         return result
+ 
++    def evaluate_sequence(
++        self,
++        obs_seq: torch.Tensor,       # (seq_len, obs_dim)
++        action_seq: torch.Tensor,    # (seq_len,)
++        rnn_state: torch.Tensor,     # (1, L*H)
++    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
++        """整段序列评估：计算每个时间步的 logprob / 熵 / 价值。"""
++        features_seq, next_state = self.encoder.forward_sequence(obs_seq, rnn_state)
++        logits_seq = self.actor(features_seq)
++        probs = Categorical(logits=logits_seq)
++        logprobs = probs.log_prob(action_seq)
++        entropies = probs.entropy()
++        values = self.critic(features_seq).squeeze(-1)
++
++        return logprobs, entropies, values, next_state
++
+ #  Rollout 数据结构
+ @dataclass
+ class RolloutData:
+@@ -609,44 +647,54 @@ def evaluate_recurrent_sequences(
+     seq_envs: np.ndarray,
+     device: torch.device,
+ ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+-    """Evaluate contiguous rollout chunks while preserving GRU state flow."""
++    """按 done 边界切分子序列，整段批量前向传播。"""
+     if rollout.rnn_states is None:
+         raise ValueError("Recurrent PPO update requires rollout.rnn_states.")
+ 
+     num_envs = rollout.obs.shape[1]
+-    indices = []
+-    logprobs = []
+-    entropies = []
+-    values = []
++    all_indices = []
++    all_logprobs = []
++    all_entropies = []
++    all_values = []
+ 
+-    #遍历指定的每个序列
+     for start_t, end_t, env_i in zip(seq_starts, seq_ends, seq_envs):
+         start_t = int(start_t)
+         end_t = int(end_t)
+         env_i = int(env_i)
+-        state = rollout.rnn_states[start_t, env_i].unsqueeze(0).detach()#序列初始隐藏态
+-
+-        #遍历序列中的每个时间步
+-        for t in range(start_t, end_t):
+-            _, logprob, entropy, value, state = agent.get_action_and_value(
+-                rollout.obs[t, env_i].unsqueeze(0),
+-                rollout.actions[t, env_i].unsqueeze(0),
+-                rnn_state=state,
+-                return_state=True,
++
++        seq_len = end_t - start_t
++        done_seq = rollout.dones[start_t:end_t, env_i]
++        done_positions = torch.where(done_seq > 0.5)[0].cpu().tolist()
++        split_points = [0] + [int(p) for p in done_positions] + [seq_len]
++
++        for i in range(len(split_points) - 1):
++            sub_start = split_points[i]
++            sub_end = split_points[i + 1]
++            if sub_start >= sub_end:
++                continue
++
++            abs_start = start_t + sub_start
++            abs_end = start_t + sub_end
++
++            state = rollout.rnn_states[abs_start, env_i].unsqueeze(0).detach()
++            sub_obs = rollout.obs[abs_start:abs_end, env_i]
++            sub_actions = rollout.actions[abs_start:abs_end, env_i]
++
++            logprobs, entropies, values, state = agent.evaluate_sequence(
++                sub_obs, sub_actions, state,
+             )
+-            indices.append(t * num_envs + env_i)
+-            logprobs.append(logprob)
+-            entropies.append(entropy)
+-            values.append(value.view(-1))
+ 
+-            if t + 1 < end_t:#回合结束隐藏态重置
+-                state = state * (1.0 - rollout.dones[t + 1, env_i]).view(1, 1).to(device)
++            sub_indices = torch.arange(abs_start, abs_end, device=device) * num_envs + env_i
++            all_indices.append(sub_indices)
++            all_logprobs.append(logprobs)
++            all_entropies.append(entropies)
++            all_values.append(values)
+ 
+     return (
+-        torch.tensor(indices, dtype=torch.long, device=device),
+-        torch.cat(logprobs, dim=0),
+-        torch.cat(entropies, dim=0),
+-        torch.cat(values, dim=0),
++        torch.cat(all_indices, dim=0),
++        torch.cat(all_logprobs, dim=0),
++        torch.cat(all_entropies, dim=0),
++        torch.cat(all_values, dim=0),
+     )
+ 
+ #  日志 + 模型导出
+@@ -703,53 +751,7 @@ def log_ppo(
+                 f"   training time: {hours:02d}:{minutes:02d}:{seconds:02d}"
+                 )
+ 
+-
+-def export_ppo_onnx(agent: PPOAgent, onnx_path: str, obs_shape: tuple) -> None:
+-    """将 PPO 智能体导出为 ONNX 模型 (确定性策略)。
+-
+-    导出时会包装一层 OnnxPolicy, 只输出动作 logits,
+-    用于 Godot 端的推理 (不需要概率采样)
+-    """
+-    path_onnx = pathlib.Path(onnx_path).with_suffix(".onnx")
+-    print(f"[Export] Exporting ONNX to {path_onnx}")
+-
+-    agent.eval().to("cpu")
+-
+-    class OnnxPolicy(torch.nn.Module):
+-        def __init__(self, ppo_agent):
+-            super().__init__()
+-            self.ppo_agent = ppo_agent
+-
+-        def forward(self, obs, state_ins):
+-            features, state_outs = self.ppo_agent._forward_features(obs, state_ins)
+-            logits = self.ppo_agent.actor(features)
+-            if state_outs is None:
+-                state_outs = state_ins
+-            return logits, state_outs
+-
+-    onnx_policy = OnnxPolicy(agent)
+-    dummy_input = torch.randn(1, int(np.prod(obs_shape)))
+-    dummy_state = torch.zeros(1, agent.recurrent_state_size).float() if agent.is_recurrent else torch.zeros(1).float()
+-
+-    torch.onnx.export(
+-        onnx_policy,
+-        args=(dummy_input, dummy_state),
+-        f=str(path_onnx),
+-        opset_version=15,
+-        input_names=["obs", "state_ins"],
+-        output_names=["output", "state_outs"],
+-        dynamic_axes={
+-            "obs": {0: "batch_size"},
+-            "state_ins": {0: "batch_size"},
+-            "output": {0: "batch_size"},
+-            "state_outs": {0: "batch_size"},
+-        },
+-    )
+-    print(f"[Export] Done: {path_onnx}")
+-
+-
+ #  主训练循环
+-
+ def train(
+     args: Args,
+     agent: PPOAgent,
+@@ -827,7 +829,6 @@ def train(
+ 
+             for epoch in range(args.update_epochs):
+                 np.random.shuffle(seq_inds)#打乱序列索引
+-                epoch_kls = []
+ 
+                 #对每个minibatch中的所有子序列
+                 for start in range(0, len(seq_inds), seqs_per_minibatch):
+@@ -850,7 +851,6 @@ def train(
+                         args.norm_adv,
+                     )
+                     clipfracs.append(clipfrac)
+-                    epoch_kls.append(approx_kl.item())
+ 
+                     # Critic loss
+                     v_loss = compute_critic_loss(
+@@ -870,7 +870,7 @@ def train(
+                     optimizer.step()
+ 
+                 # KL散度过大时结束本轮更新
+-                if args.target_kl is not None and float(np.mean(epoch_kls)) > args.target_kl:
++                if args.target_kl is not None and approx_kl > args.target_kl:
+                     break
+         else:
+             b_inds = np.arange(args.batch_size)#batch_indices
+@@ -971,25 +971,28 @@ def main():
+             args, agent, envs, optimizer, device, writer,
+             reward_normalizer, next_obs, next_done, next_rnn_state,
+         )
+-    except KeyboardInterrupt:
+-        print("\n[Interrupt] 训练被手动中断")
++    except (KeyboardInterrupt, ConnectionResetError) as e:
++        print(f"\n[Interrupt] 训练中断 ({type(e).__name__})")
+         if args.save_model_path is not None:
+             print(f"[Interrupt] 保存检查点到 {args.save_model_path} ...")
+             save_dict = {"agent_state_dict": agent.state_dict()}
+             save_pt_model(args.save_model_path, save_dict, args, reward_normalizer)
+         return
+     finally:
+-        envs.close()
+-        writer.close()
++        # Godot 进程在 Ctrl+C 时可能已退出，close 必然失败，加防护防止二次报错
++        try:
++            envs.close()
++        except Exception:
++            pass
++        try:
++            writer.close()
++        except Exception:
++            pass
+ 
+     # 正常训练结束后的保存与导出
+     if args.save_model_path is not None:
+         save_dict = {"agent_state_dict": agent.state_dict()}
+         save_pt_model(args.save_model_path, save_dict, args, reward_normalizer)
+ 
+-    if args.onnx_export_path is not None:
+-        export_ppo_onnx(agent, args.onnx_export_path,
+-                        envs.single_observation_space.shape)
+-
+ if __name__ == "__main__":
+     main()
+diff --git a/Python/training/custom_ppo_gru_fast.py b/Python/training/custom_ppo_gru_fast.py
+index d41320d..fc818fb 100644
+--- a/Python/training/custom_ppo_gru_fast.py
++++ b/Python/training/custom_ppo_gru_fast.py
+@@ -1,187 +1,9 @@
+ """
+-ppo_gru_fast.py — GRU-MLP 优化版 PPO
++Compatibility entrypoint for the GRU-fast PPO implementation.
+ 
+-核心改进：
+-1. GruMlpEncoder 新增 forward_sequence() 方法，将整段序列一次性通过 GRU
+-   （而非逐时间步 seq_len=1 调用），消除 ~128× 的 GPU kernel launch 开销。
+-2. PPOAgent 新增 evaluate_sequence() 方法，封装整段序列的 actor+critic 评估。
+-3. evaluate_recurrent_sequences 改为按 done 边界切分子序列，
+-   每段调用一次 evaluate_sequence()，彻底消除原 batch=1 的逐点循环。
+-
+-进一步优化（2026-05-16）：
+-4. torch.compile 加速 forward_sequence / evaluate_sequence（方案1）。
+-5. 向量化索引收集，消去 evaluate_recurrent_sequences 中的 Python 逐元素循环（方案3）。
++The fast GRU sequence evaluation is now integrated directly in custom_ppo.py.
+ """
+ 
+-import os
+-import sys
+-
+-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+-
+-import custom_ppo as _ppo
+-
+-import numpy as np
+-import torch
+-import torch.nn as nn
+-from torch.distributions.categorical import Categorical
+-
+-# 给 GruMlpEncoder 添加 forward_sequence() 方法
+-def _gru_forward_sequence(
+-    self: "_ppo.GruMlpEncoder",
+-    obs_seq: torch.Tensor,       # (seq_len, obs_dim)
+-    rnn_state: torch.Tensor,     # (1, L*H)
+-) -> "tuple[torch.Tensor, torch.Tensor]":
+-    """整序列前向传播：一次 GRU 调用处理全部时间步。
+-
+-    Args:
+-        obs_seq: (seq_len, obs_dim) 一整段连续观测序列
+-        rnn_state: (1, L*H) 序列起始时刻的 GRU 隐藏状态
+-
+-    Returns:
+-        features: (seq_len, output_dim) 每个时间步的特征向量
+-        h_new: (1, L*H) 序列末时刻的 GRU 隐藏状态
+-    """
+-    seq_len = obs_seq.shape[0]
+-
+-    # 分离观测段：每段 (seq_len, seg_dim)
+-    s, p, b, e, m = self.obs.split(obs_seq)
+-
+-    # GRU 输入：(1, seq_len, gru_input_dim)
+-    gru_input = torch.cat([s, p, e, m], dim=1).unsqueeze(0)
+-    gru_input = self.gru_ln(gru_input)
+-
+-    # 初始隐藏状态：(L, 1, H)
+-    h0 = rnn_state.view(1, self.gru_num_layers, self.gru_hidden)# (1, L, H)
+-    h0 = h0.transpose(0, 1).contiguous()
+-
+-    # 整段一次通过 GRU
+-    gru_out, h_new = self.gru(gru_input, h0)
+-    # gru_out: (1, seq_len, gru_hidden)
+-    # h_new: (L, 1, H)
+-
+-    # 奖励球特征：(seq_len, ball_out)
+-    ball_features = self.ball_net(b)
+-
+-    # 融合特征：(seq_len, gru_hidden + ball_out)
+-    fused = torch.cat([gru_out.squeeze(0), ball_features], dim=1)
+-
+-    # 躯干网络：(seq_len, output_dim)
+-    features = self.trunk(fused)
+-
+-    # 最终状态：(1, L*H)
+-    h_new = h_new.transpose(0, 1).reshape(1, self.recurrent_state_size)
+-
+-    return features, h_new
+-
+-
+-# 给 PPOAgent 添加 evaluate_sequence() 方法
+-def _agent_evaluate_sequence(
+-    self: "_ppo.PPOAgent",
+-    obs_seq: torch.Tensor,       # (seq_len, obs_dim)
+-    action_seq: torch.Tensor,    # (seq_len,)  rollout 中实际执行的动作
+-    rnn_state: torch.Tensor,     # (1, L*H)
+-) -> "tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]":
+-    """整段序列评估：计算每个时间步的 logprob / 熵 / 价值。
+-
+-    Returns:
+-        logprobs: (seq_len,)   动作在当前策略下的对数概率
+-        entropies: (seq_len,)  策略熵
+-        values: (seq_len,)     状态价值
+-        next_state: (1, L*H)   序列末时刻的 GRU 状态
+-    """
+-    features_seq, next_state = self.encoder.forward_sequence(obs_seq, rnn_state)
+-    # features_seq: (seq_len, output_dim)
+-
+-    logits_seq = self.actor(features_seq)          # (seq_len, n_actions)
+-    probs = Categorical(logits=logits_seq)
+-    logprobs = probs.log_prob(action_seq)           # (seq_len,)
+-    entropies = probs.entropy()                     # (seq_len,)
+-    values = self.critic(features_seq).squeeze(-1)  # (seq_len,)
+-
+-    return logprobs, entropies, values, next_state
+-
+-# 重写 evaluate_recurrent_sequences() — 整段批量评估
+-def evaluate_recurrent_sequences(
+-    agent: "_ppo.PPOAgent",
+-    rollout: "_ppo.RolloutData",
+-    seq_starts: np.ndarray,
+-    seq_ends: np.ndarray,
+-    seq_envs: np.ndarray,
+-    device: torch.device,
+-) -> "tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]":
+-    """按 done 边界切分子序列，整段批量前向传播。
+-
+-    - 原版：逐时间步 for t in range(start, end) → 每次 batch=1
+-    - 现在：找到 done 切分点，每段调用 agent.evaluate_sequence()
+-            -> 整段通过 GRU（seq_len 可达 128），一次调用替代 128 次
+-    """
+-    if rollout.rnn_states is None:
+-        raise ValueError("Recurrent PPO update requires rollout.rnn_states.")
+-
+-    num_envs = rollout.obs.shape[1]
+-
+-    all_indices = []
+-    all_logprobs = []
+-    all_entropies = []
+-    all_values = []
+-
+-    for start_t, end_t, env_i in zip(seq_starts, seq_ends, seq_envs):
+-        start_t = int(start_t)
+-        end_t = int(end_t)
+-        env_i = int(env_i)
+-
+-        seq_len = end_t - start_t
+-
+-        # 找到 done 边界：done[t]=True 的位置标记着"新回合开始"
+-        # rollout.rnn_states[start_t + p, env_i] 在这些位置已被 rollout 阶段置零
+-        done_seq = rollout.dones[start_t:end_t, env_i]  # (seq_len,)
+-        done_positions = torch.where(done_seq > 0.5)[0].cpu().tolist()
+-
+-        # 切分子序列：[0, p1), [p1, p2), ..., [pk, seq_len)
+-        split_points = [0] + [int(p) for p in done_positions] + [seq_len]#[0, p1, p2, ..., pk, seq_len]
+-
+-        for i in range(len(split_points) - 1):
+-            sub_start = split_points[i]
+-            sub_end = split_points[i + 1]
+-            if sub_start >= sub_end:
+-                continue
+-
+-            abs_start = start_t + sub_start
+-            abs_end = start_t + sub_end
+-
+-            # 该子序列的初始 GRU 状态
+-            state = rollout.rnn_states[abs_start, env_i].unsqueeze(0).detach()
+-
+-            # 整段评估
+-            sub_obs = rollout.obs[abs_start:abs_end, env_i]           # (sub_len, obs_dim)
+-            sub_actions = rollout.actions[abs_start:abs_end, env_i]   # (sub_len,)
+-
+-            logprobs, entropies, values, state = agent.evaluate_sequence(
+-                sub_obs, sub_actions, state,
+-            )
+-
+-            # 收集结果（保持时间顺序）
+-            sub_indices = torch.arange(sub_start, sub_end, device=device) * num_envs + env_i
+-            all_indices.append(sub_indices)
+-
+-            all_logprobs.append(logprobs)
+-            all_entropies.append(entropies)
+-            all_values.append(values)
+-
+-    return (
+-        torch.cat(all_indices, dim=0),
+-        torch.cat(all_logprobs, dim=0),
+-        torch.cat(all_entropies, dim=0),
+-        torch.cat(all_values, dim=0),
+-    )
+-
+-
+-# Monkey-patch：将新方法注入 custom_ppo 模块的类中
+-_ppo.GruMlpEncoder.forward_sequence = _gru_forward_sequence
+-_ppo.PPOAgent.evaluate_sequence = _agent_evaluate_sequence
+-_ppo.evaluate_recurrent_sequences = evaluate_recurrent_sequences
+-
+-# 导入所有内容
+ from custom_ppo import *
+ 
+ if __name__ == "__main__":
+diff --git a/Python/training/godot_env_wrapper.py b/Python/training/godot_env_wrapper.py
+index 695aa78..971d499 100644
+--- a/Python/training/godot_env_wrapper.py
++++ b/Python/training/godot_env_wrapper.py
+@@ -6,6 +6,7 @@ Godot 强化学习环境包装器
+   - layer_init             : 正交权重初始化
+ """
+ import pathlib
++from enum import Enum
+ import random
+ import time
+ from collections import deque
+@@ -217,6 +218,16 @@ class RewardNormalizer:
+ 
+ 
+ #  训练初始化工具
++def _resolve_path(path: Optional[str], base: pathlib.Path) -> Optional[str]:
++    """将相对路径解析为绝对路径；绝对路径和 None 原样返回。"""
++    if path is None:
++        return None
++    p = pathlib.Path(path)
++    if p.is_absolute():
++        return str(p)
++    return str((base / p).resolve())
++
++
+ def init_training_setup(args):
+     """初始化 wandb、TensorBoard、随机种子、设备、环境和观测分段。
+     """
+@@ -253,9 +264,14 @@ def init_training_setup(args):
+     if torch.cuda.is_available() and args.cuda:
+         print("Using CUDA:", torch.cuda.get_device_name(0))
+ 
++    # 将相对路径解析为绝对路径（以项目根目录为基准）
++    _project_root = pathlib.Path(__file__).resolve().parent.parent.parent
++    env_path = _resolve_path(args.env_path, _project_root)
++    config_path = _resolve_path(args.config_path, _project_root)
++
+     # Godot 环境
+     envs = GodotDiscreteEnvWrapper(
+-        env_path=args.env_path,
++        env_path=env_path,
+         show_window=args.show_window,
+         speedup=args.speedup,
+         seed=args.seed,
+@@ -265,28 +281,104 @@ def init_training_setup(args):
+         envs.single_action_space, gym.spaces.Discrete
+     ), "只支持 Discrete 动作空间"
+ 
+-    # envs=CleanRLGodotEnv(
+-    #     env_path=args.env_path,
+-    #     show_window=args.show_window,
+-    #     speedup=args.speedup,
+-    #     seed=args.seed,
+-    #     n_parallel=args.n_parallel,
+-    # )
+-
+     # 观测维度分段
+-    seg = ObsSegmentDims.from_config(args.config_path)
++    seg = ObsSegmentDims.from_config(config_path)
+ 
+     return writer, device, envs, seg, run_name
+ 
+ 
+-def save_pt_model(save_path: str, state_dicts: dict, args, reward_normalizer=None) -> None:
++def _serialize_args(args) -> dict:
++    """将 dataclass args 序列化为纯 Python 字面量 dict。
++
++    递归处理:
++      - Enum → 字符串 (value)
++      - tuple of Enum → tuple of 字符串
++      - dataclass 对象 (含 list[dataclass]) → dict (含 list[dict])
++    避免 torch.save / pickle 序列化后反序列化时找不到类的错误。
++    """
++    def _convert(value):
++        if isinstance(value, Enum):
++            return value.value
++        if isinstance(value, tuple) and value and isinstance(value[0], Enum):
++            return tuple(x.value for x in value)
++        if isinstance(value, list):
++            return [_convert(item) for item in value]
++        if isinstance(value, dict):
++            return {k: _convert(v) for k, v in value.items()}
++        # dataclass instance (非 Enum、非 list、非 dict)
++        if hasattr(value, "__dataclass_fields__"):
++            return {k: _convert(v) for k, v in vars(value).items()}
++        return value
++
++    return {k: _convert(v) for k, v in vars(args).items()}
++
++
++def save_pt_model(
++    save_path: str,
++    state_dicts: dict,
++    args,
++    reward_normalizer=None,
++    extra: Optional[dict] = None,
++) -> None:
+     """保存 PyTorch 模型检查点
++
++    扩展格式（额外字段通过 extra 传入，向后兼容）:
++    {
++        "args": {str values},
++        "agent_state_dict": ...,
++        "optimizer_state_dict": ... (可选),
++        "reward_normalizer": {...}, (可选)
++        "global_step": int, (可选)
++        "update": int, (可选)
++        "next_obs": np.ndarray, (可选)
++        "next_done": np.ndarray, (可选)
++        "next_rnn_state": np.ndarray, (可选)
++        "episode_returns": list, (可选)
++    }
+     """
+     save_path = pathlib.Path(save_path).with_suffix(".pt")
+     if reward_normalizer is not None:
+         state_dicts["reward_normalizer"] = reward_normalizer.state_dict()
+-    
+-    save_path.parent.mkdir(parents=True, exist_ok=True) # 创建保存目录
+-    torch.save({"args": vars(args), **state_dicts},str(save_path),)
++
++    save_path.parent.mkdir(parents=True, exist_ok=True)
++    payload = {"args": _serialize_args(args), **state_dicts}
++    if extra:
++        payload.update(extra)
++    torch.save(payload, str(save_path))
+     print(f"[Save] Model saved to {save_path}")
+ 
++
++def make_interrupt_save_path(base_path: str, global_step: int) -> str:
++    """根据基础路径和当前 global_step 生成中断保存文件名。"""
++    p = pathlib.Path(base_path)
++    stem = p.stem
++    parent = p.parent
++    return str(parent / f"{stem}_interrupt_globalstep{global_step}.pt")
++
++
++def safe_close(env: GodotDiscreteEnvWrapper) -> None:
++    """静默关闭环境，忽略所有异常。"""
++    try:
++        env.close()
++    except Exception:
++        pass
++
++
++def load_full_checkpoint(
++    model_path: str, device: torch.device
++) -> dict:
++    """加载扩展格式 checkpoint。
++
++    返回 dict，包含:
++      - args (dict): 序列化后的训练配置
++      - agent_state_dict: 模型参数
++      - optimizer_state_dict (可选): 优化器状态
++      - reward_normalizer (可选): 奖励归一化器状态
++      - global_step (可选): 全局步数
++      - update (可选): 已完成的 update 数
++      - next_obs / next_done / next_rnn_state (可选): 环境恢复状态
++      - episode_returns (可选): 最近回合奖励
++    """
++    checkpoint = torch.load(model_path, map_location=device, wewarning: in the working copy of 'Python/training/ppo_resume_trainer.py', LF will be replaced by CRLF the next time Git touches it
+ights_only=False)
++    return dict(checkpoint)
++
+diff --git a/Python/training/ppo_resume_trainer.py b/Python/training/ppo_resume_trainer.py
+new file mode 100644
+index 0000000..b4630f9
+--- /dev/null
++++ b/Python/training/ppo_resume_trainer.py
+@@ -0,0 +1,655 @@
++"""
++PPO 定期断点保存训练脚本
++
++功能:
++  1. 每 N 个 episode 自动保存 checkpoint（模型 + optimizer + global_step）
++  2. --resume_from PATH: 完全续训（从上次保存的 checkpoint 继续）
++  3. --load_model_path PATH: 仅加载模型参数，从头训练
++"""
++
++import argparse
++import os
++import pathlib
++import sys
++import time
++from collections import deque
++from dataclasses import dataclass
++from typing import Optional
++
++import numpy as np
++import torch
++import torch.nn as nn
++import torch.optim as optim
++
++# ─── 路径 ──────────────────────────────────────────────────────────────────
++_TRAINING_DIR = str(pathlib.Path(__file__).resolve().parent)
++sys.path.insert(0, _TRAINING_DIR)
++
++# ─── 顶层统一导入（消除局部导入）─────────────────────────────────────────
++from custom_ppo import (  # noqa: E402
++    Args as CustomPPOArgs,
++    NetworkType,
++    PPOAgent,
++    RewardNormalizer,
++    RolloutData,
++    SegmentedObsHelper,
++    collect_rollout,
++    compute_actor_loss,
++    compute_critic_loss,
++    compute_gae,
++    evaluate_recurrent_sequences,
++    init_training_setup,
++    log_ppo,
++)
++import godot_env_wrapper as _gew
++from godot_env_wrapper import (  # noqa: E402
++    GodotDiscreteEnvWrapper,
++    ObsSegmentDims,
++    safe_close,
++)
++
++
++@dataclass
++class Args(CustomPPOArgs):
++    """训练配置 (custom_ppo.Args + 断点续训字段)"""
++    # ── 断点续训 ────────────────────────────────────────────────────────
++    # resume_from: Optional[str] = "saved_models/ppo_gru_mlp_episode8.pt"
++    resume_from: Optional[str] = None
++    """完全续训：加载模型 + optimizer + reward normalizer + 训练计数（默认 None）"""
++    load_model_path: Optional[str] = None
++    """仅加载模型：加载参数后从头训练"""
++    save_every_n_episodes: int = 10
++    """每 N 个完整 episode 保存一次 checkpoint；<=0 表示不保存中间 checkpoint"""
++    max_checkpoints: int = 3
++    """最多保留多少个中间 checkpoint；超出时删除最旧的"""
++
++def parse_cli_args(parser: argparse.ArgumentParser) -> argparse.Namespace:
++    """解析命令行参数，返回 Namespace。"""
++    return parser.parse_args()
++
++
++def _build_arg_parser() -> argparse.ArgumentParser:
++    """构建覆盖 Args dataclass 所有字段的命令行参数解析器。"""
++    parser = argparse.ArgumentParser(
++        description="PPO 定期断点保存训练脚本",
++        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
++    )
++
++    # ── 环境 ─────────────────────────────────────────────────────────────
++    parser.add_argument("--env-path", type=str, dest="env_path", default=Args.env_path)
++    parser.add_argument("--config-path", type=str, dest="config_path", default=Args.config_path)
++    parser.add_argument("--n-parallel", type=int, dest="n_parallel", default=Args.n_parallel)
++    parser.add_argument("--seed", type=int, default=Args.seed)
++    parser.add_argument("--show-window", action="store_true", dest="show_window", default=Args.show_window)
++    parser.add_argument("--speedup", type=int, default=Args.speedup)
++
++    # ── 记录 ─────────────────────────────────────────────────────────────
++    parser.add_argument("--exp-name", type=str, dest="exp_name", default=Args.exp_name)
++    parser.add_argument("--experiment-dir", type=str, dest="experiment_dir", default=Args.experiment_dir)
++    parser.add_argument("--save-model-path", type=str, dest="save_model_path", default=Args.save_model_path)
++    parser.add_argument("--track", action="store_true", default=Args.track)
++    parser.add_argument("--wandb-project-name", type=str, dest="wandb_project_name", default=Args.wandb_project_name)
++    parser.add_argument("--wandb-entity", type=str, dest="wandb_entity", default=Args.wandb_entity)
++
++    # ── PPO 超参数 ──────────────────────────────────────────────────────
++    parser.add_argument("--total-timesteps", type=int, dest="total_timesteps", default=Args.total_timesteps)
++    parser.add_argument("--learning-rate", type=float, dest="learning_rate", default=Args.learning_rate)
++    parser.add_argument("--num-steps", type=int, dest="num_steps", default=Args.num_steps)
++    parser.add_argument("--gamma", type=float, default=Args.gamma)
++    parser.add_argument("--gae-lambda", type=float, dest="gae_lambda", default=Args.gae_lambda)
++    parser.add_argument("--num-minibatches", type=int, dest="num_minibatches", default=Args.num_minibatches)
++    parser.add_argument("--update-epochs", type=int, dest="update_epochs", default=Args.update_epochs)
++    parser.add_argument("--recurrent-seq-len", type=int, dest="recurrent_seq_len", default=Args.recurrent_seq_len)
++    parser.add_argument("--clip-coef", type=float, dest="clip_coef", default=Args.clip_coef)
++    parser.add_argument("--ent-coef", type=float, dest="ent_coef", default=Args.ent_coef)
++    parser.add_argument("--vf-coef", type=float, dest="vf_coef", default=Args.vf_coef)
++    parser.add_argument("--max-grad-norm", type=float, dest="max_grad_norm", default=Args.max_grad_norm)
++    parser.add_argument("--norm-adv", action="store_true", dest="norm_adv", default=Args.norm_adv)
++    parser.add_argument("--no-norm-adv", action="store_false", dest="norm_adv")
++    parser.add_argument("--clip-vloss", action="store_true", dest="clip_vloss", default=Args.clip_vloss)
++    parser.add_argument("--no-clip-vloss", action="store_false", dest="clip_vloss")
++    parser.add_argument("--anneal-lr", action="store_true", dest="anneal_lr", default=Args.anneal_lr)
++    parser.add_argument("--target-kl", type=float, dest="target_kl", default=Args.target_kl)
++    parser.add_argument("--torch-deterministic", action="store_true", dest="torch_deterministic", default=Args.torch_deterministic)
++    parser.add_argument("--no-torch-deterministic", action="store_false", dest="torch_deterministic")
++    parser.add_argument("--cuda", action="store_true", default=Args.cuda)
++    parser.add_argument("--no-cuda", action="store_false", dest="cuda")
++    parser.add_argument("--reward-norm", action="store_true", dest="reward_norm", default=Args.reward_norm)
++    parser.add_argument("--no-reward-norm", action="store_false", dest="reward_norm")
++    parser.add_argument("--reward-clip", type=float, dest="reward_clip", default=Args.reward_clip)
++
++    # ── 网络结构 ─────────────────────────────────────────────────────────
++    parser.add_argument("--network-type", type=str, dest="network_type", default=Args.network_type.value,
++                        choices=["mlp", "segmented_mlp", "gru_mlp"])
++    parser.add_argument("--self-hidden", type=int, dest="self_hidden", default=Args.self_hidden)
++    parser.add_argument("--player-hidden", type=int, dest="player_hidden", default=Args.player_hidden)
++    parser.add_argument("--ball-hidden", type=int, dest="ball_hidden", default=Args.ball_hidden)
++    parser.add_argument("--enemy-hidden", type=int, dest="enemy_hidden", default=Args.enemy_hidden)
++    parser.add_argument("--map-hidden", type=int, dest="map_hidden", default=Args.map_hidden)
++    parser.add_argument("--trunk-hidden", type=int, nargs="+", dest="trunk_hidden", default=list(Args.trunk_hidden))
++    parser.add_argument("--mlp-hiddens", type=int, nargs="+", dest="mlp_hiddens", default=list(Args.mlp_hiddens))
++    parser.add_argument("--gru-hidden", type=int, dest="gru_hidden", default=Args.gru_hidden)
++    parser.add_argument("--gru-num-layers", type=int, dest="gru_num_layers", default=Args.gru_num_layers)
++    parser.add_argument("--gru-input-layernorm", action="store_true", dest="gru_input_layernorm", default=Args.gru_input_layernorm)
++    parser.add_argument("--no-gru-input-layernorm", action="store_false", dest="gru_input_layernorm")
++
++    # ── 断点续训 ────────────────────────────────────────────────────────
++    parser.add_argument("--resume-from", type=str, dest="resume_from", default=Args.resume_from)
++    parser.add_argument("--load-model-path", type=str, dest="load_model_path", default=Args.load_model_path)
++    parser.add_argument("--save-every-n-episodes", type=int, dest="save_every_n_episodes", default=Args.save_every_n_episodes)
++    parser.add_argument("--max-checkpoints", type=int, dest="max_checkpoints", default=Args.max_checkpoints)
++
++    return parser
++
++
++def build_args_from_cli(cli_args: argparse.Namespace) -> Args:
++    """将 CLI Namespace 合并到 Args dataclass，返回最终 Args。
++    优先级：CLI 参数 > Args 默认值。脚本专有字段直接赋值。
++    """
++    args = Args()
++    cli_vars = vars(cli_args)
++
++    for key, value in cli_vars.items():
++        if hasattr(args, key):
++            setattr(args, key, value)
++
++    args.network_type = NetworkType(args.network_type)
++    args.trunk_hidden = tuple(args.trunk_hidden)
++    args.mlp_hiddens = tuple(args.mlp_hiddens)
++
++    return args
++
++def _count_completed_episodes(rollout: RolloutData) -> int:
++    """Count episode boundaries observed during this rollout.
++
++    The shared Godot episode ends when any controlled slot reports done. The
++    current-step done flag is stored in the next row, with the final step stored
++    in rollout.next_done.
++    """
++    done_rows = [rollout.next_done.unsqueeze(0)]
++    if rollout.dones.shape[0] > 1:
++        done_rows.insert(0, rollout.dones[1:])
++    dones = torch.cat(done_rows, dim=0)
++    return int(torch.any(dones > 0.5, dim=1).sum().item())
++
++def run_training_with_resume(
++    args: Args,
++    agent: PPOAgent,
++    envs,
++    optimizer: optim.Optimizer,
++    device: torch.device,
++    writer,
++    reward_normalizer: Optional[RewardNormalizer],
++    next_obs: torch.Tensor,
++    next_done: torch.Tensor,
++    next_rnn_state: Optional[torch.Tensor],
++    start_global_step: int,
++    start_update: int,
++    start_episode_count: int,
++    start_episode_returns: Optional[deque] = None,
++) -> dict:
++    """执行 PPO 训练循环；训练逻辑与 custom_ppo.train 保持一致。"""
++    global_step = start_global_step
++    episode_count = start_episode_count
++    start_time = time.time()
++    num_updates = args.total_timesteps // args.batch_size
++    episode_returns = deque(start_episode_returns or [], maxlen=20)#最近20个回合的奖励
++    accum_rewards: np.ndarray = np.zeros(args.num_envs)#每回合累计奖励
++    next_checkpoint_episode = None
++    if args.save_every_n_episodes > 0:
++        interval = int(args.save_every_n_episodes)
++        next_checkpoint_episode = ((episode_count // interval) + 1) * interval
++
++    for update in range(start_update, num_updates + 1):
++        # 学习率退火
++        if args.anneal_lr:
++            progress = 1.0 - (update - 1.0) / num_updates
++            optimizer.param_groups[0]["lr"] = progress * args.learning_rate
++
++        # 收集经验
++        rollout, global_step = collect_rollout(
++            agent, envs, args.num_steps, device,
++            next_obs, next_done, global_step,
++            episode_returns, accum_rewards,
++            reward_normalizer=reward_normalizer,
++            rnn_state=next_rnn_state,
++        )
++        next_obs = rollout.next_obs
++        next_done = rollout.next_done
++        next_rnn_state = rollout.next_rnn_state
++        completed_episodes = _count_completed_episodes(rollout)
++        episode_count += completed_episodes
++
++        # GAE 优势估计
++        with torch.no_grad():
++            next_value = agent.get_value(rollout.next_obs, rollout.next_rnn_state).reshape(1, -1)
++
++            advantages, target_values = compute_gae(
++                rollout.rewards, rollout.values, rollout.dones,
++                next_value, rollout.next_done,
++                args.gamma, args.gae_lambda,
++            )
++
++        # 展平 rollout 数据,统一形状为(batch_size, *)
++        b_obs = rollout.obs.reshape((-1,) + envs.single_observation_space.shape)
++        b_actions = rollout.actions.reshape(-1)
++        b_logprobs = rollout.logprobs.reshape(-1)
++        b_advantages = advantages.reshape(-1)
++        b_target_values = target_values.reshape(-1)
++        b_values = rollout.values.reshape(-1)
++
++        clipfracs = []
++
++        if agent.is_recurrent:# 如果是循环神经网络
++            seq_len = max(1, min(int(args.recurrent_seq_len), args.num_steps))
++            seq_starts = []
++            seq_ends = []
++            seq_envs = []
++            for env_i in range(args.num_envs):#对于每个智能体
++                for start_t in range(0, args.num_steps, seq_len):
++                    seq_starts.append(start_t)
++                    seq_ends.append(min(start_t + seq_len, args.num_steps))
++                    seq_envs.append(env_i)#env_i=0,1,2,...
++
++            seq_starts = np.asarray(seq_starts)#序列在样本中的起始位置
++            seq_ends = np.asarray(seq_ends)#序列在样本中的结束位置
++            seq_envs = np.asarray(seq_envs)
++            seq_inds = np.arange(len(seq_starts))#[0,1,2,...,len(seq_starts)-1]
++            seqs_per_minibatch = max(1, (len(seq_inds) + args.num_minibatches - 1) // args.num_minibatches)
++            """"每个minibatch包含多少个序列,等价于len(seq_inds)/args.num_minibatches向上取整"""
++
++            for epoch in range(args.update_epochs):
++                np.random.shuffle(seq_inds)#打乱序列索引
++
++                #对每个minibatch中的所有子序列
++                for start in range(0, len(seq_inds), seqs_per_minibatch):
++                    mb_seq_inds = seq_inds[start:start + seqs_per_minibatch]#子序列组成一个minibatch的长序列
++                    mb_inds, new_logprob, entropy, new_value = evaluate_recurrent_sequences(
++                        agent,
++                        rollout,
++                        seq_starts[mb_seq_inds],
++                        seq_ends[mb_seq_inds],
++                        seq_envs[mb_seq_inds],
++                        device,
++                    )
++
++                    # Actor loss
++                    pg_loss, approx_kl, clipfrac = compute_actor_loss(
++                        new_logprob,
++                        b_logprobs[mb_inds],
++                        b_advantages[mb_inds],
++                        args.clip_coef,
++                        args.norm_adv,
++                    )
++                    clipfracs.append(clipfrac)
++
++                    # Critic loss
++                    v_loss = compute_critic_loss(
++                        new_value,
++                        b_target_values[mb_inds],
++                        b_values[mb_inds],
++                        args.clip_coef,
++                        args.clip_vloss,
++                    )
++
++                    # 优化 loss
++                    loss = pg_loss - args.ent_coef * entropy.mean() + v_loss * args.vf_coef
++
++                    optimizer.zero_grad()
++                    loss.backward()
++                    nn.utils.clip_grad_norm_(agent.parameters(), args.max_grad_norm)
++                    optimizer.step()
++
++                # KL散度过大时结束本轮更新（用最后一个epoch的KL）
++                if args.target_kl is not None and approx_kl > args.target_kl:
++                    break
++        else:
++            b_inds = np.arange(args.batch_size)#batch_indices
++
++            for epoch in range(args.update_epochs):
++                np.random.shuffle(b_inds)# 打乱索引
++
++                for start in range(0, args.batch_size, args.minibatch_size):
++                    end = start + args.minibatch_size
++                    mb_inds = b_inds[start:end]#切出小批量mini batch indices
++
++                    # 用当前网络采样动作并计算价值
++                    _, new_logprob, entropy, new_value = agent.get_action_and_value(
++                        b_obs[mb_inds],
++                        b_actions[mb_inds],
++                    )
++                    new_value = new_value.view(-1)
++
++                    # Actor loss
++                    pg_loss, approx_kl, clipfrac = compute_actor_loss(
++                        new_logprob,
++                        b_logprobs[mb_inds],
++                        b_advantages[mb_inds],
++                        args.clip_coef,
++                        args.norm_adv,
++                    )
++                    clipfracs.append(clipfrac)
++
++                    # Critic loss
++                    v_loss = compute_critic_loss(
++                        new_value,
++                        b_target_values[mb_inds],
++                        b_values[mb_inds],
++                        args.clip_coef,
++                        args.clip_vloss,
++                    )
++
++                    # 优化 loss
++                    loss = pg_loss - args.ent_coef * entropy.mean() + v_loss * args.vf_coef
++
++                    optimizer.zero_grad()
++                    loss.backward()
++                    nn.utils.clip_grad_norm_(agent.parameters(), args.max_grad_norm)
++                    optimizer.step()
++
++                # KL散度过大时结束本轮更新
++                if args.target_kl is not None and approx_kl > args.target_kl:
++                    break
++
++        # 计算解释方差
++        y_pred = b_values.cpu().numpy()
++        y_true = b_target_values.cpu().numpy()
++        var_y = np.var(y_true)
++        explained_var = (
++            np.nan if var_y == 0 else 1 - np.var(y_true - y_pred) / var_y
++        )
++
++        # 日志
++        log_ppo(
++            writer, global_step, optimizer,
++            v_loss, pg_loss, entropy.mean(),
++            approx_kl, clipfracs, explained_var,
++            episode_returns, start_time,
++            update=update, num_updates=num_updates,
++        )
++
++        # 每 N 个完整 episode 保存 checkpoint
++        if next_checkpoint_episode is not None and episode_count >= next_checkpoint_episode:
++            train_state = _build_train_state(
++                global_step, update, episode_count,
++                optimizer, episode_returns,
++            )
++            ckpt_path = _make_checkpoint_path(args.save_model_path, episode_count)
++            if ckpt_path:
++                _save_checkpoint(
++                    ckpt_path, agent, optimizer,
++                    args, reward_normalizer, train_state,
++                )
++                print(
++                    f"[Checkpoint] episode={episode_count}, "
++                    f"update={update}, step={global_step} -> {ckpt_path}"
++                )
++                _cleanup_old_checkpoints(args.save_model_path, args.max_checkpoints)
++            while episode_count >= next_checkpoint_episode:
++                next_checkpoint_episode += int(args.save_every_n_episodes)
++
++    return _build_train_state(
++        global_step, num_updates, episode_count,
++        optimizer, episode_returns,
++    )
++
++
++# ╔══════════════════════════════════════════════════════════════════════════╗
++# ║                     Checkpoint 管理                                      ║
++# ╚══════════════════════════════════════════════════════════════════════════╝
++def _build_train_state(
++    global_step: int,
++    update: int,
++    episode_count: int,
++    optimizer: optim.Optimizer,
++    episode_returns: deque,
++) -> dict:
++    """打包当前训练状态为 dict，用于 checkpoint 保存"""
++    state: dict = dict(
++        global_step=int(global_step),
++        update=int(update),
++        episode_count=int(episode_count),
++        lr=float(optimizer.param_groups[0]["lr"]),
++    )
++    state["episode_returns"] = list(episode_returns)
++    return state
++
++
++def _load_train_state(
++    ckpt: dict,
++) -> tuple[int, int, int, deque]:
++    """从 checkpoint dict 恢复训练运行时变量。"""
++    global_step = int(ckpt.get("global_step", 0))
++    update = int(ckpt.get("update", 0))
++    episode_count = int(ckpt.get("episode_count", 0))
++    episode_returns = deque(ckpt.get("episode_returns", []), maxlen=20)
++    return global_step, update, episode_count, episode_returns
++
++
++def _restore_reward_normalizer(
++    ckpt: dict,
++    reward_normalizer: Optional[RewardNormalizer],
++) -> None:
++    """从 checkpoint 恢复奖励归一化器状态。"""
++    if reward_normalizer is not None and "reward_normalizer" in ckpt:
++        reward_normalizer.load_state_dict(ckpt["reward_normalizer"])
++
++
++def _make_checkpoint_path(base_path: Optional[str], episode_count: int) -> Optional[str]:
++    """生成带 episode 编号的 checkpoint 路径。"""
++    if base_path is None:
++        return None
++    base, ext = os.path.splitext(base_path)
++    if not ext:
++        ext = ".pt"
++    return f"{base}_episode{episode_count}{ext}"
++
++
++def _cleanup_old_checkpoints(base_path: Optional[str], max_keep: int) -> None:
++    """删除超出保留数量的旧 checkpoint。"""
++    if base_path is None or max_keep <= 0:
++        return
++    base, ext = os.path.splitext(base_path)
++    if not ext:
++        ext = ".pt"
++    prefix = os.path.basename(base) + "_episode"
++    dir_name = os.path.dirname(base_path) or "."
++
++    if not os.path.isdir(dir_name):
++        return
++
++    checkpoints: list[tuple[int, str]] = []
++    for f in os.listdir(dir_name):
++        if f.startswith(prefix) and f.endswith(ext):
++            try:
++                num_str = f[len(prefix):-len(ext)]
++                update_num = int(num_str)
++                checkpoints.append((update_num, os.path.join(dir_name, f)))
++            except ValueError:
++                continue
++
++    checkpoints.sort(key=lambda x: x[0])
++    while len(checkpoints) > max_keep:
++        _, old_path = checkpoints.pop(0)
++        try:
++            os.remove(old_path)
++        except OSError:
++            pass
++
++
++def _save_checkpoint(
++    ckpt_path: str,
++    agent: PPOAgent,
++    optimizer: optim.Optimizer,
++    args: Args,
++    reward_normalizer: Optional[RewardNormalizer],
++    extra: dict,
++) -> None:
++    """将模型 + optimizer + 训练状态保存到 checkpoint 文件。"""
++    _gew.save_pt_model(
++        ckpt_path,
++        {
++            "agent_state_dict": agent.state_dict(),
++            "optimizer_state_dict": optimizer.state_dict(),
++        },
++        args,
++        reward_normalizer=reward_normalizer,
++        extra=extra,
++    )
++
++def create_agent_and_optimizer(
++    n_actions: int,
++    seg: ObsSegmentDims,
++    args: Args,
++    device: torch.device,
++) -> tuple[PPOAgent, optim.Optimizer, Optional[RewardNormalizer]]:
++    """创建智能体、优化器，以及可选的奖励归一化器。"""
++    agent = PPOAgent(n_actions, seg, args).to(device)
++    print(f"[PPO] network_type={args.network_type}, params={agent.num_params():,}")
++    optimizer = optim.Adam(agent.parameters(), lr=args.learning_rate, eps=1e-5)
++
++    reward_normalizer = None
++    if args.reward_norm:
++        reward_normalizer = RewardNormalizer(clip=args.reward_clip)
++        print(f"[RewardNorm] enabled, clip={args.reward_clip}")
++
++    return agent, optimizer, reward_normalizer
++
++
++def load_checkpoint_if_requested(
++    resume_path: Optional[str],
++    is_resume: bool,
++    agent: PPOAgent,
++    optimizer: optim.Optimizer,
++    reward_normalizer: Optional[RewardNormalizer],
++    device: torch.device,
++) -> tuple[int, int, int, deque]:
++    """从 checkpoint 恢复模型 / optimizer / 归一化器 / 训练计数。"""
++    if not resume_path:
++        return 0, 1, 0, deque(maxlen=20)
++
++    print(f"[Resume] 加载 checkpoint: {resume_path}")
++    ckpt = _gew.load_full_checkpoint(resume_path, device)
++    agent.load_state_dict(ckpt["agent_state_dict"])
++
++    if is_resume:
++        # 完全续训：恢复 optimizer / 归一化器 / 训练计数；环境从新 episode reset。
++        if "optimizer_state_dict" in ckpt:
++            optimizer.load_state_dict(ckpt["optimizer_state_dict"])
++            print("[Resume] optimizer state restored")
++        _restore_reward_normalizer(ckpt, reward_normalizer)
++        start_global_step, start_update, start_episode_count, episode_returns = _load_train_state(ckpt)
++        start_update += 1
++        print(
++            f"[Resume] 从 update {start_update} / step {start_global_step} "
++            f"/ episode {start_episode_count} 继续"
++        )
++    else:
++        # 仅加载模型：其余从头初始化
++        print("[Load] 仅加载模型参数，其余从头初始化")
++        return 0, 1, 0, deque(maxlen=20)
++
++    return start_global_step, start_update, start_episode_count, episode_returns
++
++def init_observation_state(
++    args: Args,
++    envs,
++    agent: PPOAgent,
++    next_obs: Optional[torch.Tensor],
++    next_done: Optional[torch.Tensor],
++    next_rnn_state: Optional[torch.Tensor],
++    device: torch.device,
++) -> tuple[torch.Tensor, torch.Tensor, Optional[torch.Tensor]]:
++    """初始化观测 / done / RNN 隐藏态。
++
++    episode 级 checkpoint 不恢复 Godot 内部状态，续训时也从新 episode reset。
++    """
++    if next_obs is None:
++        next_obs_array, _ = envs.reset(seed=args.seed)
++        next_obs = torch.tensor(
++            np.array(next_obs_array, dtype=np.float32), device=device
++        )
++    if next_done is None:
++        next_done = torch.zeros(args.num_envs, device=device)
++    if next_rnn_state is None:
++        next_rnn_state = agent.get_initial_state(args.num_envs, device)
++    return next_obs, next_done, next_rnn_state
++
++
++def save_final_model(
++    save_model_path: Optional[str],
++    agent: PPOAgent,
++    optimizer: optim.Optimizer,
++    args: Args,
++    reward_normalizer: Optional[RewardNormalizer],
++    final_state: dict,
++) -> None:
++    """训练正常结束后保存最终模型。"""
++    if save_model_path is None or final_state is None:
++        return
++    save_dict = {
++        "agent_state_dict": agent.state_dict(),
++        "optimizer_state_dict": optimizer.state_dict(),
++    }
++    _gew.save_pt_model(
++        save_model_path, save_dict, args,
++        reward_normalizer=reward_normalizer,
++        extra=final_state,
++    )
++    print(f"[Done] 最终模型已保存到 {save_model_path}")
++
++def main():
++    # ── 1. 解析命令行参数（覆盖 Args 默认值）─────────────────────────────
++    cli_ns = parse_cli_args(_build_arg_parser())
++    args = build_args_from_cli(cli_ns)
++
++    # ── 2. 初始化环境 / TensorBoard / 设备 ─────────────────────────────
++    writer, device, envs, seg, _run_name = init_training_setup(args)
++    args.num_envs = envs.num_envs
++    args.batch_size = args.num_envs * args.num_steps
++    args.minibatch_size = args.batch_size // args.num_minibatches
++    n_actions = int(envs.single_action_space.n)
++
++    # ── 3. 创建智能体 / 优化器 / 归一化器 ────────────────────────────
++    agent, optimizer, reward_normalizer = create_agent_and_optimizer(n_actions, seg, args, device,)
++
++    # ── 4. 恢复 / 初始化训练状态 ──────────────────────────────────────
++    resume_path = args.resume_from or args.load_model_path
++    is_resume = bool(args.resume_from)
++    start_global_step, start_update, start_episode_count, episode_returns = (
++        load_checkpoint_if_requested(
++            resume_path, is_resume,
++            agent, optimizer, reward_normalizer,
++            device,
++        )
++    )
++    next_obs, next_done, next_rnn_state = init_observation_state(
++        args, envs, agent,
++        None, None, None, device,
++    )
++
++    # ── 5. 训练循环────────────────────────────────
++    final_state = None
++    try:
++        final_state = run_training_with_resume(
++            args, agent, envs, optimizer, device, writer,
++            reward_normalizer, next_obs, next_done, next_rnn_state,
++            start_global_step, start_update, start_episode_count,
++            episode_returns,
++        )
++    finally:
++        safe_close(envs)
++        try:
++            writer.close()
++        except Exception:
++            pass
++
++    # ── 6. 保存最终模型 ──────────────────────────────────────────────
++    save_final_model(
++        args.save_model_path, agent, optimizer, args,
++        reward_normalizer, final_state,
++    )
++
++
++if __name__ == "__main__":
++    main()
+diff --git a/Python/training/rllib_custom_network.py b/Python/training/rllib_custom_network.py
+index 9607899..d96c4b9 100644
+--- a/Python/training/rllib_custom_network.py
++++ b/Python/training/rllib_custom_network.py
+@@ -16,6 +16,7 @@ import ray
+ import torch
+ import torch.nn as nn
+ import yaml
++from collections import defaultdict, deque
+ from ray import train, tune
+ from ray.rllib.algorithms.algorithm import Algorithm
+ from ray.rllib.algorithms.callbacks import DefaultCallbacks
+@@ -157,9 +158,7 @@ class _TemporalGRU(nn.Module):
+ 
+ 
+ def parse_network_type(value) -> NetworkType:
+-    """将字符串或枚举值解析为 NetworkType。"""
+-    if isinstance(value, NetworkType):
+-        return value
++    """将字符串解析为 NetworkType。"""
+     text = str(value or NetworkType.SEGMENTED_MLP.value).lower()
+     for nt in NetworkType:
+         if text in (nt.value, nt.name.lower()):
+@@ -548,6 +547,166 @@ def _parse_args():
+     return args
+ 
+ 
++# 训练监控回调
++class _EpisodeStatsCallback(DefaultCallbacks):
++    """训练监控回调：打印每智能体最近 N 回合平均奖励与 PPO KL 散度。
++
++    - on_episode_end: 在 RolloutWorker 上通过 episode.agent_rewards 收集奖励
++      （仅 worker 侧有效，不会同步到主进程）。
++    - on_train_result: 主进程上从 result 字典提取已聚合的 per-policy 奖励，
++      维护滚动窗口，并与 KL / policy_loss / vf_loss / entropy 合并打印。
++
++    适用配置: RLlib 2.40, PPO old API stack (enable_env_runner_and_connector_v2=False),
++    多智能体 (env_is_multiagent=True)。
++    """
++
++    def __init__(self, window_size: int = 20):
++        super().__init__()
++        self._window = window_size
++        # {agent_id: deque([episode_reward, ...], maxlen=window_size)}
++        self._recent_rewards: dict[str, deque] = defaultdict(
++            lambda: deque(maxlen=window_size)
++        )
++
++    def on_episode_start(
++        self,
++        *,
++        episode,
++        env_runner=None,
++        metrics_logger=None,
++        env=None,
++        env_index: int,
++        rl_module=None,
++        worker=None,
++        base_env=None,
++        policies=None,
++        **kwargs,
++    ):
++        pass  # RolloutWorker 侧触发，主进程不感知
++
++    def on_episode_end(
++        self,
++        *,
++        episode,
++        env_runner=None,
++        metrics_logger=None,
++        env=None,
++        env_index: int,
++        rl_module=None,
++        worker=None,
++        base_env=None,
++        policies=None,
++        **kwargs,
++    ):
++        """RolloutWorker 上执行；数据不会自动同步到主进程。
++
++        真正的 per-policy 奖励统计在 on_train_result 中通过 result 字典获取。
++        """
++        # 保留调试打印（如需要可注释掉）
++        agent_rewards = getattr(episode, "agent_rewards", {})
++        for (agent_id, _policy_id), total_reward in agent_rewards.items():
++            self._recent_rewards[agent_id].append(float(total_reward))
++
++    def on_train_result(
++        self,
++        *,
++        algorithm,
++        metrics_logger=None,
++        result: dict,
++        **kwargs,
++    ):
++        iter_idx = result.get("training_iteration", "?")
++        print(f"\n{'='*80}")
++        print(f"  Training Iteration {iter_idx} — Per-Agent Stats "
++              f"(last {self._window} episodes/iterations)")
++        print(f"{'='*80}")
++
++        # --- 收集 per-policy 奖励数据到滚动窗口 ---
++        # RLlib 回调实例是进程隔离的：RolloutWorker 侧的 _recent_rewards
++        # 不会同步到主进程。因此必须从 result 字典提取已聚合的指标。
++        any_data = False
++
++        # 1) 尝试从 hist_stats 读取 per-policy episode 奖励列表（old API stack）
++        hist_stats = result.get("hist_stats", {})
++        if hist_stats:
++            for key, values in hist_stats.items():
++                if key.startswith("policy_") and key.endswith("_reward"):
++                    if isinstance(values, (list, tuple)) and values:
++                        policy_id = key[len("policy_"):-len("_reward")]
++                        for v in values:
++                            self._recent_rewards[policy_id].append(float(v))
++                        any_data = True
++
++        # 2) 若 hist_stats 没有 per-policy 数据，退而使用 policy_reward_mean
++        if not any_data:
++            sampler_results = result.get("sampler_results") or result.get("env_runners", {})
++            policy_reward_mean = sampler_results.get("policy_reward_mean", {})
++            if policy_reward_mean:
++                for policy_id, avg_reward in sorted(policy_reward_mean.items()):
++                    self._recent_rewards[policy_id].append(float(avg_reward))
++                any_data = True
++
++        # --- KL 散度 / 其他训练指标 (per-policy)，与奖励合并到一张表 ---
++        print()
++        learner_info = result.get("info", {}).get("learner", {})
++        if learner_info:
++            printed_header = False
++            for pid in sorted(learner_info.keys()):
++                raw = learner_info[pid]
++                if not isinstance(raw, dict):
++                    continue
++                stats = raw.get("learner_stats", raw)
++                kl = stats.get("kl", float("nan"))
++                pl = stats.get("policy_loss", float("nan"))
++                vf = stats.get("vf_loss", float("nan"))
++                ent = stats.get("entropy", float("nan"))
++
++                buf = self._recent_rewards.get(pid)
++                reward_str = f"{sum(buf)/len(buf):+.2f}" if buf else "N/A"
++
++                if not printed_header:
++                    print(f"  {'Policy':<12} {'Reward':>10} {'KL':>10} {'PolicyLoss':>12} "
++                          f"{'VFLoss':>10} {'Entropy':>10}")
++                    printed_header = True
++                print(f"  {pid:<12} {reward_str:>10} {kl:>10.4f} {pl:>12.4f} "
++                      f"{vf:>10.4f} {ent:>10.4f}")
++
++            if not printed_header:
++                print("  (info.learner found but no per-policy stats)")
++        else:
++            # 极少数版本 result 直接以 policy_id 为顶层 key
++            policy_ids = [k for k in result if k not in {
++                "training_iteration", "time_this_iter_s", "time_total_s",
++                "pid", "hostname", "date", "timestamp", "node_ip",
++                "done", "timesteps_total", "episodes_total",
++                "config", "counters", "custom_metrics", "env_runners",
++                "episode_media", "info", "perf", "timers", "agent_timesteps_total",
++            } and isinstance(result[k], dict)]
++            if policy_ids:
++                printed_header = False
++                for pid in sorted(policy_ids):
++                    stats = result.get(pid, {})
++                    if "kl" not in stats and "learner_stats" in stats:
++                        stats = stats["learner_stats"]
++                    kl = stats.get("kl", float("nan"))
++                    pl = stats.get("policy_loss", float("nan"))
++                    vf = stats.get("vf_loss", float("nan"))
++                    ent = stats.get("entropy", float("nan"))
++
++                    buf = self._recent_rewards.get(pid)
++                    reward_str = f"{sum(buf)/len(buf):+.2f}" if buf else "N/A"
++
++                    if not printed_header:
++                        print(f"  {'Policy':<12} {'Reward':>10} {'KL':>10} {'PolicyLoss':>12} "
++                              f"{'VFLoss':>10} {'Entropy':>10}")
++                        printed_header = True
++                    print(f"  {pid:<12} {reward_str:>10} {kl:>10.4f} {pl:>12.4f} "
++                          f"{vf:>10.4f} {ent:>10.4f}")
++            else:
++                print("  (no per-policy stats found in result)")
++        print(f"{'='*80}\n")
++
++
+ class RLLibTrainingPipeline:
+     """RLlib 训练流水线
+     """
+@@ -789,6 +948,10 @@ class RLLibTrainingPipeline:
+         else:
+             self._exp["config"]["num_envs_per_env_runner"] = self._num_envs
+ 
++    def _configure_callbacks(self) -> None:
++        """注入训练监控回调: 每智能体最近 N 回合平均奖励 + KL 散度。"""
++        self._exp["config"]["callbacks"] = _EpisodeStatsCallback
++
+     #训练
+     def _run_training(self) -> tune.ResultGrid:
+         """执行 RLlib 训练 (新建或恢复)。"""
+@@ -863,6 +1026,9 @@ class RLLibTrainingPipeline:
+         # 多/单智能体配置注入
+         self._configure_agent_mode()
+ 
++        # 训练监控回调注入 (每智能体最近 N 回合平均奖励 + KL)
++        self._configure_callbacks()
++
+         # 初始化 Ray (注入 PYTHONPATH 使 worker 进程能找到本地模块)
+         training_dir = os.path.dirname(os.path.abspath(__file__))
+         ray.init(
+@@ -879,7 +1045,6 @@ class RLLibTrainingPipeline:
+ 
+ 
+ #入口
+-
+ if __name__ == "__main__":
+     args = _parse_args()
+     pipeline = RLLibTrainingPipeline(
+diff --git a/Python/training/rllib_s1_config.yaml b/Python/training/rllib_s1_config.yaml
+index 565fc04..db81a54 100644
+--- a/Python/training/rllib_s1_config.yaml
++++ b/Python/training/rllib_s1_config.yaml
+@@ -50,9 +50,9 @@ config:
+     clip_actions: True # During onnx inference we simply clip the actions to [-1.0, 1.0] range, set here to match
+ 
+     rollout_fragment_length: 128       
+-    sgd_minibatch_size: 128           # 必须 > max_seq_len(128) 且 > rollout 中实际最大seq长度(512)
++    sgd_minibatch_size: 128           
+     num_workers: 2                     # Number of parallel processes
+-    num_envs_per_env_runner: 2         # Number of env instances per worker
++    num_envs_per_env_runner: 1         # Number of env instances per worker
+     train_batch_size: 512
+     #godot端每个回合步数为reset_after/8 -1
+     num_sgd_iter: 8 #how many times the past experiences is used to update the neural network
+@@ -62,13 +62,13 @@ config:
+     num_gpus: 1
+ 
+     # 网络类型: default (RLlib 内置) / segmented_mlp (分段 MLP) / gru_mlp (GRU-MLP 混合)
+-    model: gru_mlp
++    model: default
+ 
+ # 各网络类型的结构参数
+ model_config:
+     default:
+         vf_share_layers: False
+-        fcnet_hiddens: [256, 128]
++        fcnet_hiddens: [256, 128,64]
+     segmented_mlp:
+         self_hiddens: [48]
+         player_hiddens: [64]
+diff --git a/Python/training/stable_baselines3_example.py b/Python/training/stable_baselines3_example.py
+index 4874953..f2c651e 100644
+--- a/Python/training/stable_baselines3_example.py
++++ b/Python/training/stable_baselines3_example.py
+@@ -48,7 +48,7 @@ class Config:
+     """实验名称。"""
+ 
+     # ---- 训练 ----
+-    timesteps: int = 1_000_000
++    timesteps: int = 2_000_000
+     """总训练步数。"""
+     linear_lr_schedule: bool = False
+     """使用线性 LR 退火。"""
+@@ -240,9 +240,9 @@ if args.resume_model_path is None:
+     model: PPO = PPO(
+         "MultiInputPolicy",
+         env,
+-        ent_coef=0.001,
++        ent_coef=0.005,
+         verbose=1,
+-        n_steps=32,
++        n_steps=128,
+         tensorboard_log=args.experiment_dir,
+         learning_rate=learning_rate,
+         gamma=args.gamma,
+diff --git a/_temp_inspect.py b/_temp_inspect.py
+deleted file mode 100644
+index aae13ad..0000000
+--- a/_temp_inspect.py
++++ /dev/null
+@@ -1,11 +0,0 @@
+-"""Check ModelCatalog.get_model_v2 source and RLlib config."""
+-import sys, pathlib, inspect
+-sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent / "Python" / "training"))
+-
+-from ray.rllib.models.catalog import ModelCatalog
+-
+-src = inspect.getsource(ModelCatalog.get_model_v2)
+-# Print the section near where model_cls is instantiated
+-for i, line in enumerate(src.split("\n")):
+-    if any(kw in line for kw in ["model_cls", "instance =", "custom_model", "**", "kwargs"]):
+-        print(f"  L{i:4d}: {line}")
+diff --git a/curriculum_envs/s1-no-wall-for ball/assets/scenes/Player.tscn b/curriculum_envs/s1-no-wall-for ball/assets/scenes/Player.tscn
+index 674f26f..fccfa3a 100644
+--- a/curriculum_envs/s1-no-wall-for ball/assets/scenes/Player.tscn	
++++ b/curriculum_envs/s1-no-wall-for ball/assets/scenes/Player.tscn	
+@@ -240,7 +240,7 @@ shape = SubResource("CapsuleShape2D_4wvqw")
+ [node name="AIController2D" type="Node2D" parent="." unique_id=720197141]
+ script = ExtResource("8_qu62d")
+ cfg = ExtResource("9_mc6or")
+-reset_after = 10800
++reset_after = 2000
+ metadata/_custom_type_script = "uid://ciecfcurp1n2n"
+ 
+ [node name="HealthBarOnPlayer" type="TextureProgressBar" parent="." unique_id=363006926]
+diff --git a/curriculum_envs/s1-no-wall-for ball/build/game.pck b/curriculum_envs/s1-no-wall-for ball/build/game.pck
+index 1adf68c..8234f87 100644
+Binary files a/curriculum_envs/s1-no-wall-for ball/build/game.pck and b/curriculum_envs/s1-no-wall-for ball/build/game.pck differ
+diff --git a/curriculum_envs/s1-no-wall-for ball/configs/game_config.tres b/curriculum_envs/s1-no-wall-for ball/configs/game_config.tres
+index f034cdb..2a42e79 100644
+--- a/curriculum_envs/s1-no-wall-for ball/configs/game_config.tres	
++++ b/curriculum_envs/s1-no-wall-for ball/configs/game_config.tres	
+@@ -4,7 +4,6 @@
+ 
+ [resource]
+ script = ExtResource("1")
+-reward_logger_enabled = true
+ ray_count = 36
+ use_observation_valid_mask = true
+ training_player_id = -1
+diff --git a/curriculum_envs/s1-no-wall-for ball/export_presets.cfg b/curriculum_envs/s1-no-wall-for ball/export_presets.cfg
+index 163bc98..a5db7ca 100644
+--- a/curriculum_envs/s1-no-wall-for ball/export_presets.cfg	
++++ b/curriculum_envs/s1-no-wall-for ball/export_presets.cfg	
+@@ -58,7 +58,7 @@ custom_features=""
+ export_filter="all_resources"
+ include_filter=""
+ exclude_filter=""
+-export_path="build2/game.exe"
++export_path="build/game.exe"
+ patches=PackedStringArray()
+ patch_delta_encoding=false
+ patch_delta_compression_level_zstd=19
+diff --git a/curriculum_envs/s1-no-wall-for ball/scripts/scene_scripts/reward_manager.gd b/curriculum_envs/s1-no-wall-for ball/scripts/scene_scripts/reward_manager.gd
+index 3fe70f9..b879d6c 100644
+--- a/curriculum_envs/s1-no-wall-for ball/scripts/scene_scripts/reward_manager.gd	
++++ b/curriculum_envs/s1-no-wall-for ball/scripts/scene_scripts/reward_manager.gd	
+@@ -733,8 +733,11 @@ func _is_player_pressing_wall(player: Player) -> bool:
+ 
+ 	if player.is_on_wall():
+ 		var wall_normal: Vector2 = player.get_wall_normal() #碰撞法线
+-		if wall_normal != Vector2.ZERO and desired.dot(wall_normal) < -0.001:
++		#if player.player_id==0:
++			#print(wall_normal)
++		if (wall_normal.x>0.9 and desired.x<0.0) or (wall_normal.x<-0.9 and desired.x>0.0):
+ 			return true
++			
+ 	if player.is_on_floor():
+ 		return desired.y > 0.001
+ 	if player.is_on_ceiling():
+diff --git a/curriculum_envs/s4-enemy-only/build/game.pck b/curriculum_envs/s4-enemy-only/build/game.pck
+index eedda21..a75da79 100644
+Binary files a/curriculum_envs/s4-enemy-only/build/game.pck and b/curriculum_envs/s4-enemy-only/build/game.pck differ
+diff --git a/curriculum_envs/s4-enemy-only/build2/game.pck b/curriculum_envs/s4-enemy-only/build2/game.pck
+index c4d8fb7..9a3c1c3 100644
+Binary files a/curriculum_envs/s4-enemy-only/build2/game.pck and b/curriculum_envs/s4-enemy-only/build2/game.pck differ
+diff --git a/curriculum_envs/s4-enemy-only/configs/game_config.tres b/curriculum_envs/s4-enemy-only/configs/game_config.tres
+index f034cdb..2a42e79 100644
+--- a/curriculum_envs/s4-enemy-only/configs/game_config.tres
++++ b/curriculum_envs/s4-enemy-only/configs/game_config.tres
+@@ -4,7 +4,6 @@
+ 
+ [resource]
+ script = ExtResource("1")
+-reward_logger_enabled = true
+ ray_count = 36
+ use_observation_valid_mask = true
+ training_player_id = -1
+diff --git a/curriculum_envs/s4-enemy-only/scripts/scene_scripts/reward_manager.gd b/curriculum_envs/s4-enemy-only/scripts/scene_scripts/reward_manager.gd
+index 3fe70f9..b879d6c 100644
+--- a/curriculum_envs/s4-enemy-only/scripts/scene_scripts/reward_manager.gd
++++ b/curriculum_envs/s4-enemy-only/scripts/scene_scripts/reward_manager.gd
+@@ -733,8 +733,11 @@ func _is_player_pressing_wall(player: Player) -> bool:
+ 
+ 	if player.is_on_wall():
+ 		var wall_normal: Vector2 = player.get_wall_normal() #碰撞法线
+-		if wall_normal != Vector2.ZERO and desired.dot(wall_normal) < -0.001:
++		#if player.player_id==0:
++			#print(wall_normal)
++		if (wall_normal.x>0.9 and desired.x<0.0) or (wall_normal.x<-0.9 and desired.x>0.0):
+ 			return true
++			
+ 	if player.is_on_floor():
+ 		return desired.y > 0.001
+ 	if player.is_on_ceiling():
+diff --git a/curriculum_envs/s4-enemy-only/scripts/utils/reward_logger.gd b/curriculum_envs/s4-enemy-only/scripts/utils/reward_logger.gd
+index 1c17eaf..c3d3941 100644
+--- a/curriculum_envs/s4-enemy-only/scripts/utils/reward_logger.gd
++++ b/curriculum_envs/s4-enemy-only/scripts/utils/reward_logger.gd
+@@ -26,7 +26,7 @@ func _get_default_log_path() -> String:
+ 	]
+ 	# 添加进程ID以区分并行训练的多个环境实例
+ 	var process_id = OS.get_process_id()
+-	return "D:\\schoolTour\\softwares\\multi-agent-gameplay\\experiment_data\\different-network\\sarl_seg_mlp_%s_pid%d.csv" % [time_str, process_id]
++	return "D:\\schoolTour\\softwares\\multi-agent-gameplay\\experiment_data\\combat-different-network\\sarl_gru_mlp_%s_pid%d.csv" % [time_str, process_id]
+ 
+ func _ensure_file_open() -> void:
+ 	if _file != null:
+diff --git a/godot-game/.godot/editor/editor_layout.cfg b/godot-game/.godot/editor/editor_layout.cfg
+index b4fa0bc..3f3bdc2 100644
+--- a/godot-game/.godot/editor/editor_layout.cfg
++++ b/godot-game/.godot/editor/editor_layout.cfg
+@@ -23,8 +23,8 @@ v_split_offset=0
+ display_mode=0
+ file_sort=0
+ file_list_display_mode=1
+-selected_paths=PackedStringArray("res://configs/reward_config.tres")
+-uncollapsed_paths=PackedStringArray("Favorites", "res://", "res://scripts/", "res://scripts/ui/", "res://scripts/entity/", "res://scripts/config/", "res://configs/", "res://assets/", "res://assets/Tiny RPG Character Asset Pack v1.03b -Free Soldier&Orc/Tiny RPG Character Asset Pack v1.03 -Free Soldier&Orc/", "res://assets/Tiny RPG Character Asset Pack v1.03b -Free Soldier&Orc/Tiny RPG Character Asset Pack v1.03 -Free Soldier&Orc/Characters(100x100)/", "res://assets/Tiny RPG Character Asset Pack v1.03b -Free Soldier&Orc/Tiny RPG Character Asset Pack v1.03 -Free Soldier&Orc/Characters(100x100)/Soldier/", "res://assets/Tiny RPG Character Asset Pack v1.03b -Free Soldier&Orc/Tiny RPG Character Asset Pack v1.03 -Free Soldier&Orc/Characters(100x100)/Soldier/Soldier/Shadow sprites/", "res://assets/Cute_Fantasy_Free/", "res://addons/godot_rl_agents/")
++selected_paths=PackedStringArray("res://configs/reward_config_p3.tres")
++uncollapsed_paths=PackedStringArray("Favorites", "res://", "res://scripts/", "res://scripts/ui/", "res://scripts/scene_scripts/", "res://scripts/entity/", "res://scripts/config/", "res://configs/", "res://assets/", "res://assets/Tiny RPG Character Asset Pack v1.03b -Free Soldier&Orc/Tiny RPG Character Asset Pack v1.03 -Free Soldier&Orc/", "res://assets/Tiny RPG Character Asset Pack v1.03b -Free Soldier&Orc/Tiny RPG Character Asset Pack v1.03 -Free Soldier&Orc/Characters(100x100)/", "res://assets/Tiny RPG Character Asset Pack v1.03b -Free Soldier&Orc/Tiny RPG Character Asset Pack v1.03 -Free Soldier&Orc/Characters(100x100)/Soldier/", "res://assets/Tiny RPG Character Asset Pack v1.03b -Free Soldier&Orc/Tiny RPG Character Asset Pack v1.03 -Free Soldier&Orc/Characters(100x100)/Soldier/Soldier/Shadow sprites/", "res://assets/Cute_Fantasy_Free/", "res://addons/godot_rl_agents/")
+ 
+ [docks/History]
+ 
+@@ -59,15 +59,18 @@ position=Vector2i(0, 29)
+ [ScriptEditor]
+ 
+ open_scripts=["res://addons/godot_rl_agents/controller/ai_controller_2d.gd", "res://scripts/utils/animation_wrapper.gd", "res://scripts/controller.gd", "res://scripts/skills/core/components/deal_damage_group.gd", "res://scripts/entity/enemy.gd", "res://scripts/entity/entity.gd", "res://scripts/autoload/event_bus.gd", "res://export_presets.cfg", "res://scripts/config/game_config.gd", "res://scripts/ui/info_window.gd", "res://scripts/autoload/math_utils.gd", "res://scripts/entity/pathfinding.gd", "res://scripts/entity/player.gd", "res://scripts/scene_scripts/play_scene.gd", "res://configs/readme.md", "res://scripts/entity/reward_ball.gd", "res://scripts/scene_scripts/reward_ball_manager.gd", "res://scripts/config/reward_config.gd", "res://scripts/utils/reward_logger.gd", "res://scripts/scene_scripts/reward_manager.gd", "res://scripts/skills/core/skill.gd", "res://scripts/skills/core/components/skill_component.gd", "res://scripts/skills/core/skill_controller.gd", "res://scripts/skills/core/components/skill_deal_damage.gd", "res://scripts/skills/core/components/skill_get_target.gd", "res://scripts/skills/core/skill_spawn_manifest.gd", "res://scripts/skills/core/components/skill_target_player.gd", "res://scripts/skills/manifest/slash_manifest.gd", "res://addons/godot_rl_agents/sync.gd", "res://scripts/scene_scripts/vision_sensor.gd"]
+-selected_script="res://scripts/scene_scripts/vision_sensor.gd"
++selected_script="res://scripts/scene_scripts/reward_manager.gd"
+ open_help=["CanvasItem", "CharacterBody2D", "Control", "TileMapLayer"]
+ script_split_offset=344
+ list_split_offset=345
+ zoom_factor=1.076325
++window_rect=Rect2i(0, 29, 1920, 1051)
++window_screen=0
++window_screen_rect=Rect2i(0, 0, 1920, 1080)
+ 
+ [GameView]
+ 
+-floating_window_rect=Rect2i(93, 134, 1094, 773)
++floating_window_rect=Rect2i(93, 98, 1094, 809)
+ floating_window_screen=0
+ 
+ [ShaderEditor]
+diff --git a/godot-game/.godot/editor/filesystem_cache10 b/godot-game/.godot/editor/filesystem_cache10
+index cdc9ca0..e1990ed 100644
+--- a/godot-game/.godot/editor/filesystem_cache10
++++ b/godot-game/.godot/editor/filesystem_cache10
+@@ -1,5 +1,5 @@
+ 63f7b34db8d8cdea90c76aacccf841ec
+-::res://::1778923465
++::res://::1779084844
+ export_presets.cfg::TextFile::-1::1778848880::0::1::::<><><>0<>0<><>::
+ icon.svg::CompressedTexture2D::4541085455082572640::1771848123::1777215542::1::::<><><>0<>0<>224bf56117706275fd2108ed6375a969<>res://.godot/imported/icon.svg-218a8f2b3041327d8a5756f3a245f83b.ctex::
+ ::res://addons/::1776081641
+@@ -66,13 +66,13 @@ Path_Middle.png::CompressedTexture2D::409809407847814806::1772099372::1777215543
+ Path_Tile.png::CompressedTexture2D::4965467884027766906::1772099372::1777215543::1::::<><><>0<>0<>d9bc0cfbf7792b5a111957c463ad8a72<>res://.godot/imported/Path_Tile.png-bb317c958d17543bce4e744cbf1e7501.ctex::
+ Water_Middle.png::CompressedTexture2D::4688218169088215205::1772099372::1777215543::1::::<><><>0<>0<>e66e00c50aeed9349e40759f4a17368c<>res://.godot/imported/Water_Middle.png-b12d715a820dbdd4c4bcafd6434e740d.ctex::
+ Water_Tile.png::CompressedTexture2D::7032075365160121469::1772099372::1777215543::1::::<><><>0<>0<>4c5df5cfde5c3fc0bc72515c00fa82d9<>res://.godot/imported/Water_Tile.png-d58eb9623468c6df663ba48bb9a8450a.ctex::
+-::res://assets/scenes/::1778921303
++::res://assets/scenes/::1779084133
+ cpu_hit_particles.tscn::PackedScene::4030934838665518992::1773232671::0::1::::<><><>0<>0<><>::
+ enemy.tscn::PackedScene::3859967108673344725::1778653184::0::1::::<><><>0<>0<><>::uid://b6t17dcry64c1::::res://scripts/entity/enemy.gd<>uid://dxe38dagqp7mt::::res://shaders/entity.gdshader<>uid://bmqs2gqdk0osp::::res://assets/Tiny RPG Character Asset Pack v1.03b -Free Soldier&Orc/Tiny RPG Character Asset Pack v1.03 -Free Soldier&Orc/Characters(100x100)/Soldier/Soldier/Soldier-Death.png<>uid://bl25sftvk03dd::::res://scripts/skills/core/skill_controller.gd<>uid://dwe6iyyofvxs4::::res://assets/Tiny RPG Character Asset Pack v1.03b -Free Soldier&Orc/Tiny RPG Character Asset Pack v1.03 -Free Soldier&Orc/Characters(100x100)/Soldier/Soldier/Soldier-Hurt.png<>uid://b1tj45nrn03gn::::res://assets/scenes/skill_scene/skeleton_slash.tscn<>uid://csbmrt4x4m06t::::res://assets/Tiny RPG Character Asset Pack v1.03b -Free Soldier&Orc/Tiny RPG Character Asset Pack v1.03 -Free Soldier&Orc/Characters(100x100)/Soldier/Soldier/Soldier-Idle.png<>uid://cag1vrje7ssyf::::res://scripts/skills/core/skill.gd<>uid://il372d6vhq1p::::res://assets/Tiny RPG Character Asset Pack v1.03b -Free Soldier&Orc/Tiny RPG Character Asset Pack v1.03 -Free Soldier&Orc/Characters(100x100)/Soldier/Soldier/Soldier-Walk.png<>uid://2ushdpd6bm1g::::res://assets/Tiny RPG Character Asset Pack v1.03b -Free Soldier&Orc/Tiny RPG Character Asset Pack v1.03 -Free Soldier&Orc/Characters(100x100)/Soldier/Soldier/Soldier-Attack01.png<>uid://bxou54q031i7a::::res://assets/scenes/cpu_hit_particles.tscn<>uid://4snhks5is2lx::::res://scripts/entity/pathfinding.gd
+ home_scene.tscn::PackedScene::2584747012604007361::1776959281::0::1::::<><><>0<>0<><>::uid://dwco0isq6i3j::::res://scripts/utils/hom_scene.gd<>uid://bonpoq2d1n7qy::::res://assets/bg_video-1.ogv<>uid://dhsvksi4no5bl::::res://assets/Tiny Swords (Free Pack)/UI Elements/UI Elements/Buttons/play_regular-removebg-preview.png<>uid://ph7l5hwojyb2::::res://assets/Tiny Swords (Free Pack)/UI Elements/UI Elements/Buttons/play_pressed-removebg-preview.png<>uid://dm6xprr5xvhha::::res://assets/Tiny Swords (Free Pack)/UI Elements/UI Elements/Buttons/exit_regular-removebg-preview.png<>uid://cc257g1ts0n4r::::res://assets/Tiny Swords (Free Pack)/UI Elements/UI Elements/Buttons/exit_pressed-removebg-preview.png
+ InfoWindow.tscn::PackedScene::716922450300430887::1777731587::0::1::::<><><>0<>0<><>::uid://b80lwjty8u0q2::::res://scripts/ui/info_window.gd<>uid://1hvro5md7hfv::::res://configs/game_config.tres
+ Player.tscn::PackedScene::6753617555612357581::1778853816::0::1::::<><><>0<>0<><>::uid://dxoggoyf3hh77::::res://scripts/entity/player.gd<>uid://dkxrca8ott2ix::::res://assets/Tiny Swords (Free Pack)/Units/Blue Units/Warrior/Warrior_Idle.png<>uid://dxe38dagqp7mt::::res://shaders/entity.gdshader<>uid://crewl40lp33gs::::res://assets/Tiny Swords (Free Pack)/Units/Blue Units/Warrior/Warrior_Run.png<>uid://bl25sftvk03dd::::res://scripts/skills/core/skill_controller.gd<>uid://ccishdwvfyoyy::::res://assets/Tiny Swords (Free Pack)/Particle FX/Dust_01.png<>uid://ubsuldtsvf4p::::res://assets/scenes/skill_scene/slash.tscn<>uid://dirmui5fqjtt1::::res://scripts/controller.gd<>uid://c4tdbx4y0l32e::::res://assets/healthbarUnder.png<>uid://1hvro5md7hfv::::res://configs/game_config.tres<>uid://b4a1530uw0150::::res://scripts/entity/health_bar_on_player.gd<>uid://ccfcowrmeakqg::::res://assets/healthbarProgress.png
+-PlayScene.tscn::PackedScene::7869208505085660971::1778921303::0::1::::<><><>0<>0<><>::uid://c7dwahgdbhif1::::res://scripts/scene_scripts/play_scene.gd<>uid://c3hrdhfjuyutx::::res://assets/scenes/Player.tscn<>uid://dc13r4nhhuahn::::res://assets/Cute_Fantasy_Free/Tiles/Cliff_Tile.png<>uid://cc0ksbmff5khe::::res://assets/Cute_Fantasy_Free/Tiles/Path_Tile.png<>uid://btu425h4gph6h::::res://assets/Cute_Fantasy_Free/Outdoor decoration/Outdoor_Decor_Free.png<>uid://bu82dhbuyesfd::::res://assets/scenes/enemy.tscn<>uid://b73ijmsprk70q::::res://assets/Tiny Swords (Free Pack)/Terrain/Tileset/Water Background color.png<>uid://dmsrnmaj4yym0::::res://scripts/utils/spell_bar.gd<>uid://cjsprv40pjd4o::::res://assets/Tiny Swords (Free Pack)/Terrain/Decorations/Rocks in the Water/Water Rocks_01.png<>uid://4gi4tao1s66f::::res://assets/scenes/texture_button.tscn<>uid://3y848vwu75yt::::res://assets/Tiny Swords (Free Pack)/UI Elements/UI Elements/Bars/bigbar(已处理).png<>uid://cugcjtxlhfy1k::::res://assets/Tiny Swords (Free Pack)/UI Elements/UI Elements/Bars/调整血条长度.png<>uid://b4py31tkefxhl::::res://scripts/utils/player_health_bar.gd<>uid://dy0kgjhghnl88::::res://assets/Tiny Swords (Free Pack)/UI Elements/UI Elements/Buttons/esc_regular-removebg-preview.png<>uid://diuarn77ml1cl::::res://assets/Tiny Swords (Free Pack)/UI Elements/UI Elements/Buttons/esc_pressed-removebg-preview.png<>uid://cixywhkot8gx6::::res://scripts/utils/pause_menu.gd<>uid://bmy6w68efk7bl::::res://addons/godot_rl_agents/sync.gd<>uid://dqebgd3akinse::::res://scripts/scene_scripts/vision_sensor.gd<>uid://cylw6obqfylrl::::res://scripts/scene_scripts/reward_perform_button.gd<>uid://bt16p28ccblpg::::res://scripts/scene_scripts/reward_manager.gd<>uid://1hvro5md7hfv::::res://configs/game_config.tres<>uid://cilgrxpptw7oy::::res://configs/reward_config.tres<>uid://cbscorebd001::::res://scripts/ui/scoreboard_drawer.gd<>uid://dnh5hksiuuxko::::res://scripts/config/reward_config.gd<>uid://85pmureakqf0::::res://configs/reward_config_p0.tres<>uid://rox8wancd1vf::::res://configs/reward_config_p1.tres<>uid://gf8gxrukj82f::::res://configs/reward_config_p2.tres<>uid://cmlydiv2lsw2::::res://configs/reward_config_p3.tres<>uid://khjuw4ll421p::::res://assets/scenes/InfoWindow.tscn
++PlayScene.tscn::PackedScene::7869208505085660971::1779084133::0::1::::<><><>0<>0<><>::uid://c7dwahgdbhif1::::res://scripts/scene_scripts/play_scene.gd<>uid://c3hrdhfjuyutx::::res://assets/scenes/Player.tscn<>uid://dc13r4nhhuahn::::res://assets/Cute_Fantasy_Free/Tiles/Cliff_Tile.png<>uid://cc0ksbmff5khe::::res://assets/Cute_Fantasy_Free/Tiles/Path_Tile.png<>uid://btu425h4gph6h::::res://assets/Cute_Fantasy_Free/Outdoor decoration/Outdoor_Decor_Free.png<>uid://bu82dhbuyesfd::::res://assets/scenes/enemy.tscn<>uid://b73ijmsprk70q::::res://assets/Tiny Swords (Free Pack)/Terrain/Tileset/Water Background color.png<>uid://dmsrnmaj4yym0::::res://scripts/utils/spell_bar.gd<>uid://cjsprv40pjd4o::::res://assets/Tiny Swords (Free Pack)/Terrain/Decorations/Rocks in the Water/Water Rocks_01.png<>uid://4gi4tao1s66f::::res://assets/scenes/texture_button.tscn<>uid://3y848vwu75yt::::res://assets/Tiny Swords (Free Pack)/UI Elements/UI Elements/Bars/bigbar(已处理).png<>uid://cugcjtxlhfy1k::::res://assets/Tiny Swords (Free Pack)/UI Elements/UI Elements/Bars/调整血条长度.png<>uid://b4py31tkefxhl::::res://scripts/utils/player_health_bar.gd<>uid://dy0kgjhghnl88::::res://assets/Tiny Swords (Free Pack)/UI Elements/UI Elements/Buttons/esc_regular-removebg-preview.png<>uid://diuarn77ml1cl::::res://assets/Tiny Swords (Free Pack)/UI Elements/UI Elements/Buttons/esc_pressed-removebg-preview.png<>uid://cixywhkot8gx6::::res://scripts/utils/pause_menu.gd<>uid://bmy6w68efk7bl::::res://addons/godot_rl_agents/sync.gd<>uid://dqebgd3akinse::::res://scripts/scene_scripts/vision_sensor.gd<>uid://cylw6obqfylrl::::res://scripts/scene_scripts/reward_perform_button.gd<>uid://bt16p28ccblpg::::res://scripts/scene_scripts/reward_manager.gd<>uid://1hvro5md7hfv::::res://configs/game_config.tres<>uid://cilgrxpptw7oy::::res://configs/reward_config.tres<>uid://cbscorebd001::::res://scripts/ui/scoreboard_drawer.gd<>uid://dnh5hksiuuxko::::res://scripts/config/reward_config.gd<>uid://85pmureakqf0::::res://configs/reward_config_p0.tres<>uid://rox8wancd1vf::::res://configs/reward_config_p1.tres<>uid://gf8gxrukj82f::::res://configs/reward_config_p2.tres<>uid://cmlydiv2lsw2::::res://configs/reward_config_p3.tres<>uid://khjuw4ll421p::::res://assets/scenes/InfoWindow.tscn
+ RewardBall.tscn::PackedScene::6011703837836939509::1776251660::0::1::::<><><>0<>0<><>::uid://cjmbrmyg1gtvu::::res://scripts/entity/reward_ball.gd
+ texture_button.tscn::PackedScene::2048401254607909263::1776156613::0::1::::<><><>0<>0<><>::uid://bi8unrouuqqhu::::res://assets/Tiny Swords (Free Pack)/UI Elements/UI Elements/Buttons/SmallBlueSquareButton_Regular.png<>uid://dgkwpajhs1l8p::::res://assets/Tiny Swords (Free Pack)/UI Elements/UI Elements/Icons/Icon_05.png<>uid://dasjtr4pgc1v2::::res://scripts/utils/spell_button.gd<>uid://dhpngwwbcikg1::::res://assets/Tiny Swords (Free Pack)/UI Elements/UI Elements/Wood Table/WoodTable_Slots.png
+ ::res://assets/scenes/skill_scene/::1778652250
+@@ -555,14 +555,14 @@ index.apple-touch-icon.png::CompressedTexture2D::2207323107353363557::1773548580
+ index.icon.png::CompressedTexture2D::6903671498343453785::1773548580::1777215542::1::::<><><>0<>0<>d368f733ebc5842c856f4a40f15f89b5<>res://.godot/imported/index.icon.png-96098a584bb713a61c1e8aa1df56a1bb.ctex::
+ index.png::CompressedTexture2D::4142150333055362816::1773548580::1777215542::1::::<><><>0<>0<>26cd501d7b51b07c266562cf6fb444f6<>res://.godot/imported/index.png-659c11691fe5279cf81f33eb936290a4.ctex::
+ ::res://build2/::1777564393
+-::res://configs/::1778921303
++::res://configs/::1778923679
+ game_config.tres::Resource/GameConfig::1840666776433273995::1778648069::0::1::::<><><>0<>0<><>::uid://dnfqy4lfxwg7r::::res://scripts/config/game_config.gd
+ readme.md::TextFile::-1::1778852981::0::1::::<><><>0<>0<><>::
+-reward_config.tres::Resource/RewardConfig::5357456164155044212::1778921303::0::1::::<><><>0<>0<><>::uid://dnh5hksiuuxko::::res://scripts/config/reward_config.gd
+-reward_config_p0.tres::Resource/RewardConfig::2379096434006049043::1778848872::0::1::::<><><>0<>0<><>::uid://dnh5hksiuuxko::::res://scripts/config/reward_config.gd
+-reward_config_p1.tres::Resource/RewardConfig::1223568208543062671::1778848872::0::1::::<><><>0<>0<><>::uid://dnh5hksiuuxko::::res://scripts/config/reward_config.gd
+-reward_config_p2.tres::Resource/RewardConfig::433470561344408903::1778848872::0::1::::<><><>0<>0<><>::uid://dnh5hksiuuxko::::res://scripts/config/reward_config.gd
+-reward_config_p3.tres::Resource/RewardConfig::165861137218095351::1778848872::0::1::::<><><>0<>0<><>::uid://dnh5hksiuuxko::::res://scripts/config/reward_config.gd
++reward_config.tres::Resource/RewardConfig::5357456164155044212::1779084490::0::1::::<><><>0<>0<><>::uid://dnh5hksiuuxko::::res://scripts/config/reward_config.gd
++reward_config_p0.tres::Resource/RewardConfig::2379096434006049043::1779084490::0::1::::<><><>0<>0<><>::uid://dnh5hksiuuxko::::res://scripts/config/reward_config.gd
++reward_config_p1.tres::Resource/RewardConfig::1223568208543062671::1779084490::0::1::::<><><>0<>0<><>::uid://dnh5hksiuuxko::::res://scripts/config/reward_config.gd
++reward_config_p2.tres::Resource/RewardConfig::433470561344408903::1779084490::0::1::::<><><>0<>0<><>::uid://dnh5hksiuuxko::::res://scripts/config/reward_config.gd
++reward_config_p3.tres::Resource/RewardConfig::165861137218095351::1779084490::0::1::::<><><>0<>0<><>::uid://dnh5hksiuuxko::::res://scripts/config/reward_config.gd
+ ::res://resources/::1775704233
+ damage_font.tres::FontVariation::6277305180008484668::1773066541::0::1::::<><><>0<>0<><>::uid://dbu37r3755k7x::::res://assets/VCR_OSD_MONO_1.001.ttf
+ ::res://scripts/::1778480765
+@@ -582,10 +582,10 @@ health_bar_on_player.gd::GDScript::4423530875038151141::1776499158::0::1::::<>Te
+ pathfinding.gd::GDScript::2073437640953786825::1777874427::0::1::::Pathfinding<>Node2D<><>0<>0<><>::
+ player.gd::GDScript::8802882532697999892::1778398593::0::1::::Player<>Entity<><>0<>0<><>::
+ reward_ball.gd::GDScript::5429405236329484090::1777292562::0::1::::RewardBall<>Area2D<><>0<>0<><>::
+-::res://scripts/scene_scripts/::1778653352
++::res://scripts/scene_scripts/::1779084133
+ play_scene.gd::GDScript::7026413647976484620::1778408512::0::1::::PlayScene<>Node2D<><>0<>0<><>::
+ reward_ball_manager.gd::GDScript::2314794399285788993::1778396939::0::1::::RewardBallManager<>Node<><>0<>0<><>::
+-reward_manager.gd::GDScript::3775593017308200024::1778653352::0::1::::RewardManager<>Node<><>0<>0<><>::
++reward_manager.gd::GDScript::3775593017308200024::1779084133::0::1::::RewardManager<>Node<><>0<>0<><>::
+ reward_perform_button.gd::GDScript::6481473641051862345::1776574331::0::1::::<>Button<><>0<>0<><>::
+ vision_sensor.gd::GDScript::8290612692898523772::1778411783::0::1::::VisionSensor<>Node<><>0<>0<><>::
+ ::res://scripts/skills/::1775704233
+diff --git a/godot-game/.godot/editor/script_editor_cache.cfg b/godot-game/.godot/editor/script_editor_cache.cfg
+index 1668f3a..de79c2d 100644
+--- a/godot-game/.godot/editor/script_editor_cache.cfg
++++ b/godot-game/.godot/editor/script_editor_cache.cfg
+@@ -31,11 +31,11 @@ state={
+ state={
+ "bookmarks": PackedInt32Array(),
+ "breakpoints": PackedInt32Array(),
+-"column": 56,
++"column": 2,
+ "folded_lines": PackedInt32Array(),
+ "h_scroll_position": 0,
+-"row": 319,
+-"scroll_position": 301.0,
++"row": 254,
++"scroll_position": 254.0,
+ "selection": false,
+ "syntax_highlighter": "GDScript"
+ }
+@@ -59,11 +59,11 @@ state={
+ state={
+ "bookmarks": PackedInt32Array(),
+ "breakpoints": PackedInt32Array(),
+-"column": 41,
++"column": 1,
+ "folded_lines": PackedInt32Array(),
+-"h_scroll_position": 0,
+-"row": 22,
+-"scroll_position": 0.0,
++"h_scroll_position": 41,
++"row": 54,
++"scroll_position": 34.0,
+ "selection": false,
+ "syntax_highlighter": "GDScript"
+ }
+@@ -119,7 +119,7 @@ state={
+ "folded_lines": PackedInt32Array(62),
+ "h_scroll_position": 0,
+ "row": 145,
+-"scroll_position": 111.0,
++"scroll_position": 128.0,
+ "selection": false,
+ "syntax_highlighter": "GDScript"
+ }
+diff --git a/godot-game/configs/reward_config.tres b/godot-game/configs/reward_config.tres
+index c995686..795501a 100644
+--- a/godot-game/configs/reward_config.tres
++++ b/godot-game/configs/reward_config.tres
+@@ -18,5 +18,5 @@ died = -15.0
+ starve_time = 1500.0
+ ball_potential_scale = 0.5
+ distance_reward_scale = 0.01
+-center_reward = 0.001
++center_reward = 0.003
+ wall_collision_penalty = -0.5
+diff --git a/godot-game/configs/reward_config_p0.tres b/godot-game/configs/reward_config_p0.tres
+index de83dcb..4a72a16 100644
+--- a/godot-game/configs/reward_config_p0.tres
++++ b/godot-game/configs/reward_config_p0.tres
+@@ -18,5 +18,5 @@ died = -10.0
+ starve_time = 1500.0
+ ball_potential_scale = 0.5
+ distance_reward_scale = 0.002
+-center_reward = 0.001
++center_reward = 0.003
+ wall_collision_penalty = -0.5
+diff --git a/godot-game/configs/reward_config_p1.tres b/godot-game/configs/reward_config_p1.tres
+index 783712d..b2103a7 100644
+--- a/godot-game/configs/reward_config_p1.tres
++++ b/godot-game/configs/reward_config_p1.tres
+@@ -18,5 +18,5 @@ died = -20.0
+ starve_time = 1500.0
+ ball_potential_scale = 0.5
+ distance_reward_scale = 0.02
+-center_reward = 0.001
++center_reward = 0.003
+ wall_collision_penalty = -0.5
+diff --git a/godot-game/configs/reward_config_p2.tres b/godot-game/configs/reward_config_p2.tres
+index 667ac94..8682e0c 100644
+--- a/godot-game/configs/reward_config_p2.tres
++++ b/godot-game/configs/reward_config_p2.tres
+@@ -18,5 +18,5 @@ died = -10.0
+ starve_time = 1500.0
+ ball_potential_scale = 0.5
+ distance_reward_scale = 0.002
+-center_reward = 0.001
++center_reward = 0.003
+ wall_collision_penalty = -0.5
+diff --git a/godot-game/configs/reward_config_p3.tres b/godot-game/configs/reward_config_p3.tres
+index 344c60a..76c8fe1 100644
+--- a/godot-game/configs/reward_config_p3.tres
++++ b/godot-game/configs/reward_config_p3.tres
+@@ -18,5 +18,5 @@ died = -15
+ starve_time = 1500.0
+ ball_potential_scale = 0.5
+ distance_reward_scale = 0.002
+-center_reward = 0.001
++center_reward = 0.003
+ wall_collision_penalty = -0.5
+diff --git a/godot-game/scripts/scene_scripts/reward_manager.gd b/godot-game/scripts/scene_scripts/reward_manager.gd
+index 3fe70f9..8f74e68 100644
+--- a/godot-game/scripts/scene_scripts/reward_manager.gd
++++ b/godot-game/scripts/scene_scripts/reward_manager.gd
+@@ -248,8 +248,11 @@ func on_player_moved(player: Player) -> void:
+ 		#add_reward(player.player_id, _cfg(player.player_id).run, "run")
+ 		player.ai_controller.reward+=_cfg(player.player_id).run
+ 
+-#待机惩罚
++#待机惩罚（中心区域待机豁免）
+ func idle_penalty(player:Player)->void:
++	if is_in_center_arena(player):
++		return
++		
+ 	if not player.is_moving:
+ 		player.ai_controller.reward+=_cfg(player.player_id).idle
+ 
+@@ -733,8 +736,11 @@ func _is_player_pressing_wall(player: Player) -> bool:
+ 
+ 	if player.is_on_wall():
+ 		var wall_normal: Vector2 = player.get_wall_normal() #碰撞法线
+-		if wall_normal != Vector2.ZERO and desired.dot(wall_normal) < -0.001:
++		#if player.player_id==0:
++			#print(wall_normal)
++		if (wall_normal.x>0.9 and desired.x<0.0) or (wall_normal.x<-0.9 and desired.x>0.0):
+ 			return true
++			
+ 	if player.is_on_floor():
+ 		return desired.y > 0.001
+ 	if player.is_on_ceiling():
+diff --git a/savedmodels/cleanrl_ppo_gru_mlp.pt b/savedmodels/cleanrl_ppo_gru_mlp.pt
+deleted file mode 100644
+index 92a7d38..0000000
+Binary files a/savedmodels/cleanrl_ppo_gru_mlp.pt and /dev/null differ
+diff --git a/savedmodels/cleanrl_ppo_mlp.pt b/savedmodels/cleanrl_ppo_mlp.pt
+deleted file mode 100644
+index 3be4d5a..0000000
+Binary files a/savedmodels/cleanrl_ppo_mlp.pt and /dev/null differ
+diff --git a/savedmodels/combat_model.pt b/savedmodels/combat_model.pt
+deleted file mode 100644
+index 12a6a01..0000000
+Binary files a/savedmodels/combat_model.pt and /dev/null differ
+diff --git a/test_ap2.py b/test_ap2.py
+new file mode 100644
+index 0000000..40e72a7
+--- /dev/null
++++ b/test_ap2.py
+@@ -0,0 +1,17 @@
++import argparse
++parser = argparse.ArgumentParser()
++parser.add_argument("--total_timesteps", type=int, default=100)
++# Python 3.13 中 argparse 默认不再把 _ 和 - 互换
++print("trying --total-timesteps:")
++try:
++    args = parser.parse_args(["--total-timesteps", "128"])
++    print("OK:", args.total_timesteps)
++except SystemExit as e:
++    print("FAILED:", e)
++
++print("\ntrying --total_timesteps:")
++try:
++    args = parser.parse_args(["--total_timesteps", "128"])
++    print("OK:", args.total_timesteps)
++except SystemExit as e:
++    print("FAILED:", e)
+diff --git a/test_argparse.py b/test_argparse.py
+new file mode 100644
+index 0000000..140a5dc
+--- /dev/null
++++ b/test_argparse.py
+@@ -0,0 +1,8 @@
++import sys
++sys.path.insert(0, 'Python/training')
++from ppo_resume_trainer import _build_arg_parser
++parser = _build_arg_parser()
++args = parser.parse_args(['--total-timesteps', '128', '--num-steps', '4', '--save-every-n-updates', '9999'])
++print('total_timesteps:', args.total_timesteps)
++print('num_steps:', args.num_steps)
++print('save_every_n_updates:', args.save_every_n_updates)
+diff --git a/test_nan.py b/test_nan.py
+new file mode 100644
+index 0000000..0de2192
+--- /dev/null
++++ b/test_nan.py
+@@ -0,0 +1,46 @@
++import sys
++sys.path.insert(0, 'Python/training')
++import numpy as np
++import torch
++from godot_env_wrapper import init_training_setup, layer_init
++
++args = type('Args', (), {
++    'env_path': 'curriculum_envs/s4-enemy-only/build/game.exe',
++    'config_path': 'curriculum_envs/s4-enemy-only/configs/game_config.tres',
++    'n_parallel': 1,
++    'seed': 1,
++    'show_window': False,
++    'speedup': 16,
++    'exp_name': 'test',
++    'experiment_dir': 'logs/test',
++    'save_model_path': None,
++})()
++
++writer, device, envs, seg, run_name = init_training_setup(args)
++print(f"Obs dim: {envs.single_observation_space.shape}")
++print(f"Seg: self={seg.self_dim}, player={seg.player_dim}, ball={seg.ball_dim}, enemy={seg.enemy_dim}, map={seg.map_dim}")
++print(f"Total: {seg.self_dim + seg.player_dim + seg.ball_dim + seg.enemy_dim + seg.map_dim}")
++
++# Test one reset
++obs_array, _ = envs.reset(seed=1)
++obs = torch.tensor(np.array(obs_array, dtype=np.float32), device=device)
++print(f"Obs shape: {obs.shape}")
++print(f"Obs has NaN: {torch.isnan(obs).any().item()}")
++print(f"Obs min/max: {obs.min().item():.4f} / {obs.max().item():.4f}")
++
++from custom_ppo import PPOAgent, NetworkType
++agent = PPOAgent(int(envs.single_action_space.n), seg, args).to(device)
++print(f"Params: {agent.num_params():,}")
++
++# Test forward
++with torch.no_grad():
++    features, _ = agent._forward_features(obs)
++    print(f"Features has NaN: {torch.isnan(features).any().item()}")
++    logits = agent.actor(features)
++    print(f"Logits: {logits}")
++    print(f"Logits has NaN: {torch.isnan(logits).any().item()}")
++    val = agent.critic(features)
++    print(f"Value: {val}")
++    print(f"Value has NaN: {torch.isnan(val).any().item()}")
++
++envs.close()
+diff --git "a/\350\256\255\347\273\203\346\227\245\345\277\227.md" "b/\350\256\255\347\273\203\346\227\245\345\277\227.md"
+index f789855..bc2e6a6 100644
+--- "a/\350\256\255\347\273\203\346\227\245\345\277\227.md"
++++ "b/\350\256\255\347\273\203\346\227\245\345\277\227.md"
+@@ -948,6 +948,36 @@ $$
+ 
+ #### 单智能体战斗任务
+ 
++![sarl_02_attack_count](D:\schoolTour\softwares\multi-agent-gameplay\assets\sarl_02_attack_count.png)
++
++![sarl_03_damage_taken](D:\schoolTour\softwares\multi-agent-gameplay\assets\sarl_03_damage_taken.png)
++
++![sarl_03b_damage_dealt](D:\schoolTour\softwares\multi-agent-gameplay\assets\sarl_03b_damage_dealt.png)
++
++![sarl_04_wall_collision](D:\schoolTour\softwares\multi-agent-gameplay\assets\sarl_04_wall_collision.png)
++
++![sarl_05_kill_count](D:\schoolTour\softwares\multi-agent-gameplay\assets\sarl_05_kill_count.png)
++
++![sarl_06_death_count](D:\schoolTour\softwares\multi-agent-gameplay\assets\sarl_06_death_count.png)
++
++![sarl_01_total_score](D:\schoolTour\softwares\multi-agent-gameplay\assets\sarl_01_total_score.png)
++
++| 指标             | MLP         | Seg MLP | GRU-MLP 96 | GRU-MLP 128 |
++| ---------------- | ----------- | ------- | ---------- | ----------- |
++| **总分均值**     | **775.2** ✅ | 714.7   | 583.0      | 578.5       |
++| 攻击次数         | 69.5        | 64.1    | 64.1       | **79.0**    |
++| 受击次数         | **26.7**    | 26.2    | **22.7** ✅ | **22.7** ✅  |
++| **造成伤害次数** | **77.6** ✅  | 73.0    | 61.3       | 60.6        |
++| 撞墙次数         | **3.4** ✅   | 7.7     | 23.6       | 15.0        |
++| 击杀次数         | **38.4** ✅  | 36.1    | 30.3       | 30.0        |
++| 死亡次数         | 2.2         | 2.2     | **1.8** ✅  | **1.8** ✅   |
++
++mlp综合表现更优
++
++
++
++
++
+ 
+ 
+ ###   避障引导
