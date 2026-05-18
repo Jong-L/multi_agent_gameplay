@@ -171,22 +171,22 @@ def main():
         while True:
             with torch.no_grad():
                 obs_t = torch.tensor(next_obs, dtype=torch.float32).to(device)
-                # PPOAgent.get_action_and_value 返回 (action, logprob, entropy, value[, next_state])
-                result = agent.get_action_and_value(
-                    obs_t,
-                    rnn_state=rnn_state,
-                    return_state=agent.is_recurrent,
-                )
-                action = result[0]
-                if agent.is_recurrent:
-                    rnn_state = result[4]
 
                 if args.deterministic:
-                    # 确定性: 取 logits 最大概率动作
-                    features = agent.encoder(obs_t, rnn_state)[0] if agent.is_recurrent else agent.encoder(obs_t)[0]
+                    # 确定性推理：一次前向取 logits → argmax，不采
+                    features, rnn_state = agent._forward_features(obs_t, rnn_state)
                     logits = agent.actor(features)
                     action = logits.argmax(dim=1)
-                # 否则 result[0] 已是采样动作
+                else:
+                    # 随机推理：一条调用取采样动作 + 更新隐藏态
+                    result = agent.get_action_and_value(
+                        obs_t,
+                        rnn_state=rnn_state,
+                        return_state=agent.is_recurrent,
+                    )
+                    action = result[0]
+                    if agent.is_recurrent:
+                        rnn_state = result[4]
 
                 actions = [int(a.item()) for a in action]
 
