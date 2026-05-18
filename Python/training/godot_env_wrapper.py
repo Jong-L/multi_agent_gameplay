@@ -218,6 +218,16 @@ class RewardNormalizer:
 
 
 #  训练初始化工具
+def _resolve_path(path: Optional[str], base: pathlib.Path) -> Optional[str]:
+    """将相对路径解析为绝对路径；绝对路径和 None 原样返回。"""
+    if path is None:
+        return None
+    p = pathlib.Path(path)
+    if p.is_absolute():
+        return str(p)
+    return str((base / p).resolve())
+
+
 def init_training_setup(args):
     """初始化 wandb、TensorBoard、随机种子、设备、环境和观测分段。
     """
@@ -254,9 +264,14 @@ def init_training_setup(args):
     if torch.cuda.is_available() and args.cuda:
         print("Using CUDA:", torch.cuda.get_device_name(0))
 
+    # 将相对路径解析为绝对路径（以项目根目录为基准）
+    _project_root = pathlib.Path(__file__).resolve().parent.parent.parent
+    env_path = _resolve_path(args.env_path, _project_root)
+    config_path = _resolve_path(args.config_path, _project_root)
+
     # Godot 环境
     envs = GodotDiscreteEnvWrapper(
-        env_path=args.env_path,
+        env_path=env_path,
         show_window=args.show_window,
         speedup=args.speedup,
         seed=args.seed,
@@ -267,7 +282,7 @@ def init_training_setup(args):
     ), "只支持 Discrete 动作空间"
 
     # 观测维度分段
-    seg = ObsSegmentDims.from_config(args.config_path)
+    seg = ObsSegmentDims.from_config(config_path)
 
     return writer, device, envs, seg, run_name
 
