@@ -1,5 +1,6 @@
 from dataclasses import dataclass, field
 from enum import Enum
+from math import fabs
 from typing import Optional, Union
 
 import torch
@@ -16,9 +17,6 @@ class NetworkType(str, Enum):
 @dataclass
 class Args:
     """Single-agent PPO training config."""
-
-    is_multi_agent: bool = False
-
     # Environment
     env_path: Optional[str] = "curriculum_envs\\s4-enemy-only\\build\\game.exe"
     config_path: str = "curriculum_envs\\s4-enemy-only\\configs\\game_config.tres"
@@ -79,13 +77,6 @@ class Args:
     batch_size: int = 0
     minibatch_size: int = 0
 
-    def __post_init__(self) -> None:
-        if self.is_multi_agent:
-            raise ValueError(
-                "Args is for single-agent PPO. Use IppoArgs when is_multi_agent=True."
-            )
-
-
 @dataclass
 class AgentConfig:
     agent_id: int
@@ -125,24 +116,21 @@ class AgentConfig:
 @dataclass
 class IppoArgs:
     """Multi-agent IPPO training config."""
-
-    is_multi_agent: bool = True
-
     # Environment
     env_path: Optional[str] = "godot-game/build/game.exe"
     config_path: str = "godot-game/configs/game_config.tres"
     n_parallel: int = 1
     seed: int = 1
-    show_window: bool = True
+    show_window: bool = False
     speedup: int = 10
 
     # Training
     total_timesteps: int = 5_000_000
     count_steps_by: str = "env_steps"
-    batch_size: int = 1024
+    num_steps: int = 128
     num_minibatches: int = 4
     update_epochs: int = 8
-    recurrent_seq_len: int = 64
+    recurrent_seq_len: int = 128
     norm_adv: bool = True
     clip_vloss: bool = True
     anneal_lr: bool = False
@@ -169,17 +157,8 @@ class IppoArgs:
     # Runtime-derived values
     num_agents: int = 0
     num_envs: int = 0
+    batch_size: int = 0
     minibatch_size: int = 0
-
-    def __post_init__(self) -> None:
-        if self.is_multi_agent:
-            return
-
-        # Keep IPPO-only settings from taking effect when multi-agent mode is off.
-        self.agent_configs = []
-        self.count_steps_by = "env_steps"
-        self.num_agents = 0
-
 
 @dataclass
 class RolloutData:
