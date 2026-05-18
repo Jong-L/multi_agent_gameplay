@@ -348,14 +348,6 @@ def save_pt_model(
     print(f"[Save] Model saved to {save_path}")
 
 
-def make_interrupt_save_path(base_path: str, global_step: int) -> str:
-    """根据基础路径和当前 global_step 生成中断保存文件名。"""
-    p = pathlib.Path(base_path)
-    stem = p.stem
-    parent = p.parent
-    return str(parent / f"{stem}_interrupt_globalstep{global_step}.pt")
-
-
 def safe_close(env: GodotDiscreteEnvWrapper) -> None:
     """静默关闭环境，忽略所有异常。"""
     try:

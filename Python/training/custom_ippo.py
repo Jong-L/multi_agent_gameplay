@@ -5,297 +5,30 @@ Independent PPO (IPPO),离散动作空间
 该脚本只支持一个godot进程，n_parallel为1
 """
 
-import os
 import pathlib
 import time
 from collections import deque
 from typing import Optional
 
-import gymnasium as gym
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from torch.distributions.categorical import Categorical
 
 from godot_env_wrapper import (
     GodotDiscreteEnvWrapper,
-    ObsSegmentDims,
     RewardNormalizer,
     _serialize_args,
     init_training_setup,
-    layer_init,
 )
 
-from custom_ppo_dataclass import AgentConfig, IppoArgs, NetworkType, RolloutData
+from custom_ppo_dataclass import AgentConfig, IppoArgs, RolloutData
+from ppo_networks import DiscreteActorCriticAgent
 
-def as_hidden_tuple(value, default: tuple) -> tuple:
-    """Normalize None/int/iterable hidden-size config into a tuple[int, ...]."""
-    if value is None:
-        value = default
-    if isinstance(value, int):
-        return (int(value),)
-    return tuple(int(v) for v in value)
+class IPPOAgent(DiscreteActorCriticAgent):
+    """Independent PPO policy/value network."""
 
-
-def make_mlp(input_dim: int, hidden_sizes: tuple) -> tuple[nn.Module, int]:
-    """Build Linear+ReLU layers and return both module and output size."""
-    layers: list[nn.Module] = []
-    in_dim = input_dim
-    for hidden_size in hidden_sizes:
-        layers.append(layer_init(nn.Linear(in_dim, hidden_size)))
-        layers.append(nn.ReLU())
-        in_dim = hidden_size
-    return (nn.Sequential(*layers) if layers else nn.Identity(), in_dim)
-
-
-def init_gru_weights(gru: nn.GRU) -> nn.GRU:
-    """Use stable GRU initialization matching rllib_custom_network.py."""
-    for name, param in gru.named_parameters():
-        if "weight_ih" in name:
-            torch.nn.init.xavier_uniform_(param)
-        elif "weight_hh" in name:
-            torch.nn.init.orthogonal_(param)
-        elif "bias" in name:
-            torch.nn.init.constant_(param, 0.0)
-    return gru
-
-
-class SegmentedObsHelper:
-    """Small helper for the shared observation layout."""
-
-    def __init__(self, seg: ObsSegmentDims):
-        self.seg = seg
-
-    def split(self, obs: torch.Tensor) -> tuple[torch.Tensor, ...]:
-        i = 0
-        s = obs[:, i: i + self.seg.self_dim];   i += self.seg.self_dim
-        p = obs[:, i: i + self.seg.player_dim]; i += self.seg.player_dim
-        b = obs[:, i: i + self.seg.ball_dim];   i += self.seg.ball_dim
-        e = obs[:, i: i + self.seg.enemy_dim];  i += self.seg.enemy_dim
-        m = obs[:, i: i + self.seg.map_dim]
-        return s, p, b, e, m
-
-
-class FlatMlpEncoder(nn.Module):
-    def __init__(self, obs_dim: int, mlp_hiddens: tuple):
-        super().__init__()
-        self.trunk, self.output_dim = make_mlp(obs_dim, mlp_hiddens)
-        self.recurrent_state_size = 0
-
-    def forward(
-        self,
-        obs: torch.Tensor,
-        rnn_state: Optional[torch.Tensor] = None,
-    ) -> tuple[torch.Tensor, Optional[torch.Tensor]]:
-        return self.trunk(obs), None
-
-
-class SegmentedMlpEncoder(nn.Module):
-    def __init__(
-        self,
-        obs_helper: SegmentedObsHelper,
-        self_hiddens: tuple,
-        player_hiddens: tuple,
-        ball_hiddens: tuple,
-        enemy_hiddens: tuple,
-        map_hiddens: tuple,
-        trunk_hiddens: tuple,
-    ):
-        super().__init__()
-        seg = obs_helper.seg
-        self.obs = obs_helper
-        self.self_net, self_out = make_mlp(seg.self_dim, self_hiddens)
-        self.player_net, player_out = make_mlp(seg.player_dim, player_hiddens)
-        self.ball_net, ball_out = make_mlp(seg.ball_dim, ball_hiddens)
-        self.enemy_net, enemy_out = make_mlp(seg.enemy_dim, enemy_hiddens)
-        self.map_net, map_out = make_mlp(seg.map_dim, map_hiddens)
-
-        fused_dim = self_out + player_out + ball_out + enemy_out + map_out
-        self.trunk, self.output_dim = make_mlp(fused_dim, trunk_hiddens)
-        self.recurrent_state_size = 0
-
-    def forward(
-        self,
-        obs: torch.Tensor,
-    ) -> tuple[torch.Tensor, Optional[torch.Tensor]]:
-        s, p, b, e, m = self.obs.split(obs)
-        fused = torch.cat([
-            self.self_net(s),
-            self.player_net(p),
-            self.ball_net(b),
-            self.enemy_net(e),
-            self.map_net(m),
-        ], dim=1)
-        return self.trunk(fused), None
-
-
-class GruMlpEncoder(nn.Module):
-    """GRU-MLP encoder mirroring rllib_custom_network.py."""
-
-    def __init__(
-        self,
-        obs_helper: SegmentedObsHelper,
-        ball_hiddens: tuple,
-        trunk_hiddens: tuple,
-        gru_hidden: int,
-        gru_num_layers: int,
-        gru_input_layernorm: bool,
-    ):
-        super().__init__()
-        seg = obs_helper.seg
-        self.obs = obs_helper
-        self.gru_hidden = int(gru_hidden)
-        self.gru_num_layers = int(gru_num_layers)
-        self.recurrent_state_size = self.gru_hidden * self.gru_num_layers
-
-        gru_input_dim = seg.self_dim + seg.player_dim + seg.enemy_dim + seg.map_dim
-        self.gru_ln = nn.LayerNorm(gru_input_dim) if gru_input_layernorm else nn.Identity()
-        self.gru = init_gru_weights(
-            nn.GRU(
-                input_size=gru_input_dim,
-                hidden_size=self.gru_hidden,
-                num_layers=self.gru_num_layers,
-                batch_first=True,
-            )
-        )
-
-        self.ball_net, ball_out = make_mlp(seg.ball_dim, ball_hiddens)
-        fused_dim = self.gru_hidden + ball_out
-        self.trunk, self.output_dim = make_mlp(fused_dim, trunk_hiddens)
-
-    def initial_state(self, batch_size: int, device: torch.device) -> torch.Tensor:
-        return torch.zeros(batch_size, self.recurrent_state_size, device=device)
-
-    def forward(
-        self,
-        obs: torch.Tensor,
-        rnn_state: Optional[torch.Tensor] = None,
-    ) -> tuple[torch.Tensor, torch.Tensor]:
-        batch_size = obs.shape[0]
-        if rnn_state is None:
-            rnn_state = self.initial_state(batch_size, obs.device)
-        if rnn_state.dim() == 1:
-            rnn_state = rnn_state.unsqueeze(0)
-
-        s, p, b, e, m = self.obs.split(obs)
-        gru_input = torch.cat([s, p, e, m], dim=1).unsqueeze(1)
-        gru_input = self.gru_ln(gru_input)
-
-        h0 = rnn_state.view(batch_size, self.gru_num_layers, self.gru_hidden)
-        h0 = h0.transpose(0, 1).contiguous()
-        gru_out, h_new = self.gru(gru_input, h0)
-
-        ball_features = self.ball_net(b)
-        fused = torch.cat([gru_out[:, -1, :], ball_features], dim=1)
-        features = self.trunk(fused)
-        h_new = h_new.transpose(0, 1).reshape(batch_size, self.recurrent_state_size)
-        return features, h_new
-
-
-class IPPOAgent(nn.Module):
-    """Policy/value module with pluggable MLP, segmented MLP, or GRU-MLP encoder."""
-    def __init__(
-        self,
-        n_actions: int,
-        seg: ObsSegmentDims,
-        cfg: AgentConfig,
-    ):
-        super().__init__()
-
-        self.network_type = cfg.network_type
-        self.seg = seg
-        obs_helper = SegmentedObsHelper(seg)
-
-        self_hiddens = as_hidden_tuple(cfg.self_hidden, (cfg.self_hidden,))
-        player_hiddens = as_hidden_tuple(cfg.player_hidden, (cfg.player_hidden,))
-        ball_hiddens = as_hidden_tuple(cfg.ball_hidden, (cfg.ball_hidden,))
-        enemy_hiddens = as_hidden_tuple(cfg.enemy_hidden, (cfg.enemy_hidden,))
-        map_hiddens = as_hidden_tuple(cfg.map_hidden, (cfg.map_hidden,))
-        trunk_hiddens = as_hidden_tuple(cfg.trunk_hiddens, cfg.trunk_hiddens)
-        mlp_hiddens = as_hidden_tuple(cfg.mlp_hiddens, cfg.mlp_hiddens)
-
-        if self.network_type == NetworkType.SEGMENTED_MLP:
-            self.encoder = SegmentedMlpEncoder(
-                obs_helper,
-                self_hiddens,
-                player_hiddens,
-                ball_hiddens,
-                enemy_hiddens,
-                map_hiddens,
-                trunk_hiddens,
-            )
-        elif self.network_type == NetworkType.MLP:
-            self.encoder = FlatMlpEncoder(seg.total, mlp_hiddens)
-        elif self.network_type == NetworkType.GRU_MLP:
-            self.encoder = GruMlpEncoder(
-                obs_helper,
-                ball_hiddens=ball_hiddens,
-                trunk_hiddens=trunk_hiddens,
-                gru_hidden=cfg.gru_hidden,
-                gru_num_layers=cfg.gru_num_layers,
-                gru_input_layernorm=cfg.gru_input_layernorm,
-            )
-        else:
-            raise ValueError(f"Unsupported network_type={self.network_type}")
-
-        self.actor = layer_init(nn.Linear(self.encoder.output_dim, n_actions), std=0.01)
-        self.critic = layer_init(nn.Linear(self.encoder.output_dim, 1), std=1.0)
-
-    @property
-    def is_recurrent(self) -> bool:
-        return self.encoder.recurrent_state_size > 0
-
-    @property
-    def recurrent_state_size(self) -> int:
-        return self.encoder.recurrent_state_size
-
-    def get_initial_state(self, batch_size: int, device: torch.device) -> Optional[torch.Tensor]:
-        if not self.is_recurrent:
-            return None
-        return self.encoder.initial_state(batch_size, device)
-
-    def _forward_features(
-        self,
-        obs: torch.Tensor,
-        rnn_state: Optional[torch.Tensor] = None,
-    ) -> tuple[torch.Tensor, Optional[torch.Tensor]]:
-        return self.encoder(obs, rnn_state) if self.is_recurrent else self.encoder(obs)
-
-    def num_params(self) -> int:
-        return sum(p.numel() for p in self.parameters() if p.requires_grad)
-
-    def get_value(
-        self,
-        obs: torch.Tensor,
-        rnn_state: Optional[torch.Tensor] = None,
-    ) -> torch.Tensor:
-        features, _ = self._forward_features(obs, rnn_state)
-        return self.critic(features)
-
-    def get_action_and_value(
-        self,
-        obs: torch.Tensor,
-        action: Optional[torch.Tensor] = None,
-        rnn_state: Optional[torch.Tensor] = None,
-        return_state: bool = False,
-    ):
-        features, next_rnn_state = self._forward_features(obs, rnn_state)
-        logits = self.actor(features)
-        probs = Categorical(logits=logits)
-
-        if action is None:
-            action = probs.sample()
-
-        result = (
-            action,
-            probs.log_prob(action),
-            probs.entropy(),
-            self.critic(features),
-        )
-        if return_state:
-            return (*result, next_rnn_state)
-        return result
+    pass
 
 
 #  GAE
@@ -385,37 +118,51 @@ def evaluate_recurrent_sequences(
     seq_ends: np.ndarray,
     device: torch.device,
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
-    """Evaluate contiguous rollout chunks while preserving GRU state flow."""
+    """Evaluate recurrent chunks with the same sequence GRU path used by PPO."""
     if rollout.rnn_states is None:
         raise ValueError("Recurrent agent update requires rollout.rnn_states.")
 
-    indices = []
-    logprobs = []
-    entropies = []
-    values = []
+    all_indices = []
+    all_logprobs = []
+    all_entropies = []
+    all_values = []
 
     for start, end in zip(seq_starts, seq_ends):
-        state = rollout.rnn_states[int(start)].unsqueeze(0).detach()
-        for t in range(int(start), int(end)):
-            _, logprob, entropy, value, state = agent.get_action_and_value(
-                rollout.obs[t].unsqueeze(0),
-                rollout.actions[t].unsqueeze(0),
-                rnn_state=state,
-                return_state=True,
-            )
-            indices.append(t)
-            logprobs.append(logprob)
-            entropies.append(entropy)
-            values.append(value.view(-1))
+        start = int(start)
+        end = int(end)
+        seq_len = end - start
 
-            if t + 1 < int(end):
-                state = state * (1.0 - rollout.dones[t + 1]).view(1, 1).to(device)
+        done_seq = rollout.dones[start:end]
+        done_positions = torch.where(done_seq > 0.5)[0].cpu().tolist()
+        split_points = [0] + [int(p) for p in done_positions] + [seq_len]
+
+        for i in range(len(split_points) - 1):
+            sub_start = split_points[i]
+            sub_end = split_points[i + 1]
+            if sub_start >= sub_end:
+                continue
+
+            abs_start = start + sub_start
+            abs_end = start + sub_end
+
+            state = rollout.rnn_states[abs_start].unsqueeze(0).detach()
+            sub_obs = rollout.obs[abs_start:abs_end]
+            sub_actions = rollout.actions[abs_start:abs_end]
+
+            logprobs, entropies, values, state = agent.evaluate_sequence(
+                sub_obs, sub_actions, state,
+            )
+
+            all_indices.append(torch.arange(abs_start, abs_end, device=device))
+            all_logprobs.append(logprobs)
+            all_entropies.append(entropies)
+            all_values.append(values)
 
     return (
-        torch.tensor(indices, dtype=torch.long, device=device),
-        torch.cat(logprobs, dim=0),
-        torch.cat(entropies, dim=0),
-        torch.cat(values, dim=0),
+        torch.cat(all_indices, dim=0),
+        torch.cat(all_logprobs, dim=0),
+        torch.cat(all_entropies, dim=0),
+        torch.cat(all_values, dim=0),
     )
 
 #  多智能体 Rollout 收集
@@ -465,7 +212,7 @@ def collect_rollout_ippo(
         global_step += 1
 
         # 每个智能体独立推理动作
-        actions_list = [4] * n_agents  # 默认 IDLE 
+        actions_list = [4] * n_agents  # 默认 IDLE
 
         for i in range(n_agents):
             obs_i = next_obs_all[i].unsqueeze(0)  # shape(1, obs_dim)
@@ -500,7 +247,7 @@ def collect_rollout_ippo(
                 buffers[i]["logprobs"][step] = 0.0
                 buffers[i]["values"][step] = 0.0
 
-        # 所有智能体一起执行动作
+        # 所有智能体一起执行动作 next_obs_raw:(num_agents, obs_dim)
         next_obs_raw, rewards_raw, terminations, truncations, infos = envs.step(np.array(actions_list,dtype=np.int64))
         dones_raw = np.logical_or(terminations, truncations)#反应的是第i+1步状态是否终止
 
@@ -669,7 +416,7 @@ def train_agent_update(
 ) -> dict:
     """对单个智能体执行一次 PPO 更新 (多个 epoch + minibatch)
     """
-    batch_size = rollout.obs.shape[0]  # per-agent (=args.batch_size)
+    batch_size = rollout.obs.shape[0]  # per-agent (=args.num_steps)
 
     #GAE
     with torch.no_grad():
@@ -757,7 +504,10 @@ def train_agent_update(
                     break
     else:
         b_inds = np.arange(batch_size)#batch indices
-        minibatch_size = max(1, batch_size // args.num_minibatches)
+        minibatch_size = max(
+            1,
+            min(batch_size, args.minibatch_size // max(1, args.num_agents)),
+        )
 
         for epoch in range(args.update_epochs):
             np.random.shuffle(b_inds)
@@ -849,9 +599,9 @@ def train(
 
     # 按 count_steps_by 计算总更新次数
     if args.count_steps_by == "env_steps":
-        num_updates = args.total_timesteps // args.batch_size
+        num_updates = args.total_timesteps // args.num_steps
     elif args.count_steps_by == "agent_steps":
-        num_updates = args.total_timesteps // (n_agents * args.batch_size)
+        num_updates = args.total_timesteps // args.batch_size
     else:
         raise ValueError(
             f"Unknown count_steps_by='{args.count_steps_by}'. "
@@ -872,7 +622,7 @@ def train(
 
         # 经验采集
         rollouts, global_step, rnn_states, new_episode_returns = collect_rollout_ippo(
-            args.agent_configs, agents, envs, args.batch_size, device,
+            args.agent_configs, agents, envs, args.num_steps, device,
             next_obs, next_done, global_step,
             episode_returns, accum_rewards, reward_normalizers,
             rnn_states,
@@ -908,9 +658,6 @@ def train(
 def main():
     # 初始化
     args = IppoArgs()
-    if not args.is_multi_agent:
-        raise ValueError("custom_ippo.py requires is_multi_agent=True; IPPO config is disabled.")
-
     writer, device, envs, seg, run_name = init_training_setup(args)
 
     if args.n_parallel != 1:
@@ -929,7 +676,13 @@ def main():
     if len(obs_shape) != 1 or obs_shape[0] != seg.total:
         raise ValueError(f"Observation dimension mismatch: env observation shape={obs_shape}, configured segment total={seg.total}.")
 
-    args.minibatch_size = max(1, args.batch_size // args.num_minibatches)
+    args.batch_size = args.num_envs * args.num_steps
+    args.minibatch_size = args.batch_size // args.num_minibatches
+    if args.minibatch_size <= 0:
+        raise ValueError(
+            "num_minibatches is too large for the configured IPPO batch: "
+            f"batch_size={args.batch_size}, num_minibatches={args.num_minibatches}."
+        )
 
     n_actions = int(envs.single_action_space.n)
 
@@ -963,24 +716,18 @@ def main():
         )
     next_done = torch.zeros(n_agents).to(device)
 
-    try:
-        train(
-            args, agents, optimizers, envs, device, writer,
-            reward_normalizers, next_obs, next_done,
-        )
-    except KeyboardInterrupt:
-        print("\n[Interrupt] 训练被手动中断")
-        if args.save_model_path is not None:
-            print(f"[Interrupt] 保存检查点到 {args.save_model_path} ...")
-            save_ippo_model(args.save_model_path, agents, optimizers, reward_normalizers, args)
-        return
-    finally:
-        envs.close()
-        writer.close()
+    train(
+        args, agents, optimizers, envs, device, writer,
+        reward_normalizers, next_obs, next_done,
+    )
 
     # 正常训练结束后的保存
     if args.save_model_path is not None:
         save_ippo_model(args.save_model_path, agents, optimizers, reward_normalizers, args)
+
+    # 资源清理
+    envs.close()
+    writer.close()
 
 
 if __name__ == "__main__":
