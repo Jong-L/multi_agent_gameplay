@@ -484,7 +484,7 @@ def train(
     episode_returns = deque(start_episode_returns or [], maxlen=20)#最近20个回合的奖励
     accum_rewards: np.ndarray = np.zeros(args.num_envs)#每回合累计奖励
     next_checkpoint_episode = None
-    if args.save_every_n_episodes > 0:
+    if args.save_checkpoint and args.save_every_n_episodes > 0:
         interval = int(args.save_every_n_episodes)
         next_checkpoint_episode = ((episode_count // interval) + 1) * interval
     train.last_train_state = _build_train_state(
@@ -682,7 +682,7 @@ def train(
             optimizer, episode_returns,
         )
 
-        if next_checkpoint_episode is not None and episode_count >= next_checkpoint_episode:
+        if args.save_checkpoint and next_checkpoint_episode is not None and episode_count >= next_checkpoint_episode:
             ckpt_path = _make_checkpoint_path(args.save_model_path, episode_count)
             if ckpt_path:
                 _save_checkpoint(

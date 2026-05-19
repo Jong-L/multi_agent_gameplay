@@ -395,8 +395,8 @@ def collect_parallel_rollout_ippo(
 
                 actions_by_env[:, i] = action.cpu().numpy().astype(np.int64)# shape (n_game_envs,)
             else:
-                # random_actions = np.random.randint(0, envs.single_action_space.n, size=n_game_envs, dtype=np.int64)
-                random_actions=np.full(n_game_envs,4,dtype=np.float64)
+                random_actions = np.random.randint(0, envs.single_action_space.n, size=n_game_envs, dtype=np.int64)
+                # random_actions=np.full(n_game_envs,4,dtype=np.float64)
                 buffers[i]["actions"][step] = torch.tensor(random_actions, device=device)
                 actions_by_env[:, i] = random_actions
                 buffers[i]["logprobs"][step] = 0.0
@@ -744,7 +744,6 @@ def train_agent_update(
 
 
 #  主训练循环
-
 def train(
     args: IppoArgs,
     agents: list[IPPOAgent],
