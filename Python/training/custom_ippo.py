@@ -5,6 +5,7 @@ Independent PPO (IPPO),离散动作空间
 支持多个 Godot 并行环境；每个环境内的同编号智能体数据用于更新同一个 agent 网络。
 """
 
+import os
 import pathlib
 import time
 from collections import deque
@@ -20,6 +21,7 @@ from godot_env_wrapper import (
     RewardNormalizer,
     _serialize_args,
     init_training_setup,
+    load_full_checkpoint,
 )
 
 from custom_ppo_dataclass import AgentConfig, IppoArgs, RolloutData
@@ -477,7 +479,7 @@ def log_ippo(
     update: int = -1,
     num_updates: int = -1,
     new_episode_returns: Optional[list[list[float]]] = None,
-) -> None:
+) -> list[str]:
     """将 IPPO 训练指标写入 TensorBoard 并打印终端日志。"""
     # 全局指标
     sps = int(global_step / (time.time() - start_time)) if start_time > 0 else 0 #steps per second 
@@ -546,26 +548,242 @@ def log_ippo(
 
 
 #  模型保存
+def _make_agent_model_path(save_path: str, agent_id: int) -> pathlib.Path:
+    save_path = pathlib.Path(save_path).with_suffix(".pt")
+    return save_path.with_name(f"{save_path.stem}_agent{agent_id}{save_path.suffix}")
+
+
 def save_ippo_model(
     save_path: str,
     agents: list[IPPOAgent],
     optimizers: list[optim.Optimizer],
     reward_normalizers: list[Optional[RewardNormalizer]],
     args: IppoArgs,
-) -> None:
-    """保存 IPPO 所有智能体的模型检查点。
-    """
-    save_path = pathlib.Path(save_path).with_suffix(".pt")#自动追加 .pt 后缀
-    agent_states = {}
+    extra: Optional[dict] = None,
+    train_only: bool = True,
+) -> list[str]:
+    save_path = pathlib.Path(save_path).with_suffix(".pt")#鑷姩杩藉姞 .pt 鍚庣紑
+    saved_paths = []
     for i, agent in enumerate(agents):
-        agent_states[f"agent_{i}_state_dict"] = agent.state_dict() #网络参数
-        agent_states[f"agent_{i}_optimizer"] = optimizers[i].state_dict() #优化器参数
+        if train_only and not args.agent_configs[i].train:
+            continue
+        agent_id = args.agent_configs[i].agent_id
+        agent_save_path = _make_agent_model_path(str(save_path), agent_id)
+        agent_save_path.parent.mkdir(parents=True, exist_ok=True) # 鍒涘缓淇濆瓨鐩綍
+        payload = {
+            "args": _serialize_args(args),
+            "agent_id": agent_id,
+            "agent_state_dict": agent.state_dict(), #缃戠粶鍙傛暟
+            "optimizer_state_dict": optimizers[i].state_dict(), #浼樺寲鍣ㄥ弬鏁?
+        }
         if reward_normalizers[i] is not None:
-            agent_states[f"agent_{i}_reward_norm"] = reward_normalizers[i].state_dict() #奖励归一化器参数
+            payload["reward_normalizer"] = reward_normalizers[i].state_dict() #濂栧姳褰掍竴鍖栧櫒鍙傛暟
+        if extra:
+            payload.update(extra)
+        torch.save(payload, str(agent_save_path))
+        saved_paths.append(str(agent_save_path))
+        print(f"[Save] IPPO agent_{agent_id} model saved to {agent_save_path}")
+    return saved_paths
 
-    save_path.parent.mkdir(parents=True, exist_ok=True) # 创建保存目录
-    torch.save({"args": _serialize_args(args), **agent_states},str(save_path))
-    print(f"[Save] IPPO model saved to {save_path}")
+
+def _count_completed_episodes(rollouts: list[RolloutData]) -> int:
+    done_rows = [rollouts[0].next_done.unsqueeze(0)]
+    if rollouts[0].dones.shape[0] > 1:
+        done_rows.insert(0, rollouts[0].dones[1:])
+    dones = torch.cat(done_rows, dim=0)
+    return int(torch.any(dones > 0.5, dim=1).sum().item())
+
+
+def _build_train_state(
+    global_step: int,
+    update: int,
+    episode_count: int,
+    optimizers: list[optim.Optimizer],
+    episode_returns: list[deque],
+) -> dict:
+    state: dict = dict(
+        global_step=int(global_step),
+        update=int(update),
+        episode_count=int(episode_count),
+    )
+    state["lrs"] = [float(optimizer.param_groups[0]["lr"]) for optimizer in optimizers]
+    state["episode_returns"] = [list(returns) for returns in episode_returns]
+    return state
+
+
+def _load_train_state(ckpt: dict, n_agents: int) -> tuple[int, int, int, list[deque]]:
+    global_step = int(ckpt.get("global_step", 0))
+    update = int(ckpt.get("update", 0))
+    episode_count = int(ckpt.get("episode_count", 0))
+    raw_returns = ckpt.get("episode_returns", [[] for _ in range(n_agents)])
+    episode_returns = []
+    for i in range(n_agents):
+        returns = raw_returns[i] if i < len(raw_returns) else []
+        episode_returns.append(deque(returns, maxlen=20))
+    return global_step, update, episode_count, episode_returns
+
+
+def _load_agent_from_checkpoint(
+    ckpt: dict,
+    agent_id: int,
+    agent: IPPOAgent,
+    optimizer: optim.Optimizer,
+    reward_normalizer: Optional[RewardNormalizer],
+    is_resume: bool,
+    should_restore_optimizer: bool,
+) -> bool:
+    if "agent_state_dict" in ckpt:
+        ckpt_agent_id = ckpt.get("agent_id")
+        if ckpt_agent_id is not None and int(ckpt_agent_id) != agent_id:
+            return False
+        agent.load_state_dict(ckpt["agent_state_dict"])
+        if is_resume and should_restore_optimizer and "optimizer_state_dict" in ckpt:
+            optimizer.load_state_dict(ckpt["optimizer_state_dict"])
+        if reward_normalizer is not None and "reward_normalizer" in ckpt:
+            reward_normalizer.load_state_dict(ckpt["reward_normalizer"])
+        return True
+
+    return False
+
+
+def _make_checkpoint_path(base_path: Optional[str], episode_count: int) -> Optional[str]:
+    if base_path is None:
+        return None
+    base, ext = os.path.splitext(base_path)
+    if not ext:
+        ext = ".pt"
+    return f"{base}_episode{episode_count}{ext}"
+
+
+def _cleanup_old_checkpoints(base_path: Optional[str], max_keep: int) -> None:
+    if base_path is None or max_keep <= 0:
+        return
+    base, ext = os.path.splitext(base_path)
+    if not ext:
+        ext = ".pt"
+    prefix = os.path.basename(base) + "_episode"
+    dir_name = os.path.dirname(base_path) or "."
+
+    if not os.path.isdir(dir_name):
+        return
+
+    checkpoints: list[tuple[int, str]] = []
+    for f in os.listdir(dir_name):
+        if f.startswith(prefix) and f.endswith(ext):
+            try:
+                num_str = f[len(prefix):-len(ext)]
+                if "_agent" in num_str:
+                    num_str = num_str.split("_agent", 1)[0]
+                episode_num = int(num_str)
+                checkpoints.append((episode_num, os.path.join(dir_name, f)))
+            except ValueError:
+                continue
+
+    keep_episodes = sorted({episode for episode, _ in checkpoints})[-max_keep:]
+    for episode, old_path in checkpoints:
+        if episode in keep_episodes:
+            continue
+        try:
+            os.remove(old_path)
+        except OSError:
+            pass
+
+
+def _save_checkpoint(
+    ckpt_path: str,
+    agents: list[IPPOAgent],
+    optimizers: list[optim.Optimizer],
+    args: IppoArgs,
+    reward_normalizers: list[Optional[RewardNormalizer]],
+    extra: dict,
+) -> None:
+    save_ippo_model(
+        ckpt_path,
+        agents,
+        optimizers,
+        reward_normalizers,
+        args,
+        extra=extra,
+        train_only=True,
+    )
+
+
+def load_checkpoint_if_requested(
+    resume_path: Optional[str],
+    is_resume: bool,
+    agents: list[IPPOAgent],
+    optimizers: list[optim.Optimizer],
+    reward_normalizers: list[Optional[RewardNormalizer]],
+    args: IppoArgs,
+    device: torch.device,
+) -> tuple[int, int, int, list[deque]]:
+    n_agents = len(agents)
+    if not resume_path:
+        return 0, 1, 0, [deque(maxlen=20) for _ in range(n_agents)]
+
+    first_ckpt = None
+    loaded_any = False
+
+    for i, agent in enumerate(agents):
+        agent_id = args.agent_configs[i].agent_id
+        agent_path = _make_agent_model_path(resume_path, agent_id)
+        loaded = False
+        if agent_path.is_file():
+            print(f"[Resume] 加载 agent_{agent_id} checkpoint: {agent_path}")
+            ckpt = load_full_checkpoint(str(agent_path), device)
+            loaded = _load_agent_from_checkpoint(
+                ckpt, agent_id, agent, optimizers[i], reward_normalizers[i],
+                is_resume, args.agent_configs[i].train,
+            )
+            if not loaded:
+                raise KeyError(f"checkpoint agent_id does not match agent_{agent_id}: {agent_path}")
+            if first_ckpt is None:
+                first_ckpt = ckpt
+        elif args.agent_configs[i].train:
+            raise FileNotFoundError(f"Missing agent_{agent_id} checkpoint: {agent_path}")
+
+        loaded_any = loaded_any or loaded
+
+    if not loaded_any:
+        raise FileNotFoundError(
+            f"No per-agent IPPO checkpoint files found for base path: {resume_path}"
+        )
+
+    if is_resume:
+        start_global_step, start_update, start_episode_count, episode_returns = _load_train_state(first_ckpt, n_agents)
+        start_update += 1
+        print(
+            f"[Resume] 从 update {start_update} / step {start_global_step} "
+            f"/ episode {start_episode_count} 继续"
+        )
+    else:
+        print("[Load] 仅加载模型参数，其余从头初始化")
+        return 0, 1, 0, [deque(maxlen=20) for _ in range(n_agents)]
+
+    return start_global_step, start_update, start_episode_count, episode_returns
+
+
+def load_ppo_models_if_requested(
+    ppo_model_paths: list[Optional[str]],
+    agents: list[IPPOAgent],
+    device: torch.device,
+) -> None:
+    if not ppo_model_paths:
+        return
+
+    for i, path in enumerate(ppo_model_paths):
+        if path is None:
+            continue
+        if i >= len(agents):
+            raise ValueError(
+                f"ppo_model_paths has more entries than agents: index={i}, n_agents={len(agents)}."
+            )
+
+        print(f"[PPO Init] 加载 agent_{i} PPO model: {path}")
+        ckpt = load_full_checkpoint(path, device)
+        if "agent_state_dict" not in ckpt:
+            raise KeyError(f"PPO checkpoint missing agent_state_dict: {path}")
+        agents[i].load_state_dict(ckpt["agent_state_dict"])
 
 
 #  Per-Agent 训练更新
@@ -754,11 +972,15 @@ def train(
     reward_normalizers: list[Optional[RewardNormalizer]],
     next_obs: torch.Tensor,
     next_done: torch.Tensor,
-) -> None:
+    start_global_step: int = 0,
+    start_update: int = 1,
+    start_episode_count: int = 0,
+    start_episode_returns: Optional[list[deque]] = None,
+) -> dict:
     """IPPO 主训练循环"""
     n_agents = len(args.agent_configs)
     n_game_envs = args.num_game_envs# 每个智能体的并行环境数
-    global_step = 0
+    global_step = start_global_step
     start_time = time.time()
 
     # 按 count_steps_by 计算总更新次数
@@ -774,11 +996,25 @@ def train(
             "Expected 'env_steps' or 'agent_steps'."
         )
 
+    episode_count = start_episode_count
+
     episode_returns = [deque(maxlen=20) for _ in range(n_agents)] #每个智能体最近20个回合的奖励
     accum_rewards = np.zeros((n_agents, n_game_envs), dtype=np.float64)#每个智能体每回合累计奖励
     rnn_states = [agent.get_initial_state(n_game_envs, device) for agent in agents] #每个智能体的初始 RNN 状态
 
-    for update in range(1, num_updates + 1):
+    if start_episode_returns is not None:
+        episode_returns = start_episode_returns
+
+    next_checkpoint_episode = None
+    if args.save_checkpoint and args.save_every_n_episodes > 0:
+        interval = int(args.save_every_n_episodes)
+        next_checkpoint_episode = ((episode_count // interval) + 1) * interval
+    train.last_train_state = _build_train_state(
+        global_step, start_update - 1, episode_count,
+        optimizers, episode_returns,
+    )
+
+    for update in range(start_update, num_updates + 1):
         # 学习率退火
         if args.anneal_lr:
             progress = 1.0 - (update - 1.0) / num_updates
@@ -796,6 +1032,7 @@ def train(
 
         next_obs = torch.stack([r.next_obs for r in rollouts], dim=1).reshape(args.num_envs, -1)
         next_done = torch.stack([r.next_done for r in rollouts], dim=1).reshape(args.num_envs)
+        episode_count += _count_completed_episodes(rollouts)
 
         # 独立更新
         losses = []
@@ -818,6 +1055,31 @@ def train(
             update=update, num_updates=num_updates,
             new_episode_returns=new_episode_returns,
         )
+
+        train.last_train_state = _build_train_state(
+            global_step, update, episode_count,
+            optimizers, episode_returns,
+        )
+
+        if args.save_checkpoint and next_checkpoint_episode is not None and episode_count >= next_checkpoint_episode:
+            ckpt_path = _make_checkpoint_path(args.save_model_path, episode_count)
+            if ckpt_path:
+                _save_checkpoint(
+                    ckpt_path, agents, optimizers,
+                    args, reward_normalizers, train.last_train_state,
+                )
+                print(
+                    f"[Checkpoint] episode={episode_count}, "
+                    f"update={update}, step={global_step} -> {ckpt_path}"
+                )
+                _cleanup_old_checkpoints(args.save_model_path, args.max_checkpoints)
+            while episode_count >= next_checkpoint_episode:
+                next_checkpoint_episode += int(args.save_every_n_episodes)
+
+    return _build_train_state(
+        global_step, num_updates, episode_count,
+        optimizers, episode_returns,
+    )
 
 
 #  主训练入口
@@ -876,6 +1138,19 @@ def main():
         else:
             reward_normalizers.append(None)
 
+    load_ppo_models_if_requested(args.ppo_model_paths, agents, device)
+
+    #note：中断点加载优先级更高，会覆盖上一步的ppo模型
+    resume_path = args.resume_from or args.load_model_path
+    is_resume = bool(args.resume_from)
+    start_global_step, start_update, start_episode_count, episode_returns = (
+        load_checkpoint_if_requested(
+            resume_path, is_resume,
+            agents, optimizers, reward_normalizers,
+            args, device,
+        )
+    )
+
     # 初始观测
     next_obs_array, _ = envs.reset(seed=args.seed) #shape (n_parallel*n_agents, obs_dim)
     next_obs = torch.tensor(np.array(next_obs_array, dtype=np.float32)).to(device)
@@ -886,14 +1161,21 @@ def main():
         )
     next_done = torch.zeros(args.num_envs).to(device)
 
-    train(
+    final_state = None
+    final_state = train(
         args, agents, optimizers, envs, device, writer,
         reward_normalizers, next_obs, next_done,
+        start_global_step, start_update, start_episode_count,
+        episode_returns,
     )
 
     # 正常训练结束后的保存
-    if args.save_model_path is not None:
-        save_ippo_model(args.save_model_path, agents, optimizers, reward_normalizers, args)
+    if args.save_model_path is not None and final_state is not None:
+        save_ippo_model(
+            args.save_model_path,
+            agents, optimizers, reward_normalizers,
+            args, extra=final_state, train_only=True,
+        )
 
     # 资源清理
     envs.close()

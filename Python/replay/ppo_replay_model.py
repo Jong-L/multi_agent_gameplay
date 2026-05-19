@@ -26,13 +26,8 @@ from godot_env_wrapper import (
     ObsSegmentDims,
     layer_init,
 )
-from custom_ppo import (
-    NetworkType,
-    PPOAgent,
-    SegmentedObsHelper,
-    as_hidden_tuple,
-    make_mlp,
-)
+from custom_ppo import PPOAgent
+from custom_ppo_dataclass import NetworkType
 
 # ╔══════════════════════════════════════════════════════════╗
 # ║                    配  置                                ║
@@ -41,13 +36,13 @@ from custom_ppo import (
 class ReplayConfig:
     """PPO 模型回放配置 — 直接修改默认值即可。"""
 
-    model_path: str = "saved_models/ppo_mlp.pt"
+    model_path: str = "saved_models\\mlp_p1_s1_episode280.pt"
     """要加载的模型文件路径 (.pt)。"""
 
-    env_path: Optional[str] = "curriculum_envs/s4-enemy-only/build/game.exe"
+    env_path: Optional[str] = "curriculum_envs\\s1-no-wall-for ball\\build\\game.exe"
     """Godot 可执行文件路径 (None 连接编辑器)。"""
 
-    config_path: str = "curriculum_envs/s4-enemy-only/configs/game_config.tres"
+    config_path: str = "curriculum_envs\\s1-no-wall-for ball\\configs\\game_config.tres"
     """game_config.tres 路径, 用于读取观测维度配置。"""
 
     speedup: int = 2
@@ -91,7 +86,7 @@ def build_replay_args(checkpoint_data: dict):
     当前 save_pt_model 格式保证 args 中所有字段均为纯 Python 字面量。
     若 checkpoint 缺字段直接报错，不提供 fallback。
     """
-    from custom_ppo import Args as TrainArgs
+    from custom_ppo_dataclass import Args as TrainArgs
 
     # checkpoint 中保存的 args 即为完整 TrainArgs 字段
     # 过滤掉不属于 Args 的运行时字段（如 reward_normalizer）
