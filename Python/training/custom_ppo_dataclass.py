@@ -9,7 +9,6 @@ import torch
 
 class NetworkType(str, Enum):
     """Supported feature extractors for PPO/IPPO policies."""
-
     SEGMENTED_MLP = "segmented_mlp"
     MLP = "mlp"
     GRU_MLP = "gru_mlp"
@@ -18,9 +17,9 @@ class NetworkType(str, Enum):
 class Args:
     """Single-agent PPO training config."""
     # Environment
-    env_path: Optional[str] = "godot-game\\build\game.exe"
+    env_path: Optional[str] = "curriculum_envs\s1-no-wall-for ball\\build\game.exe"
     """游戏环境路径（Godot 可执行文件）"""
-    config_path: str = "curriculum_envs\\s4-enemy-only\\configs\\game_config.tres"
+    config_path: str = "godot-game\configs\game_config.tres"
     """游戏配置文件路径（.tres）"""
     n_parallel: int = 4
     """并行环境（智能体）数量"""
@@ -36,11 +35,12 @@ class Args:
     """实验名称（用于 TensorBoard / WandB 显示）"""
     experiment_dir: str = "logs/cleanrl_ppo"
     """实验日志根目录"""
-    save_model_path: Optional[str] = None
+    save_model_path: Optional[str] = "saved_models/mlp_p1_s1"
     """最终模型保存路径（.pt），设为 None 则不保存最终模型"""
     save_checkpoint: bool = True
     """是否在训练中周期性保存中断点"""
-    resume_from: Optional[str] = None
+    # resume_from: Optional[str] = "saved_models\mlp_p1_s1_episode100.pt"
+    resume_from:Optional[str]="saved_models\mlp_p1_s1_episode280.pt"
     """从中断点恢复训练的路径（设为 None 不恢复）"""
     load_model_path: Optional[str] = None
     """加载已有模型权重但不恢复优化器/计数器"""
@@ -57,7 +57,7 @@ class Args:
 
     # PPO hyperparameters
     total_timesteps: int = 2_000_000
-    """训练总时间步数"""
+    """训练总时间步数,多环境并行时加速消耗"""
     learning_rate: float = 3e-4
     """学习率"""
     num_steps: int = 128
@@ -237,14 +237,20 @@ class IppoArgs:
     cuda: bool = True
     """是否使用 CUDA"""
 
-    # Multi-agent config. Each agent can have independent network / hyperparams.
-    # agent_configs is only active when is_multi_agent=True.
+    #智能体配置
     agent_configs: list[AgentConfig] = field(default_factory=lambda: [
         AgentConfig(agent_id=0, train=True),
         AgentConfig(agent_id=1, train=False),
         AgentConfig(agent_id=2, train=False),
         AgentConfig(agent_id=3, train=False),
     ])
+
+    #从ppo中训练好的模型
+    # ppo_model_paths: list[Optional[str]] = field(default_factory=lambda: [
+    # "saved-models/ppo_agent0.pt",
+    # "saved-models/ppo_agent1.pt",
+    # "saved-models/ppo_agent2.pt",
+    # "saved-models/ppo_agent3.pt",])
 
     # Logging/checkpointing
     exp_name: str = "custom_ippo"
@@ -255,6 +261,18 @@ class IppoArgs:
     """最终模型保存路径（.pt）"""
     track: bool = False
     """是否记录到 WandB"""
+    save_checkpoint: bool = True
+    """是否在训练中周期性保存中断点"""
+    resume_from: Optional[str] = None
+    """从中断点恢复训练的路径（设置为 None 不恢复）"""
+    load_model_path: Optional[str] = None
+    """加载已有模型权重但不恢复优化器、计数器"""
+    ppo_model_paths: list[Optional[str]] = field(default_factory=lambda: [None, None, None, None])
+    """按 agent 下标加载 PPO 预训练模型权重，None 表示不加载"""
+    save_every_n_episodes: int = 10
+    """每 N 个 episode 保存一次中断点"""
+    max_checkpoints: int = 3
+    """最多保留多少个中断点文件，超出则删除最旧的"""
     wandb_project_name: str = "cleanRL"
     """WandB 项目名称"""
     wandb_entity: Optional[str] = "lunjijiang-rl"
@@ -332,7 +350,6 @@ class PoolEntry:
     """该对手参与的游戏局数"""
     age: int = 0
     """自加入池以来经过的训练步数"""
-
 
 @dataclass
 class OpponentPool:
