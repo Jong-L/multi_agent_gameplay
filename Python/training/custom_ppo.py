@@ -60,6 +60,9 @@ def collect_rollout(
         if rnn_state is None:#初始状态
             rnn_state = agent.get_initial_state(num_envs, device)#shape(num_envs,L*H)
 
+    # 追踪本次 rollout 内完成的回合奖励
+    new_episode_returns: list[float] = []
+
     for step in range(num_steps):
         global_step += 1
         obs[step] = next_obs
@@ -98,7 +101,6 @@ def collect_rollout(
 
         # 追踪平均回合奖励 (使用原始奖励)
         accum_rewards += np.asarray(reward, dtype=np.float64)
-        new_episode_returns: list[float] = []
         for i, d in enumerate(np.asarray(done)):
             if d:
                 ep_ret = float(accum_rewards[i])
@@ -168,7 +170,7 @@ def compute_actor_loss(
     # KL 散度近似
     with torch.no_grad():
         approx_kl = ((ratio - 1) - logratio).mean()
-        clipfrac = ((ratio - 1.0).abs() > clip_coef).float().mean().item()
+        clipfrac = ((ratio - 1.0).abs() > clip_coef).float().mean().item()##概率比例偏离裁剪区间的比例
 
     # 优势标准化
     if norm_adv:
@@ -266,10 +268,10 @@ def log_ppo(
     writer,
     global_step: int,
     optimizer: optim.Optimizer,
-    v_loss: torch.Tensor,
-    pg_loss: torch.Tensor,
-    entropy_loss: torch.Tensor,
-    approx_kl: torch.Tensor,
+    v_loss: float,
+    pg_loss: float,
+    entropy_loss: float,
+    approx_kl: float,
     clipfracs: list,
     explained_var: float,
     episode_returns: deque,
@@ -280,39 +282,43 @@ def log_ppo(
 ) -> None:
     """将 PPO 训练指标写入 TensorBoard 并打印终端日志。
     """
+    # 先写 SPS 到 TensorBoard
+    sps = int(global_step / (time.time() - start_time)) if start_time > 0 else 0
+    writer.add_scalar("charts/SPS", sps, global_step)
+
+    # 写所有指标到 TensorBoard
     writer.add_scalar("charts/learning_rate", optimizer.param_groups[0]["lr"], global_step)
-    writer.add_scalar("losses/value_loss", v_loss.item(), global_step)
-    writer.add_scalar("losses/policy_loss", pg_loss.item(), global_step)
-    writer.add_scalar("losses/entropy", entropy_loss.item(), global_step)
-    writer.add_scalar("losses/approx_kl", approx_kl.item(), global_step)
+    writer.add_scalar("losses/value_loss", v_loss, global_step)
+    writer.add_scalar("losses/policy_loss", pg_loss, global_step)
+    writer.add_scalar("losses/entropy", entropy_loss, global_step)
+    writer.add_scalar("losses/approx_kl", approx_kl, global_step)
     writer.add_scalar("losses/clipfrac", np.mean(clipfracs), global_step)
     writer.add_scalar("losses/explained_variance", explained_var, global_step)
 
+    # 有新 episode 完成时写入回合奖励均值（并行环境取平均）；否则保持上一次记录值
+    if new_episode_returns is not None and len(new_episode_returns) > 0:
+        writer.add_scalar("charts/episodic_return", float(np.mean(new_episode_returns)), global_step)
+
+    # 终端日志
     #时间统计
     elapsed_time = time.time() - start_time
     hours = int(elapsed_time // 3600)
     minutes = int((elapsed_time % 3600) // 60)
     seconds = int(elapsed_time % 60)
     if len(episode_returns) > 0:
-        sps = int(global_step / (time.time() - start_time))
         mean_return = np.mean(np.array(episode_returns))
         if update > 0 and num_updates > 0:
             print(
                 f"[Update {update:4d}/{num_updates}] "
-                # f"SPS: {sps:5d}  "
                 f"return: {mean_return:8.2f}  "
-                f"kl: {approx_kl.item():.4f}"
+                f"kl: {approx_kl:.4f}"
                 f"   training time: {hours:02d}:{minutes:02d}:{seconds:02d}"
             )
-        writer.add_scalar("charts/SPS", sps, global_step)
-        # 有新 episode 完成时用最新单个回合奖励；否则保持上一次记录值
-        if new_episode_returns is not None and len(new_episode_returns) > 0:
-            writer.add_scalar("charts/episodic_return", new_episode_returns[-1], global_step)
     else:
         if update > 0 and num_updates > 0:
             print(
                 f"[Update {update:4d}/{num_updates}]"
-                f"kl: {approx_kl.item():.4f}"
+                f"kl: {approx_kl:.4f}"
                 f"   training time: {hours:02d}:{minutes:02d}:{seconds:02d}"
                 )
 
@@ -522,6 +528,10 @@ def train(
         b_values = rollout.values.reshape(-1)
 
         clipfracs = []
+        pg_losses = []
+        v_losses = []
+        entropies = []
+        approx_kls = []
 
         if agent.is_recurrent:# 如果是循环神经网络
             seq_len = max(1, min(int(args.recurrent_seq_len), args.num_steps))
@@ -583,6 +593,11 @@ def train(
                     nn.utils.clip_grad_norm_(agent.parameters(), args.max_grad_norm)
                     optimizer.step()
 
+                    pg_losses.append(pg_loss.item())
+                    v_losses.append(v_loss.item())
+                    entropies.append(entropy.mean().item())
+                    approx_kls.append(approx_kl.item())
+
                 # KL散度过大时结束本轮更新
                 if args.target_kl is not None and approx_kl > args.target_kl:
                     break
@@ -630,9 +645,19 @@ def train(
                     nn.utils.clip_grad_norm_(agent.parameters(), args.max_grad_norm)
                     optimizer.step()
 
+                    pg_losses.append(pg_loss.item())
+                    v_losses.append(v_loss.item())
+                    entropies.append(entropy.mean().item())
+                    approx_kls.append(approx_kl.item())
+
                 # KL散度过大时结束本轮更新
                 if args.target_kl is not None and approx_kl > args.target_kl:
                     break
+
+        mean_pg_loss = float(np.mean(pg_losses))
+        mean_v_loss = float(np.mean(v_losses))
+        mean_entropy = float(np.mean(entropies))
+        mean_approx_kl = float(np.mean(approx_kls))
 
         # 计算解释方差
         y_pred = b_values.cpu().numpy()
@@ -645,8 +670,8 @@ def train(
         # 日志
         log_ppo(
             writer, global_step, optimizer,
-            v_loss, pg_loss, entropy.mean(),
-            approx_kl, clipfracs, explained_var,
+            mean_v_loss, mean_pg_loss, mean_entropy,
+            mean_approx_kl, clipfracs, explained_var,
             episode_returns, start_time,
             update=update, num_updates=num_updates,
             new_episode_returns=new_episode_returns,

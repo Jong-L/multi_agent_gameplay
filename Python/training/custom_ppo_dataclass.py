@@ -13,12 +13,11 @@ class NetworkType(str, Enum):
     MLP = "mlp"
     GRU_MLP = "gru_mlp"
 
-
 @dataclass
 class Args:
     """Single-agent PPO training config."""
     # Environment
-    env_path: Optional[str] = "curriculum_envs\\s4-enemy-only\\build\\game.exe"
+    env_path: Optional[str] = "godot-game\\build\game.exe"
     config_path: str = "curriculum_envs\\s4-enemy-only\\configs\\game_config.tres"
     n_parallel: int = 4
     seed: int = 1
@@ -90,10 +89,10 @@ class AgentConfig:
     ball_hidden: int = 64
     enemy_hidden: int = 64
     map_hidden: int = 64
-    trunk_hiddens: tuple = (256, 128)
+    trunk_hiddens: tuple = (128, 64)
 
     # MLP
-    mlp_hiddens: tuple = (400, 150)
+    mlp_hiddens: tuple = (256, 128, 64)
 
     # GRU
     gru_hidden: int = 128
@@ -112,14 +111,13 @@ class AgentConfig:
     reward_norm: bool = True
     reward_clip: float = 5.0
 
-
 @dataclass
 class IppoArgs:
     """Multi-agent IPPO training config."""
     # Environment
-    env_path: Optional[str] = "godot-game/build/game.exe"
+    env_path: Optional[str] = "curriculum_envs\s4-enemy-only/build\game.exe"
     config_path: str = "godot-game/configs/game_config.tres"
-    n_parallel: int = 1
+    n_parallel: int = 3
     seed: int = 1
     show_window: bool = False
     speedup: int = 10
@@ -141,9 +139,9 @@ class IppoArgs:
     # Multi-agent config. These are ignored when is_multi_agent=False.
     agent_configs: list[AgentConfig] = field(default_factory=lambda: [
         AgentConfig(agent_id=0, train=True),
-        AgentConfig(agent_id=1, train=True),
+        AgentConfig(agent_id=1, train=False),
         AgentConfig(agent_id=2, train=False),
-        AgentConfig(agent_id=3, train=True),
+        AgentConfig(agent_id=3, train=False),
     ])
 
     # Logging/checkpointing
@@ -157,6 +155,7 @@ class IppoArgs:
     # Runtime-derived values
     num_agents: int = 0
     num_envs: int = 0
+    num_game_envs: int = 0
     batch_size: int = 0
     minibatch_size: int = 0
 

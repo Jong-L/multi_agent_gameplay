@@ -433,9 +433,30 @@ vision_radius = 200.0
 
 [node name="Player_Blue" parent="." unique_id=490246979 node_paths=PackedStringArray("player_spell_bar") instance=ExtResource("1_s7ljx")]
 z_index = 6
-position = Vector2(-172, -170)
+position = Vector2(-176, -165)
 player_spell_bar = NodePath("../CanvasLayer/Control/SpellBar")
 skin_color = "Blue"
+
+[node name="Player_Black" parent="." unique_id=844634870 node_paths=PackedStringArray("player_spell_bar") instance=ExtResource("1_s7ljx")]
+z_index = 6
+position = Vector2(411, -412)
+player_spell_bar = NodePath("../CanvasLayer/Control/SpellBar")
+skin_color = "Black"
+player_id = 1
+
+[node name="Player_Red" parent="." unique_id=895822030 node_paths=PackedStringArray("player_spell_bar") instance=ExtResource("1_s7ljx")]
+z_index = 6
+position = Vector2(414.00003, 413)
+player_spell_bar = NodePath("../CanvasLayer/Control/SpellBar")
+skin_color = "Red"
+player_id = 2
+
+[node name="Player_Yellow" parent="." unique_id=526836106 node_paths=PackedStringArray("player_spell_bar") instance=ExtResource("1_s7ljx")]
+z_index = 6
+position = Vector2(-416.00003, 414)
+player_spell_bar = NodePath("../CanvasLayer/Control/SpellBar")
+skin_color = "Yellow"
+player_id = 3
 
 [node name="Map" type="Node" parent="." unique_id=781248778]
 
@@ -455,7 +476,7 @@ tile_set = SubResource("TileSet_onnvd")
 z_index = 1
 texture_filter = 1
 scale = Vector2(1.5, 1.5)
-tile_map_data = PackedByteArray("AAD3//f/AAAAAAMAAAD3//j/AAAAAAMAAAD3//n/AAAAAAMAAAD3//r/AAAAAAMAAAD3//v/AAAAAAMAAAD3//z/AAAAAAMAAAD3//3/AAAAAAMAAAD3//7/AAAAAAMAAAD3////AAAAAAMAAAD3/wAAAAAAAAMAAAD3/wEAAAAAAAMAAAD3/wIAAAAAAAMAAAD3/wMAAAAAAAMAAAD3/wQAAAAAAAMAAAD3/wUAAAAAAAMAAAD3/wYAAAAAAAMAAAD3/wcAAAAAAAMAAAD3/wgAAAAAAAMAAAD4/wgAAAAAAAMAAAD5/wgAAAAAAAMAAAD6/wgAAAAAAAMAAAD7/wgAAAAAAAMAAAD8/wgAAAAAAAMAAAD9/wgAAAAAAAMAAAD+/wgAAAAAAAMAAAD//wgAAAAAAAMAAAAAAAgAAAAAAAMAAAABAAgAAAAAAAMAAAACAAgAAAAAAAMAAAADAAgAAAAAAAMAAAAEAAgAAAAAAAMAAAAFAAgAAAAAAAMAAAAGAAgAAAAAAAMAAAAHAAgAAAAAAAMAAAAIAAgAAAAAAAMAAAAIAAcAAAAAAAMAAAAIAAYAAAAAAAMAAAAIAAUAAAAAAAMAAAAIAAQAAAAAAAMAAAAIAAMAAAAAAAMAAAAIAAIAAAAAAAMAAAAIAAEAAAAAAAMAAAAIAAAAAAAAAAMAAAAIAP//AAAAAAMAAAAIAP7/AAAAAAMAAAAIAP3/AAAAAAMAAAAIAPz/AAAAAAMAAAAIAPv/AAAAAAMAAAAIAPr/AAAAAAMAAAAIAPn/AAAAAAMAAAAIAPj/AAAAAAMAAAAIAPf/AAAAAAMAAAAHAPf/AAAAAAMAAAAGAPf/AAAAAAMAAAAFAPf/AAAAAAMAAAAEAPf/AAAAAAMAAAADAPf/AAAAAAMAAAACAPf/AAAAAAMAAAABAPf/AAAAAAMAAAAAAPf/AAAAAAMAAAD///f/AAAAAAMAAAD+//f/AAAAAAMAAAD9//f/AAAAAAMAAAD8//f/AAAAAAMAAAD7//f/AAAAAAMAAAD6//f/AAAAAAMAAAD5//f/AAAAAAMAAAD4//f/AAAAAAMAAAA=")
+tile_map_data = PackedByteArray("AADx/w4AAAAAAAMAAAD0//7/AAABAAUAAAD0/wwAAAABAAQAAAD7//7/AAACAAUAAAD8//P/AAACAAMAAAAFAPD/AAAAAAUAAAAHAAwAAAAAAAMAAAAJAAMAAAACAAUAAAABAA8AAAAAAAcAAAACAA8AAAABAAcAAAAPAAEAAAAAAAcAAAAQAAEAAAABAAcAAAANAPj/AAAAAAcAAAAOAPj/AAABAAcAAADu/wcAAAAAAAcAAADv/wcAAAABAAcAAADy//b/AAAAAAcAAADz//b/AAABAAcAAAAOAAoAAAABAAQAAAALAPT/AAABAAQAAAD8/wkAAAABAAQAAAAAAAMAAAABAAQAAAAAAAUAAAABAAQAAAAFAP//AAAAAAUAAAD///f/AAAAAAMAAAAIAPn/AAAAAAMAAAD3/wgAAAAAAAMAAAD4/wgAAAAAAAMAAAD5/wgAAAAAAAMAAAD6/wgAAAAAAAMAAAD7/wgAAAAAAAMAAAD8/wgAAAAAAAMAAAD9/wgAAAAAAAMAAAD+/wgAAAAAAAMAAAD//wgAAAAAAAMAAAAAAAgAAAAAAAMAAAABAAgAAAAAAAMAAAACAAgAAAAAAAMAAAADAAgAAAAAAAMAAAAEAAgAAAAAAAMAAAAFAAgAAAAAAAMAAAAGAAgAAAAAAAMAAAAHAAgAAAAAAAMAAAAIAAgAAAAAAAMAAAAIAAcAAAAAAAMAAAAIAAYAAAAAAAMAAAAIAAUAAAAAAAMAAAAIAAQAAAAAAAMAAAAIAAMAAAAAAAMAAAAIAAIAAAAAAAMAAAAIAAEAAAAAAAMAAAAIAAAAAAAAAAMAAAAIAP//AAAAAAMAAAAIAP7/AAAAAAMAAAAIAP3/AAAAAAMAAAAIAPz/AAAAAAMAAAAIAPv/AAAAAAMAAAAIAPr/AAAAAAMAAAAIAPj/AAAAAAMAAAAIAPf/AAAAAAMAAAAHAPf/AAAAAAMAAAAGAPf/AAAAAAMAAAAFAPf/AAAAAAMAAAAEAPf/AAAAAAMAAAAEAPb/AAAAAAMAAAADAPb/AAAAAAMAAAACAPb/AAAAAAMAAAACAPf/AAAAAAMAAAABAPf/AAAAAAMAAAAAAPf/AAAAAAMAAAADAPf/AAAAAAMAAAD+//f/AAAAAAMAAAD9//f/AAAAAAMAAAD8//f/AAAAAAMAAAD7//f/AAAAAAMAAAD6//f/AAAAAAMAAAD5//f/AAAAAAMAAAD4//f/AAAAAAMAAAD3//f/AAAAAAMAAAD3//j/AAAAAAMAAAD3//n/AAAAAAMAAAD3//r/AAAAAAMAAAD3//v/AAAAAAMAAAD3//z/AAAAAAMAAAD3//3/AAAAAAMAAAD3//7/AAAAAAMAAAD3////AAAAAAMAAAD3/wAAAAAAAAMAAAD3/wEAAAAAAAMAAAD3/wIAAAAAAAMAAAD3/wMAAAAAAAMAAAD3/wQAAAAAAAMAAAD3/wUAAAAAAAMAAAD3/wYAAAAAAAMAAAD3/wcAAAAAAAMAAAA=")
 tile_set = SubResource("TileSet_c0hqu")
 
 [node name="Water" type="TileMapLayer" parent="Map" unique_id=1066288796]
@@ -630,8 +651,14 @@ zoom = Vector2(0.79, 0.79)
 drag_horizontal_enabled = true
 
 [connection signal="player_died" from="Player_Blue" to="." method="_on_player_player_died"]
+[connection signal="player_died" from="Player_Black" to="." method="_on_player_player_died"]
+[connection signal="player_died" from="Player_Red" to="." method="_on_player_player_died"]
+[connection signal="player_died" from="Player_Yellow" to="." method="_on_player_player_died"]
 [connection signal="pressed" from="CanvasLayer/PauseButton" to="." method="_on_pause_button_pressed"]
 [connection signal="pressed" from="CanvasLayer/PauseMenu/ResumeButton" to="CanvasLayer/PauseMenu" method="_on_resume_button_pressed"]
 [connection signal="pressed" from="CanvasLayer/PauseMenu/TitleButton" to="CanvasLayer/PauseMenu" method="_on_title_button_pressed"]
 [connection signal="pressed" from="CanvasLayer/VBoxContainer/RewardPerformButton" to="Player_Blue" method="_on_reward_perform_button_pressed"]
+[connection signal="pressed" from="CanvasLayer/VBoxContainer/RewardPerformButton" to="Player_Black" method="_on_reward_perform_button_pressed"]
+[connection signal="pressed" from="CanvasLayer/VBoxContainer/RewardPerformButton" to="Player_Red" method="_on_reward_perform_button_pressed"]
+[connection signal="pressed" from="CanvasLayer/VBoxContainer/RewardPerformButton" to="Player_Yellow" method="_on_reward_perform_button_pressed"]
 [connection signal="pressed" from="CanvasLayer/VBoxContainer/RewardPerformButton" to="CanvasLayer/VBoxContainer/RewardPerformButton" method="_on_pressed"]
