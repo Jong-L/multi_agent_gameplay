@@ -100,14 +100,14 @@ class PPOArgs:
     # Optuna hyperparameter tuning
     enable_optuna: bool = True
     """Enable Optuna hyperparameter search instead of one normal training run."""
-    optuna_trials: int = 50
+    optuna_trials: int = 100
     """Number of Optuna trials to run."""
     optuna_timesteps: int = 500_000
     """Training timesteps used by each trial."""
     optuna_study_name: str = "custom_ppo_optuna"
     """Optuna study name."""
-    optuna_storage: Optional[str] = None
-    """Optional Optuna storage URI, e.g. sqlite:///optuna_custom_ppo.db."""
+    optuna_storage: Optional[str] = "sqlite:///logs/optuna/custom_ppo.db"
+    """Optuna storage URI (sqlite for persistence across crashes)."""
     optuna_best_params_path: Optional[str] = "logs/optuna/custom_ppo_best_params.json"
     """Where to write the best trial parameters after tuning."""
     optuna_prune: bool = True
