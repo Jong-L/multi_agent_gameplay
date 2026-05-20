@@ -256,7 +256,6 @@ texture_progress = ExtResource("10_mc6or")
 script = ExtResource("10_jc3ay")
 
 [node name="RewardLabel" type="Label" parent="." unique_id=478642662]
-visible = false
 z_index = 1
 offset_left = -29.999998
 offset_top = -96.666664

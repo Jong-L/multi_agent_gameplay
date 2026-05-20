@@ -158,10 +158,16 @@ func _disconnect_skill_signals() -> void:
 func add_reward(player_id: int, value: float, source: String = "") -> void:
 	if _play_scene == null:
 		return
-	if player_id < 0 or player_id >= _play_scene.players.size():
+	
+	# 通过 player_id 查找对应玩家（player_id 可能不等于数组索引）
+	var player: Player = null
+	for p in _play_scene.players:
+		if is_instance_valid(p) and p.player_id == player_id:
+			player = p
+			break
+	if player == null:
 		return
-
-	var player := _play_scene.players[player_id]
+	
 	player.ai_controller.reward += value
 
 	# 累计纯奖励（不含塑形奖励）并发射信号
@@ -361,10 +367,34 @@ func _init_potentials() -> void:
 		var pid := player.player_id
 		var cfg := _cfg(pid)
 
-		var ball_potential := _calculate_ball_shaping_potential(player, cfg)
-		var wall_potential := _calculate_wall_shaping_potential(player, cfg)
-		_prev_ball_potentials[pid] = ball_potential
-		_prev_wall_potentials[pid] = wall_potential
+		_prev_wall_potentials[pid] = _calculate_wall_shaping_potential(player, cfg)
+
+		# NONE：不计算球相关的任何势能/距离
+		if cfg.ball_potential_func == RewardConfig.BallPotentialFunc.NONE:
+			continue
+
+		_prev_ball_distances[pid] = _get_nearest_ball_distance(player)
+
+		# DISTANCE_REWARD：只跟踪距离，不计算球势能
+		if cfg.ball_potential_func == RewardConfig.BallPotentialFunc.DISTANCE_REWARD:
+			continue
+
+		_prev_ball_potentials[pid] = _calculate_ball_shaping_potential(player, cfg)
+
+
+# 奖励球重生后立即重新计算势能基线，避免下一帧塑形奖励出现虚假正向跳跃
+# 仅在势能塑形模式（LINEAR / EXPONENTIAL / INVERSE）下生效
+func recalc_ball_potentials() -> void:
+	if _play_scene == null:
+		return
+	for player in _play_scene.players:
+		if player.is_dead:
+			continue
+		var pid := player.player_id
+		var cfg := _cfg(pid)
+		if cfg.ball_potential_func in [RewardConfig.BallPotentialFunc.NONE, RewardConfig.BallPotentialFunc.DISTANCE_REWARD]:
+			continue
+		_prev_ball_potentials[pid] = _calculate_ball_shaping_potential(player, cfg)
 		_prev_ball_distances[pid] = _get_nearest_ball_distance(player)
 
 
@@ -401,7 +431,7 @@ func _process_ball_potential_shaping(player: Player, pid: int, cfg: RewardConfig
 	var prev_potential: float = _prev_ball_potentials.get(pid, current_potential)
 	var shaping: float = _shaping_gamma * current_potential - prev_potential
 	
-	#if pid==0:
+	#if pid==1:
 		#print(shaping)
 	
 	player.ai_controller.reward += shaping
@@ -769,8 +799,6 @@ func reset() -> void:
 	_init_starvation_timers()
 	_init_potentials()
 	_pure_rewards.clear()
-	_prev_ball_distances.clear()
-	_prev_ball_potentials.clear()
 	_wall_collision_counters.clear()
 	_total_reward.clear()
 	_total_ball_shaping.clear()

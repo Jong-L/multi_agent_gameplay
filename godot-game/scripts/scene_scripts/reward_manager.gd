@@ -158,10 +158,16 @@ func _disconnect_skill_signals() -> void:
 func add_reward(player_id: int, value: float, source: String = "") -> void:
 	if _play_scene == null:
 		return
-	if player_id < 0 or player_id >= _play_scene.players.size():
+	
+	# 通过 player_id 查找对应玩家（player_id 可能不等于数组索引）
+	var player: Player = null
+	for p in _play_scene.players:
+		if is_instance_valid(p) and p.player_id == player_id:
+			player = p
+			break
+	if player == null:
 		return
-
-	var player := _play_scene.players[player_id]
+	
 	player.ai_controller.reward += value
 
 	# 累计纯奖励（不含塑形奖励）并发射信号

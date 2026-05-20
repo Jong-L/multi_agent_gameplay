@@ -191,14 +191,11 @@ func _setup_camera_switch_ui() -> void:
 	canvas_layer.add_child(panel)
 	panel.set_owner(self)
 	
-	# 按钮配置,默认4个玩家，硬编码，以后看情况改
-	var button_configs := [
-		["主相机", 0],
-		["玩家{color}".format({"color":players[0].skin_color}), 1],
-		["玩家{color}".format({"color":players[1].skin_color}), 2],
-		["玩家{color}".format({"color":players[2].skin_color}), 3],
-		["玩家{color}".format({"color":players[3].skin_color}), 4],
-	]
+	# 按钮配置：主相机 + 每个玩家的跟随相机
+	var button_configs: Array[Array] = [["主相机", 0]]
+	for i in range(players.size()):
+		var label := "玩家{color}".format({"color": players[i].skin_color})
+		button_configs.append([label, i + 1])
 	
 	camera_buttons.clear()
 	for config in button_configs:
@@ -443,7 +440,12 @@ func _on_camera_switched(camera_id: int) -> void:
 
 # 更新按钮高亮状态
 func _update_button_highlight(camera_id: int) -> void:
-	var active_index := 0 if camera_id == -1 else camera_id + 1
+	var active_index := 0
+	if camera_id != -1:
+		for i in range(players.size()):
+			if players[i].player_id == camera_id:
+				active_index = i + 1
+				break
 	for i in range(camera_buttons.size()):
 		if i == active_index:
 			camera_buttons[i].modulate = Color(0.5, 1.0, 0.7)  # 绿色高亮

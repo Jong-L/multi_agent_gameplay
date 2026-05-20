@@ -151,6 +151,9 @@ func _physics_process(delta: float) -> void:
 				ball.global_position = new_pos
 				ball.activate()
 			to_remove.append(i)
+	# 通知 RewardManager 立即重算球势能基线，避免下一帧塑形奖励虚假正向跳跃
+	if _play_scene and _play_scene.reward_manager:
+		_play_scene.reward_manager.recalc_ball_potentials()
 	# 从后往前移除已重生的条目
 	for i in range(to_remove.size() - 1, -1, -1):
 		_respawn_queue.remove_at(to_remove[i])
