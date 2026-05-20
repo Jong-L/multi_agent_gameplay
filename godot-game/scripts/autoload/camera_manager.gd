@@ -71,8 +71,14 @@ func switch_to_main() -> void:
 
 # 切换到指定玩家的相机
 func switch_to_player(player_id: int) -> void:
-	if player_id < 0 or player_id >= player_cameras.size():
-		push_warning("[CameraManager] 无效的 player_id: %d" % player_id)
+	# 通过 player_id 在 players 数组中查找对应索引
+	var cam_idx := -1
+	for i in range(players.size()):
+		if is_instance_valid(players[i]) and players[i].player_id == player_id:
+			cam_idx = i
+			break
+	if cam_idx < 0 or cam_idx >= player_cameras.size():
+		push_warning("[CameraManager] 未找到 player_id=%d 对应的相机" % player_id)
 		return
 	
 	current_camera_id = player_id
@@ -82,17 +88,19 @@ func switch_to_player(player_id: int) -> void:
 	
 	for i in range(player_cameras.size()):
 		if player_cameras[i] != null:
-			player_cameras[i].enabled = (i == player_id)
+			player_cameras[i].enabled = (i == cam_idx)
 	
 	camera_switched.emit(player_id)
 	#print("[CameraManager] 切换到玩家 %d 相机" % player_id)
 
-# 根据按钮索引切换相机（0=主相机, 1-4=玩家1-4）
+# 根据按钮索引切换相机（0=主相机, 1+=对应 players[index-1] 的玩家）
 func switch_by_index(index: int) -> void:
 	if index == 0:
 		switch_to_main()
 	else:
-		switch_to_player(index - 1)
+		var player_idx := index - 1
+		if player_idx < players.size():
+			switch_to_player(players[player_idx].player_id)
 
 # 获取当前相机ID（-1=主相机，0-3=玩家相机）
 func get_current_camera_id() -> int:
