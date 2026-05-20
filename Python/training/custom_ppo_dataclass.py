@@ -98,7 +98,7 @@ class PPOArgs:
     """Reward normalization clipping range."""
 
     # Optuna hyperparameter tuning
-    enable_optuna: bool = True
+    enable_optuna: bool = False
     """Enable Optuna hyperparameter search instead of one normal training run."""
     optuna_trials: int = 100
     """Number of Optuna trials to run."""
@@ -106,7 +106,8 @@ class PPOArgs:
     """Training timesteps used by each trial."""
     optuna_study_name: str = "custom_ppo_optuna"
     """Optuna study name."""
-    optuna_storage: Optional[str] = "sqlite:///logs/optuna/custom_ppo.db"
+    # optuna_storage: Optional[str] = "sqlite:///logs/optuna/custom_ppo.db"
+    optuna_storage: Optional[str] = None
     """Optuna storage URI (sqlite for persistence across crashes)."""
     optuna_best_params_path: Optional[str] = "logs/optuna/custom_ppo_best_params.json"
     """Where to write the best trial parameters after tuning."""

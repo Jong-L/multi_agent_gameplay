@@ -813,6 +813,7 @@ def _sample_optuna_args(base_args: PPOArgs, trial: Any) -> PPOArgs:
     args.vf_coef = trial.suggest_float("vf_coef", 0.25, 1.0)
     args.max_grad_norm = trial.suggest_float("max_grad_norm", 0.5, 5.0)
     args.anneal_lr = trial.suggest_categorical("anneal_lr", [False, True])
+    args.reward_norm = trial.suggest_categorical("reward_norm", [True, False])
 
     if args.reward_norm:
         args.reward_clip = trial.suggest_categorical("reward_clip", [1.0, 2.0,3.0, 4.0,5.0])

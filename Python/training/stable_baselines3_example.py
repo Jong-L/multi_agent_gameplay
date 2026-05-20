@@ -28,15 +28,15 @@ if can_import("ray"):
 class Config:
     """SB3 PPO 训练配置"""
     # ---- 环境 ----
-    env_path: Optional[str] = None
+    env_path: Optional[str] = "godot-game/build/game.exe"
     """Godot 可执行文件路径 (None 连接编辑器)。"""
     seed: int = 0
     """随机种子。"""
     viz: bool = False
     """显示游戏窗口。"""
-    speedup: int = 10
+    speedup: int = 16
     """物理引擎加速倍数。"""
-    n_parallel: int = 1
+    n_parallel: int = 10
     """并行 Godot 进程数量。"""
     gamma: float = 0.99
     """折扣因子 γ。"""
@@ -242,7 +242,7 @@ if args.resume_model_path is None:
         env,
         ent_coef=0.005,
         verbose=1,
-        n_steps=128,
+        n_steps=64,
         tensorboard_log=args.experiment_dir,
         learning_rate=learning_rate,
         gamma=args.gamma,
