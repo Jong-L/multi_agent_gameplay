@@ -35,6 +35,8 @@ var _play_scene: PlayScene = null
 var _ball_scene: PackedScene = preload("res://assets/scenes/RewardBall.tscn")
 ## B类球重生队列：[{"ball": RewardBall, "timer": float}]
 var _respawn_queue: Array[Dictionary] = []
+## 上次处理重生的通信帧序号（用于计算帧间游戏时间）
+var _last_process_cycle: int = -1
 
 
 func _ready() -> void:
@@ -49,7 +51,6 @@ func setup(play_scene: PlayScene) -> void:
 	_play_scene = play_scene
 	_spawn_type_a_balls()
 	_spawn_type_b_balls()
-
 
 ## 生成 A 类球：在每个玩家出生点所在角的子区域内随机生成3个
 ## 子矩形从竞技场角向内延伸，避免球生成到地图外
@@ -85,7 +86,6 @@ func _spawn_type_a_balls() -> void:
 			var ball := _create_ball(RewardBall.BallType.TYPE_A, BALL_A_REWARD, pos)
 			type_a_balls.append(ball)
 			reward_balls.append(ball)
-
 
 ## 生成 B 类球：在巡逻区域内随机位置（避开玩家和障碍物）
 func _spawn_type_b_balls() -> void:
@@ -127,12 +127,22 @@ func _on_reward_ball_collected(_player_id: int, ball_type: int, ball: RewardBall
 	if ball_type == RewardBall.BallType.TYPE_B:
 		_respawn_queue.append({"ball": ball, "timer": BALL_B_RESPAWN_DELAY})
 
-# 每帧检查B类球重生队列
-func _process(delta: float) -> void:
+# 每通信帧检查 B 类球重生队列（配合 sync 的 n_action_steps 节拍）
+func _physics_process(delta: float) -> void:
+	if _play_scene == null or _play_scene.sync_node == null:
+		return
+
+	var n_steps :int= _play_scene.sync_node.n_action_steps
+	var repeat := _play_scene.sync_node.action_repeat
+
+	# 只在通信帧处理（n_action_steps 尚未自增，0, repeat, 2*repeat ... 恰好是通信帧）
+	if n_steps % repeat != 0:
+		return
+
 	var to_remove: Array[int] = []
 	for i in range(_respawn_queue.size()):
 		var entry: Dictionary = _respawn_queue[i]
-		entry.timer -= delta
+		entry.timer -= repeat*delta
 		if entry.timer <= 0.0:
 			var ball: RewardBall = entry.ball
 			if is_instance_valid(ball):
@@ -141,6 +151,9 @@ func _process(delta: float) -> void:
 				ball.global_position = new_pos
 				ball.activate()
 			to_remove.append(i)
+	# 通知 RewardManager 立即重算球势能基线，避免下一帧塑形奖励虚假正向跳跃
+	if _play_scene and _play_scene.reward_manager:
+		_play_scene.reward_manager.recalc_ball_potentials()
 	# 从后往前移除已重生的条目
 	for i in range(to_remove.size() - 1, -1, -1):
 		_respawn_queue.remove_at(to_remove[i])
@@ -278,6 +291,7 @@ func _rng_pos_in_rect(rect: Rect2, margin: float) -> Vector2:
 ## 游戏重置时调用：重新随机化所有球的位置
 func reset_all() -> void:
 	_respawn_queue.clear()
+	_last_process_cycle = -1
 	
 	# 重新随机化 A 类球位置
 	var arena := _play_scene.arena_bounds

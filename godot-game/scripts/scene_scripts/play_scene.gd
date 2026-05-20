@@ -354,6 +354,9 @@ func _setup_reward_ball_manager() -> void:
 	reward_ball_manager = RewardBallManager.new()
 	reward_ball_manager.name = "RewardBallManager"
 	add_child(reward_ball_manager)
+	# 确保 _physics_process 顺序：RewardManager（算奖励）→ RewardBallManager（重生球）→ Sync（收观测）
+	var sync_idx := sync_node.get_index()
+	move_child(reward_ball_manager, sync_idx)
 	reward_ball_manager.set_owner(self)
 	reward_ball_manager.setup(self)
 
