@@ -806,7 +806,7 @@ def _sample_optuna_args(base_args: PPOArgs, trial: Any) -> PPOArgs:
     args.num_steps = trial.suggest_categorical("num_steps", [64, 128, 256])
     args.num_minibatches = trial.suggest_categorical("num_minibatches", [2, 4, 8])
     args.update_epochs = trial.suggest_int("update_epochs", 3, 10)
-    args.gamma = trial.suggest_float("gamma", 0.95, 0.999)
+    # gamma 固定使用 base_args 的值，不参与搜索
     args.gae_lambda = trial.suggest_float("gae_lambda", 0.85, 0.98)
     args.clip_coef = trial.suggest_float("clip_coef", 0.1, 0.3)
     args.ent_coef = trial.suggest_float("ent_coef", 1e-4, 5e-2, log=True)
@@ -871,7 +871,15 @@ def _write_optuna_best_params(args: PPOArgs, study: Any) -> None:
 
 def run_optuna(args: PPOArgs):
     sampler = optuna.samplers.TPESampler(seed=args.seed)
-    pruner = optuna.pruners.MedianPruner(n_warmup_steps=3) if args.optuna_prune else optuna.pruners.NopPruner()
+    pruner = (
+        optuna.pruners.MedianPruner(
+            n_warmup_steps=100,
+            n_startup_trials=10,
+            interval_steps=10,
+        )
+        if args.optuna_prune
+        else optuna.pruners.NopPruner()
+    )
     study = optuna.create_study(
         study_name=args.optuna_study_name,
         storage=args.optuna_storage,
