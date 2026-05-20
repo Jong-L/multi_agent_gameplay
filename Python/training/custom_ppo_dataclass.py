@@ -14,12 +14,12 @@ class NetworkType(str, Enum):
     GRU_MLP = "gru_mlp"
 
 @dataclass
-class Args:
+class PPOArgs:
     """Single-agent PPO training config."""
     # Environment
-    env_path: Optional[str] = "curriculum_envs\s1-no-wall-for ball\\build\game.exe"
+    env_path: Optional[str] = "curriculum_envs/s1-no-wall-for ball/build/game.exe"
     """游戏环境路径（Godot 可执行文件）"""
-    config_path: str = "godot-game\configs\game_config.tres"
+    config_path: str = "godot-game/configs/game_config.tres"
     """游戏配置文件路径（.tres）"""
     n_parallel: int = 4
     """并行环境（智能体）数量"""
@@ -39,8 +39,8 @@ class Args:
     """最终模型保存路径（.pt），设为 None 则不保存最终模型"""
     save_checkpoint: bool = True
     """是否在训练中周期性保存中断点"""
-    # resume_from: Optional[str] = "saved_models\mlp_p1_s1_episode100.pt"
-    resume_from:Optional[str]="saved_models\mlp_p1_s1_episode280.pt"
+    resume_from: Optional[str] = None
+    # resume_from:Optional[str]="saved_models/mlp_p1_s1_episode280.pt"
     """从中断点恢复训练的路径（设为 None 不恢复）"""
     load_model_path: Optional[str] = None
     """加载已有模型权重但不恢复优化器/计数器"""
@@ -95,7 +95,23 @@ class Args:
     reward_norm: bool = True
     """是否启用奖励归一化"""
     reward_clip: float = 5.0
-    """奖励归一化裁剪范围"""
+    """Reward normalization clipping range."""
+
+    # Optuna hyperparameter tuning
+    enable_optuna: bool = False
+    """Enable Optuna hyperparameter search instead of one normal training run."""
+    optuna_trials: int = 50
+    """Number of Optuna trials to run."""
+    optuna_timesteps: int = 500_000
+    """Training timesteps used by each trial."""
+    optuna_study_name: str = "custom_ppo_optuna"
+    """Optuna study name."""
+    optuna_storage: Optional[str] = None
+    """Optional Optuna storage URI, e.g. sqlite:///optuna_custom_ppo.db."""
+    optuna_best_params_path: Optional[str] = "logs/optuna/custom_ppo_best_params.json"
+    """Where to write the best trial parameters after tuning."""
+    optuna_prune: bool = True
+    """Allow Optuna to prune clearly weak trials during training."""
 
     # Network
     network_type: NetworkType = NetworkType.MLP
@@ -112,8 +128,11 @@ class Args:
     """ENEMY 段 MLP 隐藏层宽度"""
     map_hidden: int = 64
     """MAP 段 MLP 隐藏层宽度"""
-    trunk_hiddens: tuple = (196, 64)
-    """MLP 中躯干层的宽度（各段输出拼接后 -> 躯干 -> 融合特征）"""
+    seg_trunk_hiddens: tuple = (196, 64)
+    """SEGMENTED_MLP 躯干层宽度（各段输出拼接后 -> 躯干 -> 融合特征）"""
+
+    gru_trunk_hiddens: tuple = (128, 64)
+    """GRU_MLP 躯干层宽度（GRU 输出 + BALL 特征 融合后 -> 躯干 -> 融合特征）"""
 
     # MLP
     mlp_hiddens: tuple = (256, 128, 64)
@@ -126,7 +145,6 @@ class Args:
     """GRU 层数（gru_mlp 用，>=1）"""
     gru_input_layernorm: bool = True
     """GRU 输入前是否加 LayerNorm"""
-    # trunk_hiddens: tuple = (128, 64)  # GRU 共享躯干
 
     # Runtime-derived values
     num_envs: int = 0
@@ -157,9 +175,8 @@ class AgentConfig:
     """ENEMY 段隐藏层宽度"""
     map_hidden: int = 64
     """MAP 段隐藏层宽度"""
-    trunk_hiddens: tuple = (196, 64)
-    """躯干层宽度"""
-    # trunk_hiddens: tuple = (128, 64)  # GRU 共享躯干
+    seg_trunk_hiddens: tuple = (196, 64)
+    """SEGMENTED_MLP 躯干层宽度"""
 
     # MLP
     mlp_hiddens: tuple = (256, 128, 64)
@@ -172,6 +189,8 @@ class AgentConfig:
     """GRU 层数"""
     gru_input_layernorm: bool = True
     """GRU 输入前是否加 LayerNorm"""
+    gru_trunk_hiddens: tuple = (128, 64)
+    """GRU_MLP 躯干层宽度"""
 
     learning_rate: float = 3e-4
     """学习率"""
@@ -198,7 +217,7 @@ class AgentConfig:
 class IppoArgs:
     """Multi-agent IPPO training config."""
     # Environment
-    env_path: Optional[str] = "curriculum_envs\s4-enemy-only/build\game.exe"
+    env_path: Optional[str] = "curriculum_envs/s4-enemy-only/build/game.exe"
     """游戏可执行文件路径"""
     config_path: str = "godot-game/configs/game_config.tres"
     """Godot 游戏配置文件路径（.tres）"""
