@@ -56,7 +56,7 @@ class PPOArgs:
     """WandB 用户 / 团队名"""
 
     # PPO hyperparameters
-    total_timesteps: int = 2_000_000
+    total_timesteps: int = 1_000_000
     """训练总时间步数,多环境并行时加速消耗"""
     learning_rate: float = 3e-4
     """学习率"""
@@ -98,7 +98,7 @@ class PPOArgs:
     """Reward normalization clipping range."""
 
     # Optuna hyperparameter tuning
-    enable_optuna: bool = False
+    enable_optuna: bool = True
     """Enable Optuna hyperparameter search instead of one normal training run."""
     optuna_trials: int = 50
     """Number of Optuna trials to run."""
