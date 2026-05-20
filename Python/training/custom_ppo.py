@@ -2,14 +2,17 @@
 离散动作 PPO (Proximal Policy Optimization)
 """
 import os
+import copy
+import json
 import time
 from collections import deque
-from typing import Optional
+from typing import Any, Optional
 
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
+import optuna
 
 from godot_env_wrapper import (
     GodotDiscreteEnvWrapper,
@@ -19,8 +22,8 @@ from godot_env_wrapper import (
     save_pt_model,
 )
 
-from custom_ppo_dataclass import Args, RolloutData
-from ppo_networks import DiscreteActorCriticAgent
+from custom_ppo_dataclass import PPOArgs, RolloutData
+from ppo_networks import DiscreteActorCriticAgent, NetworkType
 
 class PPOAgent(DiscreteActorCriticAgent):
     """Discrete PPO policy/value network."""
@@ -64,7 +67,7 @@ def collect_rollout(
     new_episode_returns: list[float] = []
 
     for step in range(num_steps):
-        global_step += 1
+        global_step += num_envs
         obs[step] = next_obs
         dones[step] = next_done #dones[t]表示s_t是否终止，dones[0]为初始值0
 
@@ -410,7 +413,7 @@ def _save_checkpoint(
     ckpt_path: str,
     agent: PPOAgent,
     optimizer: optim.Optimizer,
-    args: Args,
+    args: PPOArgs,
     reward_normalizer: Optional[RewardNormalizer],
     extra: dict,
 ) -> None:
@@ -461,7 +464,7 @@ def load_checkpoint_if_requested(
 
 #  主训练循环
 def train(
-    args: Args,
+    args: PPOArgs,
     agent: PPOAgent,
     envs: GodotDiscreteEnvWrapper,
     optimizer: optim.Optimizer,
@@ -475,13 +478,15 @@ def train(
     start_update: int = 1,
     start_episode_count: int = 0,
     start_episode_returns: Optional[deque] = None,
+    trial: Optional[Any] = None,
 ) -> dict:
     """PPO 主训练循环。"""
     global_step = start_global_step
     start_time = time.time()
     num_updates = args.total_timesteps // args.batch_size
     episode_count = start_episode_count
-    episode_returns = deque(start_episode_returns or [], maxlen=20)#最近20个回合的奖励
+    optuna_max_len = None if trial is None else 20
+    episode_returns = deque(start_episode_returns or [], maxlen=optuna_max_len)#最近20个回合的奖励
     accum_rewards: np.ndarray = np.zeros(args.num_envs)#每回合累计奖励
     next_checkpoint_episode = None
     if args.save_checkpoint and args.save_every_n_episodes > 0:
@@ -682,6 +687,12 @@ def train(
             optimizer, episode_returns,
         )
 
+        if trial is not None and len(episode_returns) > 0:
+            objective_value = float(np.mean(np.array(episode_returns)))
+            trial.report(objective_value, update)
+            if getattr(args, "optuna_prune", False) and trial.should_prune():
+                raise optuna.TrialPruned()
+
         if args.save_checkpoint and next_checkpoint_episode is not None and episode_count >= next_checkpoint_episode:
             ckpt_path = _make_checkpoint_path(args.save_model_path, episode_count)
             if ckpt_path:
@@ -702,67 +713,193 @@ def train(
         optimizer, episode_returns,
     )
 
+def run_training(args: PPOArgs, trial: Optional[Any] = None) -> dict:
+    """Run one PPO training job and return the final training state."""
+    writer = None
+    envs = None
+    reward_normalizer = None
+    final_state = None
+
+    try:
+        writer, device, envs, seg, run_name = init_training_setup(args)
+
+        # PPO配置
+        args.num_envs = envs.num_envs
+        args.batch_size = args.num_envs * args.num_steps
+        args.minibatch_size = args.batch_size // args.num_minibatches
+        if args.minibatch_size <= 0:
+            raise ValueError(
+                f"Invalid minibatch_size={args.minibatch_size}; "
+                f"batch_size={args.batch_size}, num_minibatches={args.num_minibatches}"
+            )
+        n_actions = int(envs.single_action_space.n)
+
+        # 智能体 + 优化器
+        agent = PPOAgent(n_actions, seg, args).to(device)
+        print(f"[PPO] network_type={args.network_type}, params={agent.num_params():,}")
+        optimizer = optim.Adam(agent.parameters(), lr=args.learning_rate, eps=1e-5)
+
+        # 奖励归一化器
+        if args.reward_norm:
+            reward_normalizer = RewardNormalizer(clip=args.reward_clip)
+            print(f"[RewardNorm] enabled, clip={args.reward_clip}")
+
+        resume_path = args.resume_from or args.load_model_path
+        is_resume = bool(args.resume_from)
+        start_global_step, start_update, start_episode_count, episode_returns = (
+            load_checkpoint_if_requested(
+                resume_path, is_resume,
+                agent, optimizer, reward_normalizer,
+                device,
+            )
+        )
+
+        # 初始观测
+        next_obs_array, _ = envs.reset(seed=args.seed)
+        next_obs = torch.tensor(np.array(next_obs_array, dtype=np.float32)).to(device)#(num_envs,obs_dim)
+        next_done = torch.zeros(args.num_envs).to(device)#(num_envs,)
+        next_rnn_state = agent.get_initial_state(args.num_envs, device)#(num_envs,rec_state_size)
+
+        final_state = train(
+            args, agent, envs, optimizer, device, writer,
+            reward_normalizer, next_obs, next_done, next_rnn_state,
+            start_global_step, start_update, start_episode_count,
+            episode_returns, trial=trial,
+        )
+
+        # 正常训练结束后的保存与导出
+        if args.save_model_path is not None and final_state is not None:
+            save_dict = {
+                "agent_state_dict": agent.state_dict(),
+                "optimizer_state_dict": optimizer.state_dict(),
+            }
+            save_pt_model(
+                args.save_model_path, save_dict, args,
+                reward_normalizer, extra=final_state,
+            )
+
+        return final_state
+    finally:
+        if envs is not None:
+            envs.close()
+        if writer is not None:
+            writer.close()
+
+
+def _parse_hiddens(value: str) -> tuple[int, ...]:
+    return tuple(int(item) for item in value.split(","))
+
+
+def _sample_optuna_args(base_args: PPOArgs, trial: Any) -> PPOArgs:
+    args = copy.deepcopy(base_args)
+    args.enable_optuna = False
+    args.resume_from = None
+    args.load_model_path = None
+    args.save_model_path = None
+    args.save_checkpoint = False
+    args.track = False
+    args.seed = int(base_args.seed + trial.number)
+    args.exp_name = f"{base_args.exp_name}_optuna_trial_{trial.number}"
+    args.total_timesteps = int(base_args.optuna_timesteps)
+
+    args.learning_rate = trial.suggest_float("learning_rate", 1e-5, 1e-3, log=True)
+    args.num_steps = trial.suggest_categorical("num_steps", [64, 128, 256])
+    args.num_minibatches = trial.suggest_categorical("num_minibatches", [2, 4, 8])
+    args.update_epochs = trial.suggest_int("update_epochs", 3, 10)
+    args.gamma = trial.suggest_float("gamma", 0.95, 0.999)
+    args.gae_lambda = trial.suggest_float("gae_lambda", 0.85, 0.98)
+    args.clip_coef = trial.suggest_float("clip_coef", 0.1, 0.3)
+    args.ent_coef = trial.suggest_float("ent_coef", 1e-4, 5e-2, log=True)
+    args.vf_coef = trial.suggest_float("vf_coef", 0.25, 1.0)
+    args.max_grad_norm = trial.suggest_float("max_grad_norm", 0.5, 5.0)
+    args.anneal_lr = trial.suggest_categorical("anneal_lr", [False, True])
+
+    if args.reward_norm:
+        args.reward_clip = trial.suggest_categorical("reward_clip", [1.0, 2.0,3.0, 4.0,5.0])
+
+    if args.network_type == NetworkType.MLP:
+        hidden_choice = trial.suggest_categorical(
+            "mlp_hiddens",
+            ["128,64", "256,128,64", "256,256,128"],
+        )
+        args.mlp_hiddens = _parse_hiddens(hidden_choice)
+
+    if args.network_type == NetworkType.SEGMENTED_MLP:
+        hidden_choice = trial.suggest_categorical(
+            "seg_trunk_hiddens",
+            ["128,64", "196,64", "256,128"],
+        )
+        args.seg_trunk_hiddens = _parse_hiddens(hidden_choice)
+
+    if args.network_type == NetworkType.GRU_MLP:
+        args.gru_hidden = trial.suggest_categorical("gru_hidden", [64, 128, 196])
+        args.gru_num_layers = trial.suggest_int("gru_num_layers", 1, 2)
+        hidden_choice = trial.suggest_categorical(
+            "gru_trunk_hiddens",
+            ["64,64", "128,64", "128,128"],
+        )
+        args.gru_trunk_hiddens = _parse_hiddens(hidden_choice)
+
+    return args
+
+
+def _objective_from_state(final_state: dict) -> float:
+    episode_returns = final_state.get("episode_returns", [])
+    if len(episode_returns) == 0:
+        return -1e9
+    return float(np.mean(np.array(episode_returns, dtype=np.float64)))
+
+
+def _write_optuna_best_params(args: PPOArgs, study: Any) -> None:
+    if not args.optuna_best_params_path:
+        return
+
+    dir_name = os.path.dirname(args.optuna_best_params_path)
+    if dir_name:
+        os.makedirs(dir_name, exist_ok=True)
+
+    data = {
+        "best_value": study.best_value,
+        "best_params": study.best_params,
+        "best_trial": study.best_trial.number,
+    }
+    with open(args.optuna_best_params_path, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+        f.write("\n")
+    print(f"[Optuna] best params saved to {args.optuna_best_params_path}")
+
+
+def run_optuna(args: PPOArgs):
+    sampler = optuna.samplers.TPESampler(seed=args.seed)
+    pruner = optuna.pruners.MedianPruner(n_warmup_steps=3) if args.optuna_prune else optuna.pruners.NopPruner()
+    study = optuna.create_study(
+        study_name=args.optuna_study_name,
+        storage=args.optuna_storage,
+        direction="maximize",
+        sampler=sampler,
+        pruner=pruner,
+        load_if_exists=True,
+    )
+
+    def objective(trial: Any) -> float:
+        trial_args = _sample_optuna_args(args, trial)
+        final_state = run_training(trial_args, trial=trial)
+        return _objective_from_state(final_state)
+
+    study.optimize(objective, n_trials=args.optuna_trials, n_jobs=1)
+    print(f"[Optuna] best value: {study.best_value}")
+    print(f"[Optuna] best params: {study.best_params}")
+    _write_optuna_best_params(args, study)
+    return study
+
 #  主训练入口
 def main():
-    # 初始化
-    args = Args()
-    writer, device, envs, seg, run_name = init_training_setup(args)
+    args = PPOArgs()
+    if args.enable_optuna:
+        run_optuna(args)
+    else:
+        run_training(args)
 
-    # PPO配置
-    args.num_envs = envs.num_envs
-    args.batch_size = args.num_envs * args.num_steps
-    args.minibatch_size = args.batch_size // args.num_minibatches
-    n_actions = int(envs.single_action_space.n)
-
-    # 智能体 + 优化器
-    agent = PPOAgent(n_actions, seg, args).to(device)
-    print(f"[PPO] network_type={args.network_type}, params={agent.num_params():,}")
-    optimizer = optim.Adam(agent.parameters(), lr=args.learning_rate, eps=1e-5)
-
-    # 奖励归一化器
-    reward_normalizer = None
-    if args.reward_norm:
-        reward_normalizer = RewardNormalizer(clip=args.reward_clip)
-        print(f"[RewardNorm] enabled, clip={args.reward_clip}")
-
-    resume_path = args.resume_from or args.load_model_path
-    is_resume = bool(args.resume_from)
-    start_global_step, start_update, start_episode_count, episode_returns = (
-        load_checkpoint_if_requested(
-            resume_path, is_resume,
-            agent, optimizer, reward_normalizer,
-            device,
-        )
-    )
-
-    # 初始观测
-    next_obs_array, _ = envs.reset(seed=args.seed)
-    next_obs = torch.tensor(np.array(next_obs_array, dtype=np.float32)).to(device)#(num_envs,obs_dim)
-    next_done = torch.zeros(args.num_envs).to(device)#(num_envs,)
-    next_rnn_state = agent.get_initial_state(args.num_envs, device)#(num_envs,rec_state_size)
-
-    final_state = None
-    final_state = train(
-        args, agent, envs, optimizer, device, writer,
-        reward_normalizer, next_obs, next_done, next_rnn_state,
-        start_global_step, start_update, start_episode_count,
-        episode_returns,
-    )
-    
-    # 正常训练结束后的保存与导出
-    if args.save_model_path is not None and final_state is not None:
-        save_dict = {
-            "agent_state_dict": agent.state_dict(),
-            "optimizer_state_dict": optimizer.state_dict(),
-        }
-        save_pt_model(
-            args.save_model_path, save_dict, args,
-            reward_normalizer, extra=final_state,
-        )
-
-    # 资源清理
-    envs.close()
-    writer.close()
 
 if __name__ == "__main__":
     main()

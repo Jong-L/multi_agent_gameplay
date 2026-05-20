@@ -218,10 +218,10 @@ class DiscreteActorCriticAgent(nn.Module):
         ball_hiddens = as_hidden_tuple(cfg.ball_hidden, (cfg.ball_hidden,))
         enemy_hiddens = as_hidden_tuple(cfg.enemy_hidden, (cfg.enemy_hidden,))
         map_hiddens = as_hidden_tuple(cfg.map_hidden, (cfg.map_hidden,))
-        trunk_hiddens = as_hidden_tuple(cfg.trunk_hiddens, cfg.trunk_hiddens)
         mlp_hiddens = as_hidden_tuple(cfg.mlp_hiddens, cfg.mlp_hiddens)
 
         if self.network_type == NetworkType.SEGMENTED_MLP:
+            seg_trunk = as_hidden_tuple(cfg.seg_trunk_hiddens, cfg.seg_trunk_hiddens)
             self.encoder = SegmentedMlpEncoder(
                 obs_helper,
                 self_hiddens,
@@ -229,15 +229,16 @@ class DiscreteActorCriticAgent(nn.Module):
                 ball_hiddens,
                 enemy_hiddens,
                 map_hiddens,
-                trunk_hiddens,
+                seg_trunk,
             )
         elif self.network_type == NetworkType.MLP:
             self.encoder = FlatMlpEncoder(seg.total, mlp_hiddens)
         elif self.network_type == NetworkType.GRU_MLP:
+            gru_trunk = as_hidden_tuple(cfg.gru_trunk_hiddens, cfg.gru_trunk_hiddens)
             self.encoder = GruMlpEncoder(
                 obs_helper,
                 ball_hiddens=ball_hiddens,
-                trunk_hiddens=trunk_hiddens,
+                trunk_hiddens=gru_trunk,
                 gru_hidden=cfg.gru_hidden,
                 gru_num_layers=cfg.gru_num_layers,
                 gru_input_layernorm=cfg.gru_input_layernorm,

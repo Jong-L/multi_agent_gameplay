@@ -287,6 +287,10 @@ func _removed_ball_affects_player_ball_shaping(player: Player, removed_ball: Rew
 	if removed_dist > vision_radius:
 		return false
 
+	# NONE模式无球塑形
+	if cfg.ball_potential_func == RewardConfig.BallPotentialFunc.NONE:
+		return false
+	
 	#如果捡到的球在视野内
 	if (
 		cfg.ball_potential_func != RewardConfig.BallPotentialFunc.DISTANCE_REWARD
@@ -371,7 +375,9 @@ func _process_potential_shaping(_delta: float) -> void:
 		var pid := player.player_id
 		var cfg := _cfg(pid)
 
-		if cfg.ball_potential_func == RewardConfig.BallPotentialFunc.DISTANCE_REWARD:
+		if cfg.ball_potential_func == RewardConfig.BallPotentialFunc.NONE:
+			pass  # 无球塑形奖励
+		elif cfg.ball_potential_func == RewardConfig.BallPotentialFunc.DISTANCE_REWARD:
 			_process_ball_distance_reward(player, pid, cfg)
 		else:
 			_process_ball_potential_shaping(player, pid, cfg)
@@ -444,7 +450,7 @@ func _process_ball_distance_reward(player: Player, pid: int, cfg: RewardConfig) 
 
 # 奖励球势能
 func _calculate_ball_shaping_potential(player: Player, cfg: RewardConfig) -> float:
-	if cfg.ball_potential_func == RewardConfig.BallPotentialFunc.DISTANCE_REWARD:
+	if cfg.ball_potential_func in [RewardConfig.BallPotentialFunc.NONE, RewardConfig.BallPotentialFunc.DISTANCE_REWARD]:
 		return 0.0
 	if cfg.ball_potential_mode == RewardConfig.BallPotentialMode.ALL:
 		return calculate_ball_potential_all(player)
@@ -634,6 +640,8 @@ func calculate_ball_potential(player: Player) -> float:
 # 根据配置的势能函数类型，计算单个球的势能值
 func _calculate_single_ball_potential(dist: float, ball_reward: float, vision_radius: float, scale: float, func_type: RewardConfig.BallPotentialFunc) -> float:
 	match func_type:
+		RewardConfig.BallPotentialFunc.NONE:
+			return 0.0
 		RewardConfig.BallPotentialFunc.LINEAR:
 			# Φ = R_ball - (R_ball / r_vision) * d
 			return scale * maxf(0.0, ball_reward - ball_reward / vision_radius * dist)

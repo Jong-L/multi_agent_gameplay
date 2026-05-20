@@ -36,7 +36,7 @@ from custom_ppo_dataclass import NetworkType
 class ReplayConfig:
     """PPO 模型回放配置 — 直接修改默认值即可。"""
 
-    model_path: str = "saved_models\\mlp_p1_s1_episode280.pt"
+    model_path: str = "saved_models\\mlp_p1_s1_episode340.pt"
     """要加载的模型文件路径 (.pt)。"""
 
     env_path: Optional[str] = "curriculum_envs\\s1-no-wall-for ball\\build\\game.exe"
@@ -86,7 +86,7 @@ def build_replay_args(checkpoint_data: dict):
     当前 save_pt_model 格式保证 args 中所有字段均为纯 Python 字面量。
     若 checkpoint 缺字段直接报错，不提供 fallback。
     """
-    from custom_ppo_dataclass import Args as TrainArgs
+    from custom_ppo_dataclass import PPOArgs as TrainArgs
 
     # checkpoint 中保存的 args 即为完整 TrainArgs 字段
     # 过滤掉不属于 Args 的运行时字段（如 reward_normalizer）
