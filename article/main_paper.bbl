@@ -1,4 +1,4 @@
-\begin{thebibliography}{3}
+\begin{thebibliography}{8}
 \providecommand{\natexlab}[1]{#1}
 \providecommand{\url}[1]{#1}
 \expandafter\ifx\csname urlstyle\endcsname\relax\else
@@ -18,6 +18,33 @@ SUTTON R~S, BARTO A~G.
 \newblock Cambridge, MA: MIT Press, 2018.
 \newblock \url{http://incompleteideas.net/book/the-book.html}.
 
+\bibitem[Lowe et~al.(2017)Lowe, Wu, Tamar, Harb, Abbeel, and
+  Mordatch]{lowe2017maddpg}
+LOWE R, WU Y, TAMAR A, et~al.
+\newblock Multi-agent actor-critic for mixed cooperative-competitive
+  environments\allowbreak[C]//\allowbreak
+Advances in Neural Information Processing Systems (NeurIPS): Vol.~30.
+\newblock 2017: 6379-6390.
+
+\bibitem[Rashid et~al.(2018)Rashid, Samvelyan, de~Witt, Farquhar, Foerster, and
+  Whiteson]{rashid2018qmix}
+RASHID T, SAMVELYAN M, DE~WITT C~S, et~al.
+\newblock {QMIX}: Monotonic value function factorisation for deep multi-agent
+  reinforcement learning\allowbreak[C]//\allowbreak
+Proceedings of the 35th International Conference on Machine Learning (ICML):
+  Vol.~80.
+\newblock PMLR, 2018: 4295-4304.
+
+\bibitem[Sunehag et~al.(2018)Sunehag, Lever, Gruslys, Czarnecki, Zambaldi,
+  Jaderberg, Lanctot, Sonnerat, Leibo, Tuyls, and
+  Graepel]{sunehag2018valuedecomposition}
+SUNEHAG P, LEVER G, GRUSLYS A, et~al.
+\newblock Value-decomposition networks for cooperative multi-agent
+  learning\allowbreak[C]//\allowbreak
+Proceedings of the 17th International Conference on Autonomous Agents and
+  MultiAgent Systems (AAMAS).
+\newblock 2018: 2085-2087.
+
 \bibitem[de~Witt et~al.(2020)de~Witt, Gupta, Makoviichuk, Makoviychuk, Torr,
   Sun, and Whiteson]{dewitt2020independentlearningneedstarcraft}
 DE~WITT C~S, GUPTA T, MAKOVIICHUK D, et~al.
@@ -34,5 +61,19 @@ NG A, HARADA D, RUSSELL S~J.
 International Conference on Machine Learning.
 \newblock 1999.
 \newblock \url{https://api.semanticscholar.org/CorpusID:5730166}.
+
+\bibitem[Schulman et~al.(2016)Schulman, Moritz, Levine, Jordan, and
+  Abbeel]{schulman2015highdimensional}
+SCHULMAN J, MORITZ P, LEVINE S, et~al.
+\newblock High-dimensional continuous control using generalized advantage
+  estimation\allowbreak[C]//\allowbreak
+International Conference on Learning Representations (ICLR).
+\newblock 2016.
+
+\bibitem[Schulman et~al.(2017)Schulman, Wolski, Dhariwal, Radford, and
+  Klimov]{schulman2017proximal}
+SCHULMAN J, WOLSKI F, DHARIWAL P, et~al.
+\newblock Proximal policy optimization algorithms\allowbreak[A].
+\newblock 2017.
 
 \end{thebibliography}

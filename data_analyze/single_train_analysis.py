@@ -1,6 +1,7 @@
 """
 Single Training Analysis
-Analyze individual training runs and plot total ball reward with mean reference line
+Analyze individual training runs and plot total ball reward with mean reference line.
+使用两级平滑管线 (高斯滤波 → 样条插值)，产出论文级图表。
 """
 
 import pandas as pd
@@ -9,9 +10,11 @@ import seaborn as sns
 import numpy as np
 from pathlib import Path
 
-# Set seaborn style
-sns.set_style("whitegrid")
-sns.set_context("paper", font_scale=1.3)
+from publication_plot_utils import (
+    setup_style, save_figure,
+    prepare_curve, plot_with_fill, add_stats_box, style_axes,
+    COLORS,
+)
 
 BALL_SOURCES = ['collect_ball_A', 'collect_ball_B']
 
@@ -21,11 +24,9 @@ def load_and_aggregate_ball_data(file_path):
     df = pd.read_csv(file_path)
     ball_df = df[df['source'].isin(BALL_SOURCES)]
     
-    # Aggregate by episode and player
     aggregated = ball_df.groupby(['episode_id', 'player_id'])['value'].sum().reset_index()
     aggregated.columns = ['episode_id', 'player_id', 'total_ball_reward']
     
-    # Sum across all players per episode
     episode_totals = aggregated.groupby('episode_id')['total_ball_reward'].sum().reset_index()
     episode_totals.columns = ['episode_id', 'total_ball_reward']
     
@@ -38,81 +39,49 @@ def load_and_aggregate_ball_data(file_path):
     return episode_totals
 
 
-def smooth_curve(y, window=5):
-    """Apply moving average smoothing"""
-    if len(y) < window:
-        return y
-    return np.convolve(y, np.ones(window)/window, mode='valid')
-
-
-def plot_single_training(episode_data, title, save_path, smooth_window=10):
+def plot_single_training(episode_data, title, save_path, smooth_window=5):
     """Plot total ball reward with mean reference line"""
+    setup_style()
+    
     fig, ax = plt.subplots(1, 1, figsize=(10, 6), dpi=150)
     
     episodes = episode_data['episode_id'].values
     rewards = episode_data['total_ball_reward'].values
     mean_reward = episode_data['total_ball_reward'].mean()
     
-    # Smoothing
-    if smooth_window > 1 and len(rewards) > smooth_window:
-        smoothed_rewards = smooth_curve(rewards, smooth_window)
-        smoothed_episodes = episodes[smooth_window-1:]
-    else:
-        smoothed_rewards = rewards
-        smoothed_episodes = episodes
+    # ── 两级平滑管线 ──────────────────────────────────
+    x_smooth, y_smooth, y_lower, y_upper = prepare_curve(
+        episodes, rewards,
+        errors=np.full_like(rewards, 4.0),  # 固定 4 单位半带宽
+        smooth_window=smooth_window,
+    )
     
-    # Plot reward curve
-    sns.lineplot(x=smoothed_episodes, y=smoothed_rewards,
-                color='#0173B2',
-                linewidth=1.5,
-                label='Total Ball Reward',
-                ax=ax)
+    plot_with_fill(ax, x_smooth, y_smooth, y_lower, y_upper,
+                   color=COLORS['blue'], label='Total Ball Reward')
     
-    # 添加淡色填充以增强水墨效果
-    ax.fill_between(smoothed_episodes, smoothed_rewards - 8, smoothed_rewards + 8, 
-                  alpha=0.3, color='#0173B2', zorder=1)
-    
-    # Plot mean reference line
-    ax.axhline(y=mean_reward, 
-               color='#DE8F05', 
-               linestyle='--', 
-               linewidth=2,
+    # ── 均值参考线 ────────────────────────────────────
+    ax.axhline(y=mean_reward, color=COLORS['orange'],
+               linestyle='--', linewidth=2,
                label=f'Mean: {mean_reward:.2f}')
     
-    ax.set_xlabel('Episode', fontsize=12)
-    ax.set_ylabel('Total Ball Reward', fontsize=12)
-    ax.set_title(title, fontsize=14, fontweight='bold')
-    ax.legend(loc='upper left', fontsize=10, frameon=True)
-    ax.set_xlim(0, None)
-    ax.set_ylim(bottom=0)
+    style_axes(ax, xlabel='Episode', ylabel='Total Ball Reward', title=title,
+               xlim=(0, None), ylim=(0, None))
     
-    # Add statistics text box
+    # ── 统计信息 ──────────────────────────────────────
     stats_text = f"Episodes: {len(episode_data)}\n"
     stats_text += f"Mean: {mean_reward:.2f}\n"
     stats_text += f"Max: {episode_data['total_ball_reward'].max():.2f}\n"
     stats_text += f"Min: {episode_data['total_ball_reward'].min():.2f}"
-    
-    ax.text(0.98, 0.98, stats_text, 
-           transform=ax.transAxes,
-           verticalalignment='top',
-           horizontalalignment='right',
-           bbox=dict(boxstyle='round', facecolor='white', alpha=0.9, edgecolor='gray'),
-           fontsize=10,
-           family='monospace')
+    add_stats_box(ax, stats_text, loc='upper right')
     
     plt.tight_layout()
-    
-    if save_path:
-        plt.savefig(save_path, dpi=300, bbox_inches='tight', facecolor='white')
-        print(f"Saved: {save_path}")
-    
+    save_figure(fig, save_path)
     return fig
 
 
 def main():
     base_dir = r"D:\schoolTour\softwares\multi-agent-gameplay\logs\game_reward_log"
     
-    # Define files to analyze
     files = {
         'Linear Potential': {
             'path': f"{base_dir}\\train_rewards_ball_lrrs_2026-04-24_18-24-19_pid29760.csv",
@@ -137,14 +106,11 @@ def main():
             print(f"[ERROR] File not found: {info['path']}")
             continue
         
-        # Load data
         episode_data = load_and_aggregate_ball_data(info['path'])
-        
-        # Plot
-        fig = plot_single_training(episode_data, 
-                                   f'Single Training: {name}', 
-                                   info['output'],
-                                   smooth_window=5)
+        plot_single_training(episode_data,
+                             f'Single Training: {name}',
+                             info['output'],
+                             smooth_window=5)
     
     print("\n" + "="*60)
     print("Analysis Complete!")
@@ -152,9 +118,6 @@ def main():
     print("\nGenerated files:")
     for name, info in files.items():
         print(f"  - {info['output']}")
-    
-    print("\nDisplaying plots... (close windows to exit)")
-    plt.show()
 
 
 if __name__ == "__main__":
