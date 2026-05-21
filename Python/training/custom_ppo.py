@@ -485,7 +485,8 @@ def train(
     start_time = time.time()
     num_updates = args.total_timesteps // args.batch_size
     episode_count = start_episode_count
-    optuna_max_len = None if trial is None else 20
+    optuna_max_len = 20 if trial is None else 100
+    # print(optuna_max_len)
     episode_returns = deque(start_episode_returns or [], maxlen=optuna_max_len)#最近20个回合的奖励
     accum_rewards: np.ndarray = np.zeros(args.num_envs)#每回合累计奖励
     next_checkpoint_episode = None
@@ -798,25 +799,20 @@ def _sample_optuna_args(base_args: PPOArgs, trial: Any) -> PPOArgs:
     args.save_model_path = None
     args.save_checkpoint = False
     args.track = False
-    args.seed = int(base_args.seed + trial.number)
+    # args.seed = int(base_args.seed + trial.number)
     args.exp_name = f"{base_args.exp_name}_optuna_trial_{trial.number}"
     args.total_timesteps = int(base_args.optuna_timesteps)
 
     args.learning_rate = trial.suggest_float("learning_rate", 1e-5, 1e-3, log=True)
     args.num_steps = trial.suggest_categorical("num_steps", [64, 128, 256])
-    args.num_minibatches = trial.suggest_categorical("num_minibatches", [2, 4, 8])
-    args.update_epochs = trial.suggest_int("update_epochs", 3, 10)
-    # gamma 固定使用 base_args 的值，不参与搜索
-    args.gae_lambda = trial.suggest_float("gae_lambda", 0.85, 0.98)
-    args.clip_coef = trial.suggest_float("clip_coef", 0.1, 0.3)
+
+    args.clip_coef = trial.suggest_float("clip_coef", 0.15, 0.25)
     args.ent_coef = trial.suggest_float("ent_coef", 1e-4, 5e-2, log=True)
-    args.vf_coef = trial.suggest_float("vf_coef", 0.25, 1.0)
-    args.max_grad_norm = trial.suggest_float("max_grad_norm", 0.5, 5.0)
-    args.anneal_lr = trial.suggest_categorical("anneal_lr", [False, True])
     args.reward_norm = trial.suggest_categorical("reward_norm", [True, False])
+    args.anneal_lr = trial.suggest_categorical("anneal_lr", [False, True])
 
     if args.reward_norm:
-        args.reward_clip = trial.suggest_categorical("reward_clip", [1.0, 2.0,3.0, 4.0,5.0])
+        args.reward_clip = trial.suggest_categorical("reward_clip", [1.0, 2.0,3.0])
 
     if args.network_type == NetworkType.MLP:
         hidden_choice = trial.suggest_categorical(
@@ -871,11 +867,20 @@ def _write_optuna_best_params(args: PPOArgs, study: Any) -> None:
 
 
 def run_optuna(args: PPOArgs):
+    # 确保 optuna storage / best_params 父目录存在（避免 sqlite3.OperationalError）
+    if args.optuna_storage and args.optuna_storage.startswith("sqlite:///"):
+        db_path = args.optuna_storage[len("sqlite:///"):]
+        parent = os.path.dirname(db_path)
+        if parent:
+            os.makedirs(parent, exist_ok=True)
+    if args.optuna_best_params_path:
+        os.makedirs(os.path.dirname(args.optuna_best_params_path), exist_ok=True)
+
     sampler = optuna.samplers.TPESampler(seed=args.seed)
     pruner = (
         optuna.pruners.MedianPruner(
             n_warmup_steps=100,
-            n_startup_trials=10,
+            n_startup_trials=8,
             interval_steps=10,
         )
         if args.optuna_prune
