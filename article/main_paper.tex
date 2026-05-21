@@ -232,7 +232,7 @@
   \setlength{\tabcolsep}{6pt}
   \renewcommand{\arraystretch}{1.8}
   \begin{tabularx}{0.85\textwidth}{r@{\hspace{0.5em}}X}
-    论文题目： & \uline{基于多智能体强化学习的2D竞技场博弈对抗研究} \\[0.2ex]
+    论文题目： & \uline{基于机器学习的无人机博弈对抗研究} \\[0.2ex]
     院~~~~~系： & \uline{控计学院} \\[0.2ex]
     专~~~~~业： & \uline{计算机科学与技术} \\[0.2ex]
     班~~~~~级： & \uline{计算2202} \\[0.2ex]
@@ -253,24 +253,16 @@
 % ----------------------------------------------------------
 \begin{cnabstract}{多智能体强化学习；独立近端策略优化；博弈对抗；奖励塑形；循环神经网络}
 
-多智能体强化学习（Multi-Agent Reinforcement Learning, MARL）致力于解决多个自主智能体
-在共享环境中通过交互学习最优策略的问题，在实时策略博弈、机器人集群协作等复杂决策场景
-中具有重要的研究价值与应用前景。
+强化学习是机器学习及人工智能领域比较重要的研究方向与工程方法，用于解决序列决策问题，近年来特别是在游戏，机器人路径规划，策略博弈等场景中被广泛使用。机器博弈研究多个智能体在环境中的对抗与合作行为，通过交互学习最优策略，在实时策略博弈、机器人集群协作等复杂决策场景中具有重要的研究价值与应用前景。
 
-本文基于 Godot 游戏引擎构建了 2D 俯视角多智能体竞技场博弈环境《Tiny Swords》，
-设计了包含自身状态、对手信息、实体感知与 LiDAR 射线检测的 174 维分段式观测空间，
-以及基于势能的奖励塑形（Potential-Based Reward Shaping, PBRS）系统，
-涵盖奖励球引导、障碍物避障与差异化事件奖励。
-采用独立近端策略优化（Independent PPO, IPPO）算法，
-通过课程学习与大量消融实验，系统研究了势函数形式、障碍物处理策略与
-网络架构对智能体基础行为的影响。
+本文基于 Godot 游戏引擎开发构建了 2D 俯视角多智能体混战竞技场博弈环境《Tiny Swords》，
+设计并实现了包含自身状态、对手信息、游戏内元素感知与 LiDAR 射线检测障碍物的 174 维分段式观测空间，并为每个智能体单独设计了游戏事件的奖励函数，制定了博弈规则。进一步地为了解决奖励稀疏的问题，采用了小事件稠密引导奖励和基于势能的奖励塑形方法，提高了策略收敛速度。在此基础上采用独立近端策略优化算法，先在单智能体环境下通过课程学习让智能体从易到难地学习期望行为，同时进行了必要的消融实验，对比与讨论了在该特定环境下势函数形式、障碍物处理策略与网络架构对智能体基础行为的影响。
 
-在此基础上，针对多智能体训练中的非平稳性问题，
-本文设计了迭代自博弈训练框架：
-各智能体独立训练至收敛后，采用冻结对手、轮换微调的方式驱动策略持续对抗进化，
+此后将训练好的智能体放在多智能体环境中学习博弈与对抗，针对多智能体训练中的非平稳性与违反单智能体强化学习算法假设问题，为了让智能体体现出对抗性，
+本文采用了简化的虚拟自博弈训练框架：
+采用冻结对手、轮换微调的方式驱动策略持续对抗进化，
 并引入对手池管理与 ELO 评分机制追踪策略强度变迁。
-实验结果表明，迭代自博弈能够有效促使智能体涌现出策略循环与行为分化，
-验证了该方法在驱动多智能体博弈对抗中的有效性。
+实验结果表明，该自博弈框架能够有效促使智能体涌现出对抗策略与行为，并减少了策略方差。
 
 \end{cnabstract}
 
@@ -278,31 +270,6 @@
 % 英文摘要
 % ----------------------------------------------------------
 \begin{enabstract}{Multi-Agent Reinforcement Learning; Independent PPO; Game-Theoretic Adversarial; Reward Shaping; Recurrent Neural Network}
-
-This is the English abstract. It should correspond to the Chinese abstract,
-with approximately the same content and length.
-
-Multi-Agent Reinforcement Learning (MARL) addresses the problem of multiple autonomous agents
-learning optimal policies through interaction in shared environments, with significant research
-value and application prospects in complex decision-making scenarios such as real-time strategy
-games and robot swarm coordination.
-
-This paper constructs a 2D top-down multi-agent arena game environment called ``Tiny Swords''
-based on the Godot game engine. A 174-dimensional segmented observation space encompassing
-self-state, opponent information, entity perception, and LiDAR ray detection is designed,
-along with a Potential-Based Reward Shaping (PBRS) system covering ball collection guidance,
-obstacle avoidance, and differentiated event rewards. Using the Independent Proximal Policy
-Optimization (IPPO) algorithm, the influence of potential function forms, obstacle handling
-strategies, and network architectures on agent behavior is systematically studied through
-curriculum learning and extensive ablation experiments.
-
-To address the non-stationarity problem in multi-agent training, this paper proposes an
-iterative self-play training framework: after independent training to convergence,
-agents are sequentially fine-tuned against frozen opponents, driving continuous competitive
-strategy evolution. An opponent pool management and Elo rating mechanism is introduced to
-track strategy strength dynamics. Experimental results demonstrate that iterative self-play
-effectively drives agents to exhibit strategy cycles and behavioral differentiation,
-validating the effectiveness of the proposed approach in multi-agent competitive scenarios.
 
 \end{enabstract}
 
@@ -329,62 +296,55 @@ validating the effectiveness of the proposed approach in multi-agent competitive
 \setcounter{page}{1}
 \pagestyle{fancy}
 
-% ==================== 前言 ====================
-\unnumberedsection{前言}
-
-前言部分说明研究背景、目的和意义，介绍论文的主要研究内容和结构安排。
-注意前言不编"第*章"号。
-
-近年来，人工智能技术在实时博弈对抗领域的应用日益广泛，
-从 AlphaGo 在围棋中超越人类顶尖棋手，到 AlphaStar 在星际争霸II中达到宗师级水平，
-再到 OpenAI Five 在 Dota 2 中击败世界冠军队伍，
-强化学习（Reinforcement Learning, RL）已展现出在复杂决策问题中的巨大潜力\cite{sutton2018reinforcement}。
-
-多智能体强化学习（MARL）将 RL 框架拓展至多个智能体共享环境的场景，
-其核心挑战在于环境的非平稳性（non-stationarity）：
-每个智能体的策略变化都会改变其他智能体所面对的环境动态，
-使得单智能体 RL 的理论保证不再直接适用。
-在博弈对抗场景中，智能体不仅需要学会利用环境中的资源，
-更需要学会感知对手策略并作出适应性调整，
-这正是本课题关注的核心问题。
-
-本文围绕"构建博弈环境、训练基础策略、驱动策略对抗进化"三个层次展开研究。
-首先，基于 Godot 引擎开发了《Tiny Swords》2D 竞技场多智能体博弈环境，
-设计了高维分段观测空间与多层奖励塑形系统；
-其次，采用 IPPO 算法训练智能体掌握吃球、战斗、避障等基础行为，
-通过势函数对比、网络架构消融等实验确定最优配置；
-最后，提出迭代自博弈训练框架，驱动智能体在持续对抗中涌现出策略循环与行为分化。
-
 % ==================== 第1章 ====================
 \section{绪论}
 
 \subsection{研究背景与意义}
 
-博弈对抗是人工智能领域的核心挑战之一。
-从早期的国际象棋程序 Deep Blue，到近年来的 AlphaGo、AlphaStar、OpenAI Five，
-AI 在博弈领域的每一次突破都标志着智能决策技术的重大进步。
+强化学习（Reinforcement Learning, RL）是机器学习的重要分支，
+通过试错与环境交互学习最优策略，已在复杂决策问题中展现出巨大潜力——
+从 AlphaGo\cite{Silveralphago2016} 在围棋中超越人类顶尖棋手，
+到 AlphaStar\cite{VinyalsAlphaStar2019} 在星际争霸II中达到宗师级水平，
+再到 OpenAI Five 在 Dota 2 中击败世界冠军队伍\cite{openai2019dota2largescale}，
+这些里程碑不仅展示了 RL 的技术高度，更揭示了一个深层规律：
+AI 的重大突破往往发生在博弈对抗场景中。
+
+博弈对抗之所以成为 AI 研究的试金石，在于它天然要求智能体具备适应性决策能力。
+在博弈场景中，智能体不仅需要利用环境资源、遵循游戏规则，
+更需要感知对手策略并作出动态调整——
+"最优"策略并非静态存在，而是相对于对手策略的函数。
+从早期的 Deep Blue\cite{CAMPBELL200257} 到近年来的 AlphaStar，
+AI 博弈能力每一次提升的背后，都是对对手建模、策略适应与对抗进化等核心问题的深入回应。
 与完全信息的棋盘博弈不同，实时策略博弈具有状态空间庞大、信息不完全、
 决策异步等特点，更贴近真实世界的决策场景。
 
-多智能体强化学习为博弈对抗提供了一套端到端的学习框架。
-通过让智能体在环境中反复试错，RL 能够自动发现超越人类先验知识的策略。
-然而，在 MARL 场景下，环境非平稳性、信用分配（credit assignment）和
-探索-利用权衡等问题相互交织，给训练带来了额外的挑战。
+良好的博弈能力体现在智能体面对各种各样的对手时都有不错的表现，为了体现对手的丰富性，本课题将强化学习智能体作为对手，在多智能体博弈中研究智能体如何能够应对纷繁复杂，行为各不一致的对手。
 
-本文旨在构建一个可控的 2D 多智能体博弈实验平台，
-系统研究从环境设计、奖励工程到策略对抗进化的完整流程，
-为多智能体博弈对抗的理论研究提供实践经验与实验支撑。
+当多个自学习智能体共处同一博弈环境时，问题从单智能体优化升级为博弈动力学问题。
+多智能体强化学习（Multi-Agent RL, MARL）面临的核心挑战是非平稳性（non-stationarity）：
+每个智能体的策略更新都会改变其他智能体面对的环境转移概率，
+使单智能体 RL 中的 Markov 决策过程（MDP）假设不再成立\cite{lowe2017maddpg}。
+在博弈论视角下，多智能体对抗的本质不是"谁的学习算法更强"，
+而是"策略之间的对抗动力学将涌现出怎样的均衡或循环"——
+博弈中的策略循环（strategy cycle）与策略非传递性（non-transitivity）等
+现象，是对抗性多智能体系统的核心研究对象。
 
 \subsection{国内外研究现状}
+
+\subsubsection{强化学习}
+
+\subsubsection{多智能体对抗}
 
 MARL 的研究可大致分为三类范式：集中训练集中执行（CTCE）、
 集中训练分散执行（CTDE）和分散训练分散执行（DTDE）。
 
 在 CTDE 范式下，MADDPG\cite{lowe2017maddpg}通过集中 Critic 利用全局信息、
-分散 Actor 仅依赖局部观测，有效缓解了非平稳性问题；
+分散 Actor 仅依赖局部观测，有效缓解了非平稳性问题，在协作型任务中表现出色；
 QMIX\cite{rashid2018qmix}和 VDN\cite{sunehag2018valuedecomposition}通过值函数分解
 实现了多智能体协作。在 DTDE 范式下，IPPO\cite{dewitt2020independentlearningneedstarcraft}
-将 PPO 独立应用于每个智能体，以其简洁性和实用性在多个 MARL 基准上取得了有竞争力的结果。
+将 PPO 独立应用于每个智能体，同样用于协作型任务，以其简洁性和实用性在多个 MARL 基准上取得了有竞争力的结果。
+
+而对于博弈场景，如何让智能体学会博弈，能够对抗，主要有以下研究：
 
 自博弈（self-play）是驱动策略进化的重要范式。
 AlphaGo 通过自我对弈生成训练数据不断精进棋力；
@@ -392,6 +352,7 @@ AlphaStar 引入了联盟训练（league training），维护多个历史策略�
 有效防止策略坍塌。Fictitious Play 和 Prioritized Fictitious Self-Play（PFSP）
 则为自博弈提供了博弈论基础。
 
+\subsubsection{强化学习训练技术}
 在奖励工程方面，势能奖励塑形（PBRS）\cite{Ng1999PolicyIU}通过引入势函数
 为状态空间赋予先验知识，在保持最优策略不变的前提下加速学习。
 在 MARL 中，奖励设计还需考虑智能体间的激励相容问题。
