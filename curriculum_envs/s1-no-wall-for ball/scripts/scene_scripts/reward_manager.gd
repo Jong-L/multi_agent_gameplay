@@ -431,7 +431,7 @@ func _process_ball_potential_shaping(player: Player, pid: int, cfg: RewardConfig
 	var prev_potential: float = _prev_ball_potentials.get(pid, current_potential)
 	var shaping: float = _shaping_gamma * current_potential - prev_potential
 	
-	#if pid==1:
+	#if pid==0:
 		#print(shaping)
 	
 	player.ai_controller.reward += shaping

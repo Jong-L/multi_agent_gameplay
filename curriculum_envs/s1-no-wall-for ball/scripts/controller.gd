@@ -27,7 +27,7 @@ func reset():
 	super.reset()
 	_prev_action = Player.Action.IDLE
 	if _player is Player:#加这个判断用于代码提示，写在同一行条件语句没有代码提示
-		if _player.player_id==0:#只用重置一次
+		if _player == play_scene.players[0]:#场景树中第一个 player 触发重置
 			play_scene._handle_reset()
 
 func get_obs() -> Dictionary:
