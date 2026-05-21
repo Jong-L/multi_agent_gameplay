@@ -78,7 +78,7 @@ class PPOArgs:
     """策略熵损失系数"""
     vf_coef: float = 0.5
     """价值函数损失系数"""
-    max_grad_norm: float = 0.5
+    max_grad_norm: float = 4.0
     """梯度裁剪阈值"""
     norm_adv: bool = True
     """是否对优势函数标准化"""
@@ -161,6 +161,8 @@ class AgentConfig:
     """智能体编号（0~num_agents-1）"""
     train: bool = True
     """是否训练该智能体"""
+    act_when_not_training: bool = False
+    """train=False 时是否仍使用该 agent 的策略动作；False 则使用随机动作"""
 
     network_type: NetworkType = NetworkType.MLP
     """网络类型"""
@@ -303,6 +305,20 @@ class IppoArgs:
     """是否启用 PFSP 对手池训练模式（每局只更新一个智能体，其余从池中采样）"""
     pool_max_size: int = 40
     """对手池最大容量（~10/agent）"""
+    pool_slots_per_agent: int = 20
+    """每个 agent slot 的队列容量，对应 opponent_pool[agent_id][slot_index]"""
+    pool_initial_keep_per_agent: int = 10
+    """从初始 IPPO 中断点目录中为每个 agent 载入最近多少个 checkpoint"""
+    pool_phase_timesteps: int = 800_000
+    """轮回对手池训练中，每个主 agent phase 的训练步数"""
+    pool_rounds: int = 3
+    """完整轮回次数；每轮按 pool_main_agent_order 依次训练"""
+    pool_main_agent_order: tuple = (0, 1, 2, 3)
+    """轮回训练顺序"""
+    pool_final_agent_id: int = 0
+    """轮回结束后额外长训练的主 agent"""
+    pool_final_timesteps: int = 3_000_000
+    """轮回结束后对 pool_final_agent_id 的额外训练步数"""
     pool_save_interval: int = 50_000
     """全局步数间隔：每隔多少步把当前四智能体快照加入对手池"""
     pool_checkpoint_dir: Optional[str] = None
@@ -313,6 +329,10 @@ class IppoArgs:
     """均匀采样概率（避免胜率估计过时）"""
     pool_win_rate_ema: float = 0.95
     """胜率 EMA 衰减系数"""
+    pool_reward_ema: float = 0.9
+    """按主 agent 回合平均奖励更新对手难度的 EMA 衰减系数"""
+    pool_default_reward_score: float = 0.0
+    """没有交手记录的对手组默认回合平均奖励；采样时奖励越低概率越高"""
     pool_elo_k_factor: float = 32.0
     """ELO 评分 K 因子"""
     pool_use_recency_bias: bool = True
@@ -325,6 +345,20 @@ class IppoArgs:
     """Phase 2 基线 checkpoint 目录，用于初始化对手池"""
     pool_log_every_n_updates: int = 10
     """每 N 个 update 打印一次对手池详细统计"""
+    pool_delete_replaced_checkpoints: bool = False
+    """队列挤出旧条目时是否删除对应 checkpoint 文件"""
+    pool_bootstrap_checkpoint_timesteps: int = 1_000_000
+    """IPPO 直接训练阶段：保存中断点的训练步数"""
+    pool_bootstrap_extra_timesteps: int = 8_000_000
+    """IPPO 直接训练阶段：不保存中断点的额外训练步数"""
+    pool_final_save_agent_ids: tuple = (0,)
+    """IPPO 直接训练或对手池最终保存时，需要保存的 agent id"""
+    pool_eval_groups: int = 4
+    """对比评价时随机抽取多少组对手 checkpoint"""
+    pool_eval_episodes_per_group: int = 20
+    """每组对手评价多少个 episode"""
+    pool_eval_output_path: Optional[str] = "logs/ippo_pool_eval.csv"
+    """对比评价 CSV 输出路径"""
 
     # Runtime-derived values
     num_agents: int = 0
@@ -362,10 +396,16 @@ class PoolEntry:
     """归属哪个 agent slot（0~3）"""
     global_step: int
     """快照时的训练全局步数"""
+    slot_index: int = 0
+    """该条目在对应 agent 队列中的位置"""
+    source: str = ""
+    """条目来源，例如 bootstrap / pool_phase"""
     elo_rating: float = 1200.0
     """ELO 评分"""
     win_rate: float = 0.5
     """训练 agent 对该对手的 EMA 胜率 (0=全败, 1=全胜)"""
+    main_reward_ema: float = 0.0
+    """训练主 agent 面对该条目所在对手组时的回合平均奖励 EMA"""
     n_games: int = 0
     """该对手参与的游戏局数"""
     age: int = 0
@@ -376,8 +416,12 @@ class OpponentPool:
     """PFSP 对手池，管理所有 agent slot 的历史策略快照。"""
     entries: list[PoolEntry] = field(default_factory=list)
     """所有池条目"""
+    entries_by_agent: dict[int, list[PoolEntry]] = field(default_factory=dict)
+    """按 agent_id 分组后的队列，形如 opponent_pool[agent_id][slot_index]"""
     max_size: int = 40
     """池总容量（~10/agent）"""
+    per_agent_max_size: int = 20
+    """每个 agent slot 的队列容量"""
     save_interval: int = 50_000
     """快照保存间隔（全局步数）"""
     last_save_step: int = 0
