@@ -68,7 +68,7 @@ class PPOArgs:
     """GAE 的 lambda 参数"""
     num_minibatches: int = 4
     """将 rollout 数据分成多少个小批量"""
-    update_epochs: int = 8
+    update_epochs: int = 5
     """每个 rollout 的更新轮数"""
     recurrent_seq_len: int = 128
     """循环网络（GRU）的序列截断长度"""
@@ -78,13 +78,13 @@ class PPOArgs:
     """策略熵损失系数"""
     vf_coef: float = 0.5
     """价值函数损失系数"""
-    max_grad_norm: float = 4.0
+    max_grad_norm: float = 0.5
     """梯度裁剪阈值"""
     norm_adv: bool = True
     """是否对优势函数标准化"""
     clip_vloss: bool = True
     """是否裁剪价值函数损失"""
-    anneal_lr: bool = False
+    anneal_lr: bool = True
     """是否对学习率退火（随训练进度线性衰减）"""
     target_kl: Optional[float] = None
     """早停目标 KL 散度阈值（None 则禁用早停）"""
@@ -94,11 +94,11 @@ class PPOArgs:
     """是否使用 CUDA 加速"""
     reward_norm: bool = True
     """是否启用奖励归一化"""
-    reward_clip: float = 5.0
+    reward_clip: float = 3.0
     """Reward normalization clipping range."""
 
     # Optuna hyperparameter tuning
-    enable_optuna: bool = False
+    enable_optuna: bool = True
     """Enable Optuna hyperparameter search instead of one normal training run."""
     optuna_trials: int = 100
     """Number of Optuna trials to run."""
@@ -106,8 +106,8 @@ class PPOArgs:
     """Training timesteps used by each trial."""
     optuna_study_name: str = "custom_ppo_optuna"
     """Optuna study name."""
-    # optuna_storage: Optional[str] = "sqlite:///logs/optuna/custom_ppo.db"
-    optuna_storage: Optional[str] = None
+    optuna_storage: Optional[str] = "sqlite:///logs/optuna/custom_ppo.db"
+    # optuna_storage: Optional[str] = None
     """Optuna storage URI (sqlite for persistence across crashes)."""
     optuna_best_params_path: Optional[str] = "logs/optuna/custom_ppo_best_params.json"
     """Where to write the best trial parameters after tuning."""
