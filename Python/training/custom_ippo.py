@@ -237,7 +237,10 @@ def collect_parallel_rollout_ippo(
             buffers[i]["obs"][step] = obs_i
             buffers[i]["dones"][step] = done_i
 
-            if agents_cfg[i].train:
+            use_policy_action = agents_cfg[i].train or getattr(
+                agents_cfg[i], "act_when_not_training", False
+            )
+            if use_policy_action:
                 with torch.no_grad():
                     if agents[i].is_recurrent:
                         rnn_states[i] = rnn_states[i] * (1.0 - done_i).view(-1, 1)
@@ -658,6 +661,7 @@ def train_agent_update(
     """
     num_steps = rollout.obs.shape[0]
     n_game_envs = rollout.obs.shape[1]
+    rollout_batch_size = num_steps * n_game_envs
 
     #GAE
     with torch.no_grad():
@@ -750,13 +754,14 @@ def train_agent_update(
                 if approx_kl > args.target_kl:
                     break
     else:
-        b_inds = np.arange(args.batch_size)#batch indices
+        b_inds = np.arange(rollout_batch_size)#batch indices
+        minibatch_size = min(args.minibatch_size, rollout_batch_size)
 
         for epoch in range(args.update_epochs):
             np.random.shuffle(b_inds)
 
-            for start in range(0, args.batch_size, args.minibatch_size):
-                end = start + args.minibatch_size
+            for start in range(0, rollout_batch_size, minibatch_size):
+                end = start + minibatch_size
                 mb_inds = b_inds[start:end]
 
                 _, new_logprob, entropy, new_value = agent.get_action_and_value( #shape(minibatch_size,1)
