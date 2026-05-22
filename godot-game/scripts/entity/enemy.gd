@@ -30,7 +30,7 @@ enum State {
 @export var out_of_bounds_time: float = 2.0      #离开巡逻范围多久触发返回
 @export var patrol_idle_time: float = 2.0        #巡逻点到达后等待时长
 @export var patrol_time:float=8				     #巡逻时间，避免被障碍物卡住一直走
-@export var respawn_time: float = 8.0            #重生倒计时
+@export var respawn_time: float = 7.0            #重生倒计时
 
 var target: Player = null                        #当前追击目标
 var state: State = State.PATROL                  #当前状态，初始为巡逻
