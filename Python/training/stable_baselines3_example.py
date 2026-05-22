@@ -28,15 +28,15 @@ if can_import("ray"):
 class Config:
     """SB3 PPO 训练配置"""
     # ---- 环境 ----
-    env_path: Optional[str] = "godot-game/build/game.exe"
+    env_path: Optional[str] = "godot-game\\build-multiagent\game.exe"
     """Godot 可执行文件路径 (None 连接编辑器)。"""
     seed: int = 0
     """随机种子。"""
-    viz: bool = False
+    viz: bool = True
     """显示游戏窗口。"""
-    speedup: int = 16
+    speedup: int = 5
     """物理引擎加速倍数。"""
-    n_parallel: int = 10
+    n_parallel: int = 1
     """并行 Godot 进程数量。"""
     gamma: float = 0.99
     """折扣因子 γ。"""

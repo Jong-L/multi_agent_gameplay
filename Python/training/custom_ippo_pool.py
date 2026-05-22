@@ -55,8 +55,14 @@ from godot_env_wrapper import RewardNormalizer, init_training_setup, load_full_c
 class IppoPoolArgs(IppoArgs):
     """Configuration for the staged IPPO/opponent-pool experiment."""
 
-    run_mode: str = "pool_cycle"
+    run_mode: str = "full"
     """ippo_bootstrap / pool_cycle / evaluate / full"""
+
+    bootstrap_exp_name: str = "ippo_bootstrap"
+    """TensorBoard exp_name prefix for bootstrap phases (phase1=_checkpoint, phase2=_direct)."""
+
+    pool_exp_name: str = "ippo_pool"
+    """TensorBoard exp_name for the opponent-pool training phase."""
 
     bootstrap_save_model_path: Optional[str] = "saved_models/ippo_bootstrap"
     """Base path for the first direct-IPPO stage and its episode checkpoints."""
@@ -265,6 +271,8 @@ def _parse_cli(args: IppoPoolArgs) -> IppoPoolArgs:
     parser.add_argument("--load-model-path")
     parser.add_argument("--resume-from")
     parser.add_argument("--ppo-model-paths", nargs=4)
+    parser.add_argument("--bootstrap-exp-name")
+    parser.add_argument("--pool-exp-name")
     parser.add_argument("--pool-initial-checkpoint-dir")
     parser.add_argument("--pool-checkpoint-dir")
     parser.add_argument("--pool-slots-per-agent", type=int)
@@ -289,6 +297,8 @@ def _parse_cli(args: IppoPoolArgs) -> IppoPoolArgs:
         "save_model_path": "save_model_path",
         "load_model_path": "load_model_path",
         "resume_from": "resume_from",
+        "bootstrap_exp_name": "bootstrap_exp_name",
+        "pool_exp_name": "pool_exp_name",
         "pool_initial_checkpoint_dir": "pool_initial_checkpoint_dir",
         "pool_checkpoint_dir": "pool_checkpoint_dir",
         "pool_slots_per_agent": "pool_slots_per_agent",
@@ -540,6 +550,7 @@ def run_ippo_bootstrap(args: IppoPoolArgs) -> None:
 
     #阶段1 同时训练并且给每个智能体保存检查点
     phase1 = copy.deepcopy(args)#配置
+    phase1.exp_name = f"{args.bootstrap_exp_name}_checkpoint"
     phase1.use_opponent_pool = False
     phase1.agent_configs = _with_train_flags(phase1, all_ids)#所有智能体都训练
     phase1.total_timesteps = int(args.pool_bootstrap_checkpoint_timesteps)
@@ -558,6 +569,7 @@ def run_ippo_bootstrap(args: IppoPoolArgs) -> None:
 
     #阶段2 继续训练并给主智能体保存最终模型
     phase2 = copy.deepcopy(args)
+    phase2.exp_name = f"{args.bootstrap_exp_name}_direct"
     phase2.use_opponent_pool = False
     phase2.agent_configs = _with_train_flags(phase2, all_ids)#所有智能体都训练
     phase2.ppo_model_paths = [None for _ in phase2.agent_configs]#不加载模型参数
@@ -907,6 +919,7 @@ def train_pool_phase(
 def run_pool_cycle(args: IppoPoolArgs) -> None:
     pool = build_initial_pool(args)
     setup_args = copy.deepcopy(args)
+    setup_args.exp_name = args.pool_exp_name
     setup_args.use_opponent_pool = True
     #所有智能体都进行训练
     setup_args.agent_configs = _with_train_flags(setup_args, set(_agent_ids(setup_args)))
@@ -1080,6 +1093,7 @@ def run_evaluation(args: IppoPoolArgs) -> None:
             if model_path is None:
                 continue
             policies: list[list[IPPOAgent]] = []
+            #对于采样到的每个对手组
             for group in opponent_groups:
                 group_agents: list[Optional[IPPOAgent]] = [None for _ in _agent_ids(eval_args)]
                 #把智能体0设置为评估模型
@@ -1199,16 +1213,18 @@ def _print_eval_summary(rows: list[dict[str, Any]]) -> None:
 
 
 def run_full_plan(args: IppoPoolArgs) -> None:
+    print("[Full Plan] Starting full plan...")
     run_ippo_bootstrap(args)
     pool_args = copy.deepcopy(args)
     pool_args.load_model_path = None
     pool_args.resume_from = None
     pool_args.ppo_model_paths = [None for _ in pool_args.agent_configs]
-    if pool_args.pool_initial_checkpoint_dir is None:
-        pool_args.pool_initial_checkpoint_dir = (
-            str(pathlib.Path(args.bootstrap_save_model_path).parent)
-            if args.bootstrap_save_model_path
-            else None
+    # Bootstrap checkpoints are saved as flat files in the parent directory
+    # of bootstrap_save_model_path (e.g. saved_models/ippo_bootstrap_episode{N}_agent{id}.pt).
+    # Override pool_initial_checkpoint_dir to point to the actual location.
+    if args.bootstrap_save_model_path:
+        pool_args.pool_initial_checkpoint_dir = str(
+            pathlib.Path(args.bootstrap_save_model_path).parent
         )
     run_pool_cycle(pool_args)
 
