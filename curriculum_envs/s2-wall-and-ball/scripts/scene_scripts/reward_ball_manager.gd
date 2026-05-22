@@ -35,6 +35,8 @@ var _play_scene: PlayScene = null
 var _ball_scene: PackedScene = preload("res://assets/scenes/RewardBall.tscn")
 ## B类球重生队列：[{"ball": RewardBall, "timer": float}]
 var _respawn_queue: Array[Dictionary] = []
+## 上次处理重生的通信帧序号（用于计算帧间游戏时间）
+var _last_process_cycle: int = -1
 
 
 func _ready() -> void:
@@ -49,7 +51,6 @@ func setup(play_scene: PlayScene) -> void:
 	_play_scene = play_scene
 	_spawn_type_a_balls()
 	_spawn_type_b_balls()
-
 
 ## 生成 A 类球：在每个玩家出生点所在角的子区域内随机生成3个
 ## 子矩形从竞技场角向内延伸，避免球生成到地图外
@@ -86,7 +87,6 @@ func _spawn_type_a_balls() -> void:
 			type_a_balls.append(ball)
 			reward_balls.append(ball)
 
-
 ## 生成 B 类球：在巡逻区域内随机位置（避开玩家和障碍物）
 func _spawn_type_b_balls() -> void:
 	if _play_scene == null:
@@ -95,9 +95,16 @@ func _spawn_type_b_balls() -> void:
 	var patrol := _play_scene.patrol_rect
 	if patrol.size == Vector2.ZERO:
 		return
+	var player_positions := _current_player_positions()
+	var collision_decoration_positions := _play_scene.collision_decoration_positions
+	var candidate_positions := _grid_pos_candidates_avoiding_positions_and_deco(_play_scene.patrol_tile_positions, patrol, BALL_B_SPAWN_MARGIN, player_positions, BALL_B_MIN_PLAYER_DIST, collision_decoration_positions, BALL_B_MIN_DECO_DIST)
 	
 	for i in range(BALL_B_MAX_COUNT):
-		var pos := _safe_pos_in_patrol()
+		var pos: Vector2
+		if candidate_positions.is_empty():
+			pos = _safe_pos_in_patrol()
+		else:
+			pos = _pop_random_pos(candidate_positions)
 		var ball := _create_ball(RewardBall.BallType.TYPE_B, BALL_B_REWARD, pos)
 		type_b_balls.append(ball)
 		reward_balls.append(ball)
@@ -120,12 +127,22 @@ func _on_reward_ball_collected(_player_id: int, ball_type: int, ball: RewardBall
 	if ball_type == RewardBall.BallType.TYPE_B:
 		_respawn_queue.append({"ball": ball, "timer": BALL_B_RESPAWN_DELAY})
 
-# 每帧检查B类球重生队列
-func _process(delta: float) -> void:
+# 每通信帧检查 B 类球重生队列（配合 sync 的 n_action_steps 节拍）
+func _physics_process(delta: float) -> void:
+	if _play_scene == null or _play_scene.sync_node == null:
+		return
+
+	var n_steps :int= _play_scene.sync_node.n_action_steps
+	var repeat := _play_scene.sync_node.action_repeat
+
+	# 只在通信帧处理（n_action_steps 尚未自增，0, repeat, 2*repeat ... 恰好是通信帧）
+	if n_steps % repeat != 0:
+		return
+
 	var to_remove: Array[int] = []
 	for i in range(_respawn_queue.size()):
 		var entry: Dictionary = _respawn_queue[i]
-		entry.timer -= delta
+		entry.timer -= repeat*delta
 		if entry.timer <= 0.0:
 			var ball: RewardBall = entry.ball
 			if is_instance_valid(ball):
@@ -134,6 +151,9 @@ func _process(delta: float) -> void:
 				ball.global_position = new_pos
 				ball.activate()
 			to_remove.append(i)
+	# 通知 RewardManager 立即重算球势能基线，避免下一帧塑形奖励虚假正向跳跃
+	if _play_scene and _play_scene.reward_manager:
+		_play_scene.reward_manager.recalc_ball_potentials()
 	# 从后往前移除已重生的条目
 	for i in range(to_remove.size() - 1, -1, -1):
 		_respawn_queue.remove_at(to_remove[i])
@@ -144,6 +164,11 @@ func _process(delta: float) -> void:
 func _safe_pos_in_patrol() -> Vector2:
 	var patrol := _play_scene.patrol_rect
 	var deco_positions := _play_scene.collision_decoration_positions
+	var player_positions := _current_player_positions()
+	var candidate_positions := _grid_pos_candidates_avoiding_positions_and_deco(_play_scene.patrol_tile_positions, patrol, BALL_B_SPAWN_MARGIN, player_positions, BALL_B_MIN_PLAYER_DIST, deco_positions, BALL_B_MIN_DECO_DIST)
+	if not candidate_positions.is_empty():
+		return _pop_random_pos(candidate_positions)
+
 	var last_pos := _rng_pos_in_rect(patrol, BALL_B_SPAWN_MARGIN)
 	
 	for attempt in range(_SAFE_POS_MAX_ATTEMPTS):
@@ -175,11 +200,6 @@ func _safe_pos_in_patrol() -> Vector2:
 
 
 ## 在矩形内生成随机位置，避开指定的出生点
-## @param rect 目标矩形区域
-## @param margin 距矩形边缘的最小距离
-## @param spawn_positions 需要避开的出生点列表
-## @param min_dist 与出生点的最小距离
-## @return 符合条件的随机位置（最多重试 _SAFE_POS_MAX_ATTEMPTS 次）
 func _random_pos_avoiding_spawn(rect: Rect2, margin: float, spawn_positions: Array[Vector2], min_dist: float) -> Vector2:
 	for attempt in range(_SAFE_POS_MAX_ATTEMPTS):
 		var pos := _rng_pos_in_rect(rect, margin)
@@ -194,8 +214,11 @@ func _random_pos_avoiding_spawn(rect: Rect2, margin: float, spawn_positions: Arr
 	return _rng_pos_in_rect(rect, margin)
 
 func _grid_pos_candidates_avoiding_spawn_and_deco(rect: Rect2, margin: float, spawn_positions: Array[Vector2], min_dist: float, deco_positions: Array[Vector2], min_deco_dist: float) -> Array[Vector2]:
+	return _grid_pos_candidates_avoiding_positions_and_deco(_play_scene.arena_tile_positions, rect, margin, spawn_positions, min_dist, deco_positions, min_deco_dist)
+
+func _grid_pos_candidates_avoiding_positions_and_deco(grid_positions: Array[Vector2], rect: Rect2, margin: float, avoid_positions: Array[Vector2], min_dist: float, deco_positions: Array[Vector2], min_deco_dist: float) -> Array[Vector2]:
 	var candidates: Array[Vector2] = []
-	if _play_scene == null or _play_scene.arena_tile_positions.is_empty():
+	if _play_scene == null or grid_positions.is_empty():
 		return candidates
 
 	var usable_rect := Rect2(
@@ -205,10 +228,10 @@ func _grid_pos_candidates_avoiding_spawn_and_deco(rect: Rect2, margin: float, sp
 	if usable_rect.size.x <= 0.0 or usable_rect.size.y <= 0.0:
 		return candidates
 
-	for tile_pos in _play_scene.arena_tile_positions:
+	for tile_pos in grid_positions:
 		if not usable_rect.has_point(tile_pos):
 			continue
-		if _is_too_close_to_any(tile_pos, spawn_positions, min_dist):
+		if _is_too_close_to_any(tile_pos, avoid_positions, min_dist):
 			continue
 		if _is_too_close_to_any(tile_pos, deco_positions, min_deco_dist):
 			continue
@@ -220,6 +243,15 @@ func _pop_random_pos(positions: Array[Vector2]) -> Vector2:
 	var pos := positions[index]
 	positions.remove_at(index)
 	return pos
+
+func _current_player_positions() -> Array[Vector2]:
+	var positions: Array[Vector2] = []
+	if _play_scene == null:
+		return positions
+	for player in _play_scene.players:
+		if is_instance_valid(player):
+			positions.append(player.global_position)
+	return positions
 
 func _is_too_close_to_any(pos: Vector2, positions: Array[Vector2], min_dist: float) -> bool:
 	var min_dist_sq := min_dist * min_dist
@@ -259,6 +291,7 @@ func _rng_pos_in_rect(rect: Rect2, margin: float) -> Vector2:
 ## 游戏重置时调用：重新随机化所有球的位置
 func reset_all() -> void:
 	_respawn_queue.clear()
+	_last_process_cycle = -1
 	
 	# 重新随机化 A 类球位置
 	var arena := _play_scene.arena_bounds
@@ -288,7 +321,12 @@ func reset_all() -> void:
 			a_idx += 1
 	
 	# 重新随机化 B 类球位置
+	var b_player_positions := _current_player_positions()
+	var b_candidate_positions := _grid_pos_candidates_avoiding_positions_and_deco(_play_scene.patrol_tile_positions, _play_scene.patrol_rect, BALL_B_SPAWN_MARGIN, b_player_positions, BALL_B_MIN_PLAYER_DIST, collision_decoration_positions, BALL_B_MIN_DECO_DIST)
 	for ball in type_b_balls:
 		if is_instance_valid(ball):
 			ball.reset_ball()
-			ball.position = _safe_pos_in_patrol()
+			if b_candidate_positions.is_empty():
+				ball.position = _safe_pos_in_patrol()
+			else:
+				ball.position = _pop_random_pos(b_candidate_positions)

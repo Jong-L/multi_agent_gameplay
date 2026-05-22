@@ -48,4 +48,5 @@ texture_filter = 1
 rotation = 0.50963616
 sprite_frames = SubResource("SpriteFrames_2brcw")
 animation = &"slash"
-frame_progress = 0.7285187
+frame = 3
+frame_progress = 1.0

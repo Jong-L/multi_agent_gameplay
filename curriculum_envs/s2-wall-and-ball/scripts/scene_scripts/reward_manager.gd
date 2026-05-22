@@ -53,10 +53,8 @@ var _skip_ball_potential_shaping_once: Dictionary = {}
 var _prev_ball_potentials: Dictionary = {}
 var _prev_wall_potentials: Dictionary = {}
 var _prev_ball_distances: Dictionary = {}  # {player_id: 上帧最近球距离}
-var action_repeat_count:int=0
 
 # ── 配置路由 ──
-
 # 根据玩家ID获取对应的奖励配置
 func _cfg(player_id: int) -> RewardConfig:
 	if game_config and game_config.use_per_player_reward:
@@ -65,7 +63,6 @@ func _cfg(player_id: int) -> RewardConfig:
 	return reward_config
 
 # ── 生命周期 ──
-
 func _ready() -> void:
 	_play_scene = get_parent() if get_parent() is PlayScene else null
 	_connect_signals()
@@ -80,7 +77,11 @@ func _physics_process(delta: float) -> void:
 	_game_time += delta
 
 	#Rewardmanager在同一个物理帧在sync之前执行，让sync获取最新的奖励，之前有一个物理帧的误差，实际获取的是上一个物理帧的奖励
-	if action_repeat_count==0:
+	if _sync_node == null or _sync_node.action_repeat <= 0:
+		return
+
+	# RewardManager runs before Sync, so n_action_steps has not been incremented yet.
+	if _sync_node.n_action_steps % _sync_node.action_repeat == 0:
 		#奖励塑形
 		_process_potential_shaping(delta)
 		#撞墙惩罚
@@ -96,8 +97,6 @@ func _physics_process(delta: float) -> void:
 		# circle 结束：快照并发射信号（此时 ai_controller.reward 包含本 circle 全部奖励）
 		if game_config and game_config.enable_info_window:
 			_snapshot_circle_rewards()
-
-	action_repeat_count=(action_repeat_count+1)%_sync_node.action_repeat
 
 
 #全局信号连接
@@ -159,10 +158,16 @@ func _disconnect_skill_signals() -> void:
 func add_reward(player_id: int, value: float, source: String = "") -> void:
 	if _play_scene == null:
 		return
-	if player_id < 0 or player_id >= _play_scene.players.size():
+	
+	# 通过 player_id 查找对应玩家（player_id 可能不等于数组索引）
+	var player: Player = null
+	for p in _play_scene.players:
+		if is_instance_valid(p) and p.player_id == player_id:
+			player = p
+			break
+	if player == null:
 		return
-
-	var player := _play_scene.players[player_id]
+	
 	player.ai_controller.reward += value
 
 	# 累计纯奖励（不含塑形奖励）并发射信号
@@ -250,8 +255,11 @@ func on_player_moved(player: Player) -> void:
 		#add_reward(player.player_id, _cfg(player.player_id).run, "run")
 		player.ai_controller.reward+=_cfg(player.player_id).run
 
-#待机惩罚
+#待机惩罚（中心区域待机豁免）
 func idle_penalty(player:Player)->void:
+	if is_in_center_arena(player):
+		return
+		
 	if not player.is_moving:
 		player.ai_controller.reward+=_cfg(player.player_id).idle
 
@@ -359,10 +367,34 @@ func _init_potentials() -> void:
 		var pid := player.player_id
 		var cfg := _cfg(pid)
 
-		var ball_potential := _calculate_ball_shaping_potential(player, cfg)
-		var wall_potential := _calculate_wall_shaping_potential(player, cfg)
-		_prev_ball_potentials[pid] = ball_potential
-		_prev_wall_potentials[pid] = wall_potential
+		_prev_wall_potentials[pid] = _calculate_wall_shaping_potential(player, cfg)
+
+		# NONE：不计算球相关的任何势能/距离
+		if cfg.ball_potential_func == RewardConfig.BallPotentialFunc.NONE:
+			continue
+
+		_prev_ball_distances[pid] = _get_nearest_ball_distance(player)
+
+		# DISTANCE_REWARD：只跟踪距离，不计算球势能
+		if cfg.ball_potential_func == RewardConfig.BallPotentialFunc.DISTANCE_REWARD:
+			continue
+
+		_prev_ball_potentials[pid] = _calculate_ball_shaping_potential(player, cfg)
+
+
+# 奖励球重生后立即重新计算势能基线，避免下一帧塑形奖励出现虚假正向跳跃
+# 仅在势能塑形模式（LINEAR / EXPONENTIAL / INVERSE）下生效
+func recalc_ball_potentials() -> void:
+	if _play_scene == null:
+		return
+	for player in _play_scene.players:
+		if player.is_dead:
+			continue
+		var pid := player.player_id
+		var cfg := _cfg(pid)
+		if cfg.ball_potential_func in [RewardConfig.BallPotentialFunc.NONE, RewardConfig.BallPotentialFunc.DISTANCE_REWARD]:
+			continue
+		_prev_ball_potentials[pid] = _calculate_ball_shaping_potential(player, cfg)
 		_prev_ball_distances[pid] = _get_nearest_ball_distance(player)
 
 
@@ -391,6 +423,7 @@ func _process_ball_potential_shaping(player: Player, pid: int, cfg: RewardConfig
 	
 	#重置势能并跳过奖励发放
 	if _skip_ball_potential_shaping_once.get(pid, false):
+		#print("skip!!!")
 		_prev_ball_potentials[pid] = current_potential
 		_skip_ball_potential_shaping_once.erase(pid)
 		return
@@ -459,7 +492,7 @@ func _calculate_ball_shaping_potential(player: Player, cfg: RewardConfig) -> flo
 	#否则计算最近奖励球势能
 	return calculate_ball_potential(player)
 
-# 获取玩家到障碍物的碰撞距离列表（已过滤非碰撞射线）
+# 获取玩家到障碍物的碰撞距离列表
 func _get_collision_distances(player: Player, pid: int) -> Array[float]:
 	if _play_scene == null:
 		return []
@@ -676,22 +709,23 @@ func _get_nearest_ball_distance(player: Player) -> float:
 	return min_dist
 
 ## 中央区域塑形奖励：鼓励智能体进入竞技场中心
-func _process_center_shaping(delta: float) -> void:
+#判断智能体是否在竞技场中心区域
+func is_in_center_arena(player:Player):
+	var patrol_rect:Rect2=_play_scene.patrol_rect
+	return patrol_rect.has_point(player.global_position)
+
+func _process_center_shaping(_delta: float) -> void:
 	if _play_scene == null:
 		return
-
-	var arena_center: Vector2 = Vector2.ZERO
-
 	for player in _play_scene.players:
 		if player.is_dead:
 			continue
 
 		var cfg := _cfg(player.player_id)
-		var dist_to_center: float = player.global_position.distance_to(arena_center)
-		#乘2，在边界奖励为0
-		var center_reward: float = cfg.center_reward_scale * maxf(0.0, 1.0 - 2*dist_to_center / _play_scene.arena_length)
-		# 直接修改 AIController 的 reward
-		player.ai_controller.reward += center_reward * delta
+		var in_center_arena:bool=is_in_center_arena(player)
+		if in_center_arena:
+			player.ai_controller.reward+=cfg.center_reward
+			#print("in center")
 
 ## ── 撞墙惩罚 ──
 func _process_wall_collision(_delta: float) -> void:
@@ -706,11 +740,9 @@ func _process_wall_collision(_delta: float) -> void:
 		var cfg := _cfg(pid)
 
 		# 撞墙惩罚
-		var is_wall_collision := false
-		if player.last_collison_data and player.is_moving:
-			if player.last_collison_data.get_collider() is TileMapLayer:
-				add_reward(pid, -cfg.wall_collision_penalty, "wall_collision")
-				is_wall_collision = true
+		var is_wall_collision := _is_player_pressing_wall(player)
+		if is_wall_collision:
+			add_reward(pid, cfg.wall_collision_penalty, "wall_collision")
 
 		# 撞墙计数器与 reset_on_wall
 		if game_config != null and game_config.reset_on_wall:
@@ -734,6 +766,28 @@ func _process_wall_collision(_delta: float) -> void:
 			var rd: float = -1.0 / (d_min + epsilon)
 			add_reward(pid, rd, "wall_distance")
 
+func _is_player_pressing_wall(player: Player) -> bool:
+	if not player.is_moving:
+		return false
+
+	var desired: Vector2 = player.desired_velocity
+	if desired.length() <= 0.001: #弹性检测
+		return false
+
+	if player.is_on_wall():
+		var wall_normal: Vector2 = player.get_wall_normal() #碰撞法线
+		#if player.player_id==0:
+			#print(wall_normal)
+		if (wall_normal.x>0.9 and desired.x<0.0) or (wall_normal.x<-0.9 and desired.x>0.0):
+			return true
+			
+	if player.is_on_floor():
+		return desired.y > 0.001
+	if player.is_on_ceiling():
+		return desired.y < -0.001
+
+	return false
+
 ## ── 重置 ──
 
 #游戏重置时调用
@@ -742,11 +796,9 @@ func reset() -> void:
 		_reward_logger.end_episode()
 		_reward_logger.start_episode()
 
-	action_repeat_count=0
 	_init_starvation_timers()
 	_init_potentials()
 	_pure_rewards.clear()
-	_prev_ball_distances.clear()
 	_wall_collision_counters.clear()
 	_total_reward.clear()
 	_total_ball_shaping.clear()

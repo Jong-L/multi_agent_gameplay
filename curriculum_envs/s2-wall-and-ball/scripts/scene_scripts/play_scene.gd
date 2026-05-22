@@ -36,6 +36,7 @@ var reward_ball_manager: RewardBallManager = null
 # 调试信息窗口（由 InfoWindow._ready 赋值，reparenting 之前）
 var info_window: InfoWindow = null
 var arena_tile_positions: Array[Vector2] = []
+var patrol_tile_positions: Array[Vector2] = []
 
 # 相机切换按钮组
 var camera_buttons: Array[Button] = []
@@ -125,6 +126,7 @@ func _init_map_data() -> void:
 	# Road 层（巡逻区域）
 	if _road_layer != null:
 		patrol_rect =MathUtils._tilemap_to_world_rect(_road_layer)
+		patrol_tile_positions = MathUtils._tilemap_to_world_positions(_road_layer)
 	
 	# CollisionDecoration
 	if _collision_deco_layer != null:
@@ -156,6 +158,9 @@ func _collect_enemis()->void:
 	for child in get_children():
 		if child is Enemy:
 			enemies.append(child)
+	# 按名称排序确保数组顺序稳定,用于观测槽位固定
+	enemies.sort_custom(func(a, b): return a.name.naturalnocasecmp_to(b.name) < 0)
+
 # 初始化相机系统，将玩家引用传给 CameraManager
 func _setup_camera_system() -> void:
 	CameraManager.players.clear()
@@ -186,14 +191,11 @@ func _setup_camera_switch_ui() -> void:
 	canvas_layer.add_child(panel)
 	panel.set_owner(self)
 	
-	# 按钮配置,默认4个玩家，硬编码，以后看情况改
-	var button_configs := [
-		["主相机", 0],
-		["玩家{color}".format({"color":players[0].skin_color}), 1],
-		["玩家{color}".format({"color":players[1].skin_color}), 2],
-		["玩家{color}".format({"color":players[2].skin_color}), 3],
-		["玩家{color}".format({"color":players[3].skin_color}), 4],
-	]
+	# 按钮配置：主相机 + 每个玩家的跟随相机
+	var button_configs: Array[Array] = [["主相机", 0]]
+	for i in range(players.size()):
+		var label := "玩家{color}".format({"color": players[i].skin_color})
+		button_configs.append([label, i + 1])
 	
 	camera_buttons.clear()
 	for config in button_configs:
@@ -349,6 +351,9 @@ func _setup_reward_ball_manager() -> void:
 	reward_ball_manager = RewardBallManager.new()
 	reward_ball_manager.name = "RewardBallManager"
 	add_child(reward_ball_manager)
+	# 确保 _physics_process 顺序：RewardManager（算奖励）→ RewardBallManager（重生球）→ Sync（收观测）
+	var sync_idx := sync_node.get_index()
+	move_child(reward_ball_manager, sync_idx)
 	reward_ball_manager.set_owner(self)
 	reward_ball_manager.setup(self)
 
@@ -435,7 +440,12 @@ func _on_camera_switched(camera_id: int) -> void:
 
 # 更新按钮高亮状态
 func _update_button_highlight(camera_id: int) -> void:
-	var active_index := 0 if camera_id == -1 else camera_id + 1
+	var active_index := 0
+	if camera_id != -1:
+		for i in range(players.size()):
+			if players[i].player_id == camera_id:
+				active_index = i + 1
+				break
 	for i in range(camera_buttons.size()):
 		if i == active_index:
 			camera_buttons[i].modulate = Color(0.5, 1.0, 0.7)  # 绿色高亮
@@ -481,7 +491,7 @@ func _build_map_state(player: Player) -> Array[float]:
 	
 	return map_state
 
-## 射线调试绘制：在 _draw() 中调用，不需要时注释掉此调用即可
+## 射线调试绘制：在 _draw() 中调用
 func _draw() -> void:
 	_draw_rays_debug()
 
@@ -511,11 +521,10 @@ func _draw_rays_debug() -> void:
 #为指定玩家生成观测数据
 func get_obs_for_player(player: Player) -> Dictionary:
 	var use_valid_mask := game_config.use_observation_valid_mask if game_config else false
-	var use_velocity_obs := game_config.use_velocity_obs if game_config else true
 	if vision_sensor == null or not is_instance_valid(vision_sensor):
 		# 无传感器时返回最小观测
 		var fallback_obs := {
-			"self_state": [0.0, 0.0, 0.0, 0.0],
+			"self_state": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
 			"nearby_players": [],
 			"nearby_balls": [],
 			"nearby_enemies": [],
@@ -526,14 +535,15 @@ func get_obs_for_player(player: Player) -> Dictionary:
 	var all_balls: Array[RewardBall] = []
 	if reward_ball_manager != null:
 		all_balls = reward_ball_manager.reward_balls
+	var arena_center := arena_bounds.position + arena_bounds.size / 2.0
 	var obs_dict = vision_sensor.scan(
 		player,
 		players,
 		enemies,
 		all_balls,
 		arena_length,
+		arena_center,
 		use_valid_mask,
-		use_velocity_obs,
 	)
 	#添加饥饿时间
 	#var starve_duration:float=reward_manager.compute_starve_duration(player)

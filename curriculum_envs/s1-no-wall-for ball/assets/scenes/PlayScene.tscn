@@ -430,12 +430,32 @@ visible = false
 script = ExtResource("17_vsens")
 vision_radius = 200.0
 
+[node name="Player_Blue" parent="." unique_id=490246979 node_paths=PackedStringArray("player_spell_bar") instance=ExtResource("1_s7ljx")]
+z_index = 6
+position = Vector2(-416, -415.00003)
+player_spell_bar = NodePath("../CanvasLayer/Control/SpellBar")
+skin_color = "Blue"
+
 [node name="Player_Black" parent="." unique_id=844634870 node_paths=PackedStringArray("player_spell_bar") instance=ExtResource("1_s7ljx")]
 z_index = 6
 position = Vector2(411, -412)
 player_spell_bar = NodePath("../CanvasLayer/Control/SpellBar")
 skin_color = "Black"
 player_id = 1
+
+[node name="Player_Red" parent="." unique_id=895822030 node_paths=PackedStringArray("player_spell_bar") instance=ExtResource("1_s7ljx")]
+z_index = 6
+position = Vector2(414.00003, 413)
+player_spell_bar = NodePath("../CanvasLayer/Control/SpellBar")
+skin_color = "Red"
+player_id = 2
+
+[node name="Player_Yellow" parent="." unique_id=526836106 node_paths=PackedStringArray("player_spell_bar") instance=ExtResource("1_s7ljx")]
+z_index = 6
+position = Vector2(-416.00003, 414)
+player_spell_bar = NodePath("../CanvasLayer/Control/SpellBar")
+skin_color = "Yellow"
+player_id = 3
 
 [node name="Map" type="Node" parent="." unique_id=781248778]
 
@@ -521,7 +541,7 @@ alignment = 1
 layout_mode = 2
 shortcut = SubResource("Shortcut_1cyef")
 
-[node name="PlayerHealthBar_Blue" type="TextureProgressBar" parent="CanvasLayer" unique_id=1011567860]
+[node name="PlayerHealthBar_Blue" type="TextureProgressBar" parent="CanvasLayer" unique_id=1011567860 node_paths=PackedStringArray("player")]
 anchors_preset = 2
 anchor_top = 1.0
 anchor_bottom = 1.0
@@ -536,6 +556,7 @@ texture_under = SubResource("AtlasTexture_fr07b")
 texture_progress = SubResource("AtlasTexture_s2jpe")
 texture_progress_offset = Vector2(8.19, 12.985)
 script = ExtResource("11_s2jpe")
+player = NodePath("../../Player_Blue")
 
 [node name="PauseButton" type="TextureButton" parent="CanvasLayer" unique_id=1345003797]
 offset_left = 908.0
@@ -603,9 +624,15 @@ position = Vector2(78, 16)
 zoom = Vector2(0.79, 0.79)
 drag_horizontal_enabled = true
 
+[connection signal="player_died" from="Player_Blue" to="." method="_on_player_player_died"]
 [connection signal="player_died" from="Player_Black" to="." method="_on_player_player_died"]
+[connection signal="player_died" from="Player_Red" to="." method="_on_player_player_died"]
+[connection signal="player_died" from="Player_Yellow" to="." method="_on_player_player_died"]
 [connection signal="pressed" from="CanvasLayer/PauseButton" to="." method="_on_pause_button_pressed"]
 [connection signal="pressed" from="CanvasLayer/PauseMenu/ResumeButton" to="CanvasLayer/PauseMenu" method="_on_resume_button_pressed"]
 [connection signal="pressed" from="CanvasLayer/PauseMenu/TitleButton" to="CanvasLayer/PauseMenu" method="_on_title_button_pressed"]
+[connection signal="pressed" from="CanvasLayer/VBoxContainer/RewardPerformButton" to="Player_Blue" method="_on_reward_perform_button_pressed"]
 [connection signal="pressed" from="CanvasLayer/VBoxContainer/RewardPerformButton" to="Player_Black" method="_on_reward_perform_button_pressed"]
+[connection signal="pressed" from="CanvasLayer/VBoxContainer/RewardPerformButton" to="Player_Red" method="_on_reward_perform_button_pressed"]
+[connection signal="pressed" from="CanvasLayer/VBoxContainer/RewardPerformButton" to="Player_Yellow" method="_on_reward_perform_button_pressed"]
 [connection signal="pressed" from="CanvasLayer/VBoxContainer/RewardPerformButton" to="CanvasLayer/VBoxContainer/RewardPerformButton" method="_on_pressed"]

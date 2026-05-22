@@ -25,7 +25,8 @@ enum Action {
 var is_moving: bool = false                #期望速度大于零就为true，而非实际速度
 var movement:Vector2=Vector2.ZERO     #键盘输入或智能体动作的期望移动方向                  
 var spawn_position: Vector2
-var last_collison_data: KinematicCollision2D = null  #move_and_collide返回数据
+var desired_velocity: Vector2 = Vector2.ZERO #基于指令的期望速度
+var real_velocity: Vector2 = Vector2.ZERO #碰撞等情况出现时的真是速度
 var pending_action: Action = Action.IDLE # 当前待执行动作
 var _anim_idle: AnimationWrapper
 var _anim_run: AnimationWrapper
@@ -64,8 +65,6 @@ func _physics_process(delta: float) -> void:
 	
 	_handle_movement(delta)
 	_execute_action()
-	#if player_id==0:
-		#print(velocity)
 	#奖励标签（仅在 reward 值变化时更新）
 	if CameraManager.current_camera_id!=-1:
 		var current_reward: float = ai_controller.reward
@@ -104,41 +103,42 @@ func set_action(action: int) -> void:#设置待执行动作
 		pending_action = action as Action
 
 #根据 pending_action执行动作
-func _handle_movement(delta:float) -> void:
+func _handle_movement(_delta:float) -> void:
+	movement = Vector2.ZERO
 	is_moving = false#不移动时为false
 	
 	#human模式下操控当前看到的角色
 	if sync_node.control_mode==sync_node.ControlModes.HUMAN\
 	and player_id==CameraManager.current_camera_id:
 		movement=Input.get_vector("move_left", "move_right", "move_up", "move_down")
-		
-	match pending_action:
-		Action.MOVE_UP:
-			movement = Vector2.UP
-		Action.MOVE_DOWN:
-			movement = Vector2.DOWN
-		Action.MOVE_LEFT:
-			movement = Vector2.LEFT
-		Action.MOVE_RIGHT:
-			movement = Vector2.RIGHT
+	else:
+		match pending_action:
+			Action.MOVE_UP:
+				movement = Vector2.UP
+			Action.MOVE_DOWN:
+				movement = Vector2.DOWN
+			Action.MOVE_LEFT:
+				movement = Vector2.LEFT
+			Action.MOVE_RIGHT:
+				movement = Vector2.RIGHT
+			Action.IDLE, Action.ATTACK:
+				movement = Vector2.ZERO
 	
 	if movement.length() > 0:
-		velocity = movement.normalized() * run_speed
+		desired_velocity = movement.normalized() * run_speed
 	else:
-		velocity = Vector2.ZERO
+		desired_velocity = Vector2.ZERO
 	
-	if velocity.length()>0:
-		is_moving=true
-	
-	last_collison_data = move_and_collide(velocity * delta)
+	velocity = desired_velocity
+	move_and_slide()
+	real_velocity = get_real_velocity()
+	is_moving = desired_velocity.length() > 0.0
 
 func _execute_action() -> void:# 执行非移动动作（攻击/待机）
 	if pending_action == Action.ATTACK:
 		skill_controller.trigger_skill_by_idx(0)  # 触发第 0 个技能
 
 func _handle_animation() -> void:# 动画状态更新
-	#if player_id==0:
-		#print(self.get_real_velocity())
 	if movement.length() > 0:
 		if movement.x > 0:
 			animated_sprite.flip_h = false
@@ -174,24 +174,25 @@ func get_skill_cooldown_ratio(skill_idx: int = 0) -> float:
 func get_normalized_velocity() -> Vector2:
 	if run_speed <= 0.0:
 		return Vector2.ZERO
-	return velocity / run_speed
+	return real_velocity / run_speed
 
 func _get_die_anim() -> AnimationWrapper:
 	return AnimationWrapper.new("die", true)
 
 func reset() -> void:
-	#set_process(true)
-	#set_physics_process(true)
-	#animated_sprite.visible=true
+	set_process(true)
+	set_physics_process(true)
+	animated_sprite.visible=true
 	current_animation_wrapper = null
 	is_dead = false
 	position = spawn_position
 	velocity = Vector2.ZERO
+	desired_velocity = Vector2.ZERO
+	real_velocity = Vector2.ZERO
 	current_health=max_health
 	is_moving = false
 	movement = Vector2.ZERO
 	pending_action = Action.IDLE
-	last_collison_data = null
 	last_damage_source = null
 	_is_playing_skill_anim = false
 	for skill in skill_controller.skills:

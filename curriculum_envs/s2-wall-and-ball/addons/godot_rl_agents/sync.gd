@@ -382,10 +382,21 @@ func _get_agents():
 			)
 			agent_demo_record = agent
 
+	agents_training.sort_custom(func(a, b): return _agent_player_id(a) < _agent_player_id(b))
+
 	var training_agent_count = agents_training.size()
 	agents_training_policy_names.resize(training_agent_count)
 	for i in range(0, training_agent_count):
 		agents_training_policy_names[i] = agents_training[i].policy_name
+
+
+func _agent_player_id(agent) -> int:
+	var player = agent.get("_player")
+	if player != null:
+		var player_id = player.get("player_id")
+		if player_id != null:
+			return int(player_id)
+	return 2147483647
 
 
 func _set_heuristic(heuristic, agents: Array):

@@ -198,8 +198,8 @@ animations = [{
 }]
 
 [sub_resource type="CapsuleShape2D" id="CapsuleShape2D_4wvqw"]
-radius = 49.67
-height = 177.33
+radius = 49.666664
+height = 177.33333
 
 [sub_resource type="LabelSettings" id="LabelSettings_jc3ay"]
 font_size = 25
@@ -215,6 +215,7 @@ damage_text_color = Color(0.9999998, 0.23224765, 0.098263316, 1)
 atk = 15.0
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=655665298]
+visible = false
 z_index = 3
 shape = SubResource("CapsuleShape2D_physics")
 
@@ -239,7 +240,7 @@ shape = SubResource("CapsuleShape2D_4wvqw")
 [node name="AIController2D" type="Node2D" parent="." unique_id=720197141]
 script = ExtResource("8_qu62d")
 cfg = ExtResource("9_mc6or")
-reset_after = 2000
+reset_after = 10800
 metadata/_custom_type_script = "uid://ciecfcurp1n2n"
 
 [node name="HealthBarOnPlayer" type="TextureProgressBar" parent="." unique_id=363006926]
