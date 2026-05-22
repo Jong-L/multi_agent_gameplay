@@ -17,7 +17,7 @@ class NetworkType(str, Enum):
 class PPOArgs:
     """Single-agent PPO training config."""
     # Environment
-    env_path: Optional[str] = "curriculum_envs/s1-no-wall-for ball/build2/game.exe"
+    env_path: Optional[str] = "curriculum_envs/s3-enemy-and-ball/build3/game.exe"
     """游戏环境路径（Godot 可执行文件）"""
     config_path: str = "godot-game/configs/game_config.tres"
     """游戏配置文件路径（.tres）"""
@@ -77,7 +77,7 @@ class PPOArgs:
     """循环网络（GRU）的序列截断长度"""
     clip_coef: float = 0.2
     """PPO 裁剪系数 epsilon"""
-    ent_coef: float = 0.0018160124315864958
+    ent_coef: float = 0.002
     """策略熵损失系数"""
     vf_coef: float = 0.5
     """价值函数损失系数"""

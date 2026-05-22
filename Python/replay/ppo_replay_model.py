@@ -36,10 +36,10 @@ from custom_ppo_dataclass import NetworkType
 class ReplayConfig:
     """PPO 模型回放配置 — 直接修改默认值即可。"""
 
-    model_path: str = "saved_models\\mlp_s2_agent2.pt"
+    model_path: str = "saved_models\\mlp_s2_agent0_episode230.pt"
     """要加载的模型文件路径 (.pt)。"""
 
-    env_path: Optional[str] = "curriculum_envs\\s2-wall-and-ball\\build2\\game.exe"
+    env_path: Optional[str] = "curriculum_envs\\s2-wall-and-ball\\build0\\game.exe"
     """Godot 可执行文件路径 (None 连接编辑器)。"""
 
     config_path: str = "curriculum_envs\\s1-no-wall-for ball\\configs\\game_config.tres"
