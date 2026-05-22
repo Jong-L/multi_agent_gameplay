@@ -17,7 +17,7 @@ class NetworkType(str, Enum):
 class PPOArgs:
     """Single-agent PPO training config."""
     # Environment
-    env_path: Optional[str] = "curriculum_envs/s3-enemy-and-ball/build3/game.exe"
+    env_path: Optional[str] = "curriculum_envs\s4-enemy-and-wall-and-ball/build3\game.exe"
     """游戏环境路径（Godot 可执行文件）"""
     config_path: str = "godot-game/configs/game_config.tres"
     """游戏配置文件路径（.tres）"""
@@ -36,6 +36,9 @@ class PPOArgs:
     # Logging/checkpointing
     exp_name: str = "custom_ppo"
     """实验名称（用于 TensorBoard / WandB 显示）"""
+    run_name: Optional[str] = None
+    """训练日志名称。None 则自动生成 {exp_name}__{seed}__{timestamp}；显式指定则直接使用。
+    多进程并行训练时建议设置如 mlp_s1_agent0 以便 TensorBoard 区分。"""
     experiment_dir: str = "logs/cleanrl_ppo"
     """实验日志根目录"""
     save_model_path: Optional[str] = "saved_models/mlp_p1_s1"
@@ -77,7 +80,8 @@ class PPOArgs:
     """循环网络（GRU）的序列截断长度"""
     clip_coef: float = 0.2
     """PPO 裁剪系数 epsilon"""
-    ent_coef: float = 0.002
+    # ent_coef: float = 0.005
+    ent_coef: float = 0.01
     """策略熵损失系数"""
     vf_coef: float = 0.5
     """价值函数损失系数"""
@@ -205,9 +209,9 @@ class AgentConfig:
     """折扣因子"""
     gae_lambda: float = 0.95
     """GAE lambda"""
-    clip_coef: float = 0.16557490394051463
+    clip_coef: float = 0.2
     """PPO 裁剪系数"""
-    ent_coef: float = 0.0018160124315864958
+    ent_coef: float = 0.01
     """熵系数"""
     vf_coef: float = 0.5
     """价值函数损失系数"""
@@ -270,13 +274,6 @@ class IppoArgs:
         AgentConfig(agent_id=3, train=False),
     ])
 
-    #从ppo中训练好的模型
-    # ppo_model_paths: list[Optional[str]] = field(default_factory=lambda: [
-    # "saved-models/ppo_agent0.pt",
-    # "saved-models/ppo_agent1.pt",
-    # "saved-models/ppo_agent2.pt",
-    # "saved-models/ppo_agent3.pt",])
-
     # Logging/checkpointing
     exp_name: str = "custom_ippo"
     """实验名称"""
@@ -294,6 +291,11 @@ class IppoArgs:
     """加载已有模型权重但不恢复优化器、计数器"""
     ppo_model_paths: list[Optional[str]] = field(default_factory=lambda: [None, None, None, None])
     """按 agent 下标加载 PPO 预训练模型权重，None 表示不加载"""
+    # ppo_model_paths: list[Optional[str]] = field(default_factory=lambda: [
+    # "saved-models/ppo_agent0.pt",
+    # "saved-models/ppo_agent1.pt",
+    # "saved-models/ppo_agent2.pt",
+    # "saved-models/ppo_agent3.pt",])
     save_every_n_episodes: int = 10
     """每 N 个 episode 保存一次中断点"""
     max_checkpoints: int = 3
@@ -324,7 +326,7 @@ class IppoArgs:
     """轮回结束后对 pool_final_agent_id 的额外训练步数"""
     pool_save_interval: int = 50_000
     """全局步数间隔：每隔多少步把当前四智能体快照加入对手池"""
-    pool_checkpoint_dir: Optional[str] = None
+    pool_checkpoint_dir: Optional[str] = "saved-models/ippo_pool_checkpoints"
     """对手池 checkpoint 文件目录。None 则使用 {experiment_dir}/pool_checkpoints"""
     pool_pfsp_temperature: float = 0.5
     """PFSP softmax 温度 (<1 聚焦有挑战的对手, >1 更均匀)"""
