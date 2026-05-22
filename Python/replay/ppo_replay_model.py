@@ -36,7 +36,7 @@ from custom_ppo_dataclass import NetworkType
 class ReplayConfig:
     """PPO 模型回放配置 — 直接修改默认值即可。"""
 
-    model_path: str = "saved_models\mlp_s3_agent0_episode210.pt"
+    model_path: str = "saved_models\\mlp_s3_agent0.pt"
     """要加载的模型文件路径 (.pt)。"""
 
     env_path: Optional[str] = "curriculum_envs\\s3-enemy-and-ball\\build0\\game.exe"
