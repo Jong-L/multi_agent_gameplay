@@ -17,7 +17,7 @@ class NetworkType(str, Enum):
 class PPOArgs:
     """Single-agent PPO training config."""
     # Environment
-    env_path: Optional[str] = "curriculum_envs\s4-enemy-and-wall-and-ball/build3\game.exe"
+    env_path: Optional[str] = "godot-game/build3\game.exe"
     """游戏环境路径（Godot 可执行文件）"""
     config_path: str = "godot-game/configs/game_config.tres"
     """游戏配置文件路径（.tres）"""
@@ -25,7 +25,7 @@ class PPOArgs:
     """并行环境（智能体）数量"""
     seed: int = 1
     """随机种子"""
-    show_window: bool = False
+    show_window: bool =False
     """是否显示游戏窗口"""
     speedup: int = 16
     """游戏物理加速倍数"""
@@ -80,8 +80,8 @@ class PPOArgs:
     """循环网络（GRU）的序列截断长度"""
     clip_coef: float = 0.2
     """PPO 裁剪系数 epsilon"""
-    # ent_coef: float = 0.005
-    ent_coef: float = 0.01
+    ent_coef: float = 0.005
+    # ent_coef: float = 0.01
     """策略熵损失系数"""
     vf_coef: float = 0.5
     """价值函数损失系数"""
@@ -211,7 +211,7 @@ class AgentConfig:
     """GAE lambda"""
     clip_coef: float = 0.2
     """PPO 裁剪系数"""
-    ent_coef: float = 0.01
+    ent_coef: float = 0.005
     """熵系数"""
     vf_coef: float = 0.5
     """价值函数损失系数"""
@@ -227,7 +227,7 @@ class AgentConfig:
 class IppoArgs:
     """Multi-agent IPPO training config."""
     # Environment
-    env_path: Optional[str] = "curriculum_envs/s4-enemy-only/build/game.exe"
+    env_path: Optional[str] = "godot-game/build-multiagent/game.exe"
     """游戏可执行文件路径"""
     config_path: str = "godot-game/configs/game_config.tres"
     """Godot 游戏配置文件路径（.tres）"""
@@ -279,7 +279,7 @@ class IppoArgs:
     """实验名称"""
     experiment_dir: str = "logs/cleanrl_ippo"
     """实验日志根目录"""
-    save_model_path: Optional[str] = "saved-models/clean_rl_ippo"
+    save_model_path: Optional[str] = "saved_models/ippo_pool_final"
     """最终模型保存路径（.pt）"""
     track: bool = False
     """是否记录到 WandB"""
@@ -289,13 +289,13 @@ class IppoArgs:
     """从中断点恢复训练的路径（设置为 None 不恢复）"""
     load_model_path: Optional[str] = None
     """加载已有模型权重但不恢复优化器、计数器"""
-    ppo_model_paths: list[Optional[str]] = field(default_factory=lambda: [None, None, None, None])
+    # ppo_model_paths: list[Optional[str]] = field(default_factory=lambda: [None, None, None, None])
+    ppo_model_paths: list[Optional[str]] = field(default_factory=lambda: [
+        "saved_models\\curriculum\\ppo_agent_0.pt",
+        "saved_models\\curriculum\\ppo_agent_1.pt",
+        "saved_models\\curriculum\\ppo_agent_2.pt",
+        "saved_models\\curriculum\\ppo_agent_3.pt",])
     """按 agent 下标加载 PPO 预训练模型权重，None 表示不加载"""
-    # ppo_model_paths: list[Optional[str]] = field(default_factory=lambda: [
-    # "saved-models/ppo_agent0.pt",
-    # "saved-models/ppo_agent1.pt",
-    # "saved-models/ppo_agent2.pt",
-    # "saved-models/ppo_agent3.pt",])
     save_every_n_episodes: int = 10
     """每 N 个 episode 保存一次中断点"""
     max_checkpoints: int = 3
@@ -314,19 +314,19 @@ class IppoArgs:
     """每个 agent slot 的队列容量，对应 opponent_pool[agent_id][slot_index]"""
     pool_initial_keep_per_agent: int = 10
     """从初始 IPPO 中断点目录中为每个 agent 载入最近多少个 checkpoint"""
-    pool_phase_timesteps: int = 800_000
+    pool_phase_timesteps: int = 500_000
     """轮回对手池训练中，每个主 agent phase 的训练步数"""
-    pool_rounds: int = 3
+    pool_rounds: int = 8
     """完整轮回次数；每轮按 pool_main_agent_order 依次训练"""
     pool_main_agent_order: tuple = (0, 1, 2, 3)
     """轮回训练顺序"""
     pool_final_agent_id: int = 0
     """轮回结束后额外长训练的主 agent"""
-    pool_final_timesteps: int = 3_000_000
+    pool_final_timesteps: int = 4_000_000
     """轮回结束后对 pool_final_agent_id 的额外训练步数"""
     pool_save_interval: int = 50_000
     """全局步数间隔：每隔多少步把当前四智能体快照加入对手池"""
-    pool_checkpoint_dir: Optional[str] = "saved-models/ippo_pool_checkpoints"
+    pool_checkpoint_dir: Optional[str] = "saved_models/ippo_pool_checkpoints"
     """对手池 checkpoint 文件目录。None 则使用 {experiment_dir}/pool_checkpoints"""
     pool_pfsp_temperature: float = 0.5
     """PFSP softmax 温度 (<1 聚焦有挑战的对手, >1 更均匀)"""
@@ -346,7 +346,7 @@ class IppoArgs:
     """新近偏置尺度因子"""
     pool_training_agent_selection: str = "round_robin"
     """训练 agent 选择策略: 'round_robin' / 'random'"""
-    pool_initial_checkpoint_dir: Optional[str] ="saved_models/ippo_bootstrap"
+    pool_initial_checkpoint_dir: Optional[str] = None
     """ippo联合训练后的 checkpoint 目录，用于初始化对手池"""
     pool_log_every_n_updates: int = 10
     """每 N 个 update 打印一次对手池详细统计"""
