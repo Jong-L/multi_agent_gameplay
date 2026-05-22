@@ -45,7 +45,7 @@ from custom_ippo import (
 class ReplayConfig:
     """IPPO 模型回放配置 — 直接修改默认值即可。"""
 
-    model_path: str = "savedmodels/cleanrl_ippo.pt"
+    model_path: str = "saved_models\\mlp_s1_agent0.pt"
     """要加载的模型文件路径 (.pt)。"""
 
     env_path: Optional[str] = "godot-game/build/game.exe"

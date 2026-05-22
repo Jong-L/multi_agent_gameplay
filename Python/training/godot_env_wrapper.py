@@ -276,6 +276,7 @@ def init_training_setup(args):
         speedup=args.speedup,
         seed=args.seed,
         n_parallel=args.n_parallel,
+        port=11008 + args.port_offset,
     )
     assert isinstance(
         envs.single_action_space, gym.spaces.Discrete

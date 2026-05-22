@@ -17,7 +17,7 @@ class NetworkType(str, Enum):
 class PPOArgs:
     """Single-agent PPO training config."""
     # Environment
-    env_path: Optional[str] = "curriculum_envs/s1-no-wall-for ball/build/game.exe"
+    env_path: Optional[str] = "curriculum_envs/s1-no-wall-for ball/build2/game.exe"
     """游戏环境路径（Godot 可执行文件）"""
     config_path: str = "godot-game/configs/game_config.tres"
     """游戏配置文件路径（.tres）"""
@@ -29,6 +29,9 @@ class PPOArgs:
     """是否显示游戏窗口"""
     speedup: int = 16
     """游戏物理加速倍数"""
+    port_offset: int = 0
+    """Godot 通信端口偏移量。基础端口 11008，实际端口 = 11008 + port_offset。
+    多进程并行训练时，每个进程设置不同偏移量避免端口冲突（如 0, 100, 200, 300）。"""
 
     # Logging/checkpointing
     exp_name: str = "custom_ppo"
@@ -72,7 +75,7 @@ class PPOArgs:
     """每个 rollout 的更新轮数"""
     recurrent_seq_len: int = 128
     """循环网络（GRU）的序列截断长度"""
-    clip_coef: float = 0.16557490394051463
+    clip_coef: float = 0.2
     """PPO 裁剪系数 epsilon"""
     ent_coef: float = 0.0018160124315864958
     """策略熵损失系数"""
@@ -98,7 +101,7 @@ class PPOArgs:
     """Reward normalization clipping range."""
 
     # Optuna hyperparameter tuning
-    enable_optuna: bool = True
+    enable_optuna: bool = False
     """Enable Optuna hyperparameter search instead of one normal training run."""
     optuna_trials: int = 100
     """Number of Optuna trials to run."""
