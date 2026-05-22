@@ -1,6 +1,7 @@
 """
 离散动作 PPO (Proximal Policy Optimization)
 """
+import argparse
 import os
 import copy
 import json
@@ -908,7 +909,36 @@ def run_optuna(args: PPOArgs):
 
 #  主训练入口
 def main():
+    parser = argparse.ArgumentParser(
+        description="离散动作 PPO (Proximal Policy Optimization) 训练",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    parser.add_argument("--env_path", type=str, default=None,
+                        help="游戏环境可执行文件路径")
+    parser.add_argument("--config_path", type=str, default=None,
+                        help="游戏配置文件路径")
+    parser.add_argument("--total_timesteps", type=int, default=None,
+                        help="训练总时间步数")
+    parser.add_argument("--save_model_path", type=str, default=None,
+                        help="最终模型保存路径")
+    parser.add_argument("--resume_from", type=str, default=None,
+                        help="中断点恢复路径")
+    parser.add_argument("--load_model_path", type=str, default=None,
+                        help="加载已有模型权重路径")
+    parser.add_argument("--port_offset", type=int, default=None,
+                        help="Godot 通信端口偏移量 (11008+offset)，多进程并行训练时设不同值避免冲突")
+
+    cli = parser.parse_args()
     args = PPOArgs()
+
+    # 仅覆盖命令行显式指定的字段，其余沿用 dataclass 默认值
+    for field in ("env_path", "config_path", "total_timesteps",
+                  "save_model_path", "resume_from", "load_model_path",
+                  "port_offset"):
+        val = getattr(cli, field, None)
+        if val is not None:
+            setattr(args, field, val)
+
     if args.enable_optuna:
         run_optuna(args)
     else:
