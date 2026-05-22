@@ -1,4 +1,4 @@
-\begin{thebibliography}{11}
+\begin{thebibliography}{22}
 \providecommand{\natexlab}[1]{#1}
 \providecommand{\url}[1]{#1}
 \expandafter\ifx\csname urlstyle\endcsname\relax\else
@@ -43,24 +43,93 @@ LOWE R, WU Y, TAMAR A, et~al.
 Advances in Neural Information Processing Systems (NeurIPS): Vol.~30.
 \newblock 2017: 6379-6390.
 
-\bibitem[Rashid et~al.(2018)Rashid, Samvelyan, de~Witt, Farquhar, Foerster, and Whiteson]{rashid2018qmix}
-RASHID T, SAMVELYAN M, DE~WITT C~S, et~al.
-\newblock {QMIX}: Monotonic value function factorisation for deep multi-agent reinforcement learning\allowbreak[C]//\allowbreak
-Proceedings of the 35th International Conference on Machine Learning (ICML): Vol.~80.
-\newblock PMLR, 2018: 4295-4304.
-
-\bibitem[Sunehag et~al.(2018)Sunehag, Lever, Gruslys, Czarnecki, Zambaldi, Jaderberg, Lanctot, Sonnerat, Leibo, Tuyls, and Graepel]{sunehag2018valuedecomposition}
-SUNEHAG P, LEVER G, GRUSLYS A, et~al.
-\newblock Value-decomposition networks for cooperative multi-agent learning\allowbreak[C]//\allowbreak
-Proceedings of the 17th International Conference on Autonomous Agents and MultiAgent Systems (AAMAS).
-\newblock 2018: 2085-2087.
-
 \bibitem[de~Witt et~al.(2020)de~Witt, Gupta, Makoviichuk, Makoviychuk, Torr, Sun, and Whiteson]{dewitt2020independentlearningneedstarcraft}
 DE~WITT C~S, GUPTA T, MAKOVIICHUK D, et~al.
 \newblock Is independent learning all you need in the starcraft multi-agent challenge?\allowbreak[A/OL].
 \newblock 2020.
 \newblock arXiv: \eprint{https://arxiv.org/abs/2011.09533}{2011.09533}.
 \newblock \url{https://arxiv.org/abs/2011.09533}.
+
+\bibitem[Sutton et~al.(2018)Sutton and Barto]{sutton2018reinforcement}
+SUTTON R~S, BARTO A~G.
+\newblock Reinforcement learning: An introduction\allowbreak[M/OL].
+\newblock 2nd ed.
+\newblock Cambridge, MA: MIT Press, 2018: 73-88,321-337.
+\newblock \url{http://incompleteideas.net/book/the-book.html}.
+
+\bibitem[Sutton(1988)]{sutton1988learning}
+SUTTON R~S.
+\newblock Learning to predict by the methods of temporal differences\allowbreak[J/OL].
+\newblock Machine Learning, 1988, 3\allowbreak (1): 9-44.
+\newblock DOI: \doi{10.1007/BF00115009}.
+
+\bibitem[Cybenko(1989)]{cybenko1989approximation}
+CYBENKO G.
+\newblock Approximation by superpositions of a sigmoidal function\allowbreak[J/OL].
+\newblock Mathematics of Control, Signals and Systems, 1989, 2\allowbreak (4): 303-314.
+\newblock DOI: \doi{10.1007/BF02551274}.
+
+\bibitem[Hornik et~al.(1989)Hornik, Stinchcombe, and White]{hornik1989multilayer}
+HORNIK K, STINCHCOMBE M, WHITE H.
+\newblock Multilayer feedforward networks are universal approximators\allowbreak[J/OL].
+\newblock Neural Networks, 1989, 2\allowbreak (5): 359-366.
+\newblock DOI: \doi{10.1016/0893-6080(89)90020-8}.
+
+\bibitem[Mnih et~al.(2015)Mnih, Kavukcuoglu, Silver, Rusu, Veness, Bellemare, Graves, Riedmiller, Fidjeland, Ostrovski, Petersen, Beattie, Sadik, Antonoglou, King, Kumaran, Wierstra, Legg, and Hassabis]{mnih2015human}
+MNIH V, KAVUKCUOGLU K, SILVER D, et~al.
+\newblock Human-level control through deep reinforcement learning\allowbreak[J/OL].
+\newblock Nature, 2015, 518\allowbreak (7540): 529-533.
+\newblock DOI: \doi{10.1038/nature14236}.
+
+\bibitem[Sutton et~al.(1999)Sutton, McAllester, Singh, and Mansour]{sutton1999policyandvalue}
+SUTTON R~S, MCALLESTER D, SINGH S, et~al.
+\newblock Policy gradient methods for reinforcement learning with function approximation\allowbreak[C]//\allowbreak
+Advances in Neural Information Processing Systems (NeurIPS): Vol.~12.
+\newblock MIT Press, 1999: 1057-1063.
+
+\bibitem[Williams(1992)]{williams1992simple}
+WILLIAMS R~J.
+\newblock Simple statistical gradient-following algorithms for connectionist reinforcement learning\allowbreak[J/OL].
+\newblock Machine Learning, 1992, 8\allowbreak (3): 229-256.
+\newblock DOI: \doi{10.1007/BF00992696}.
+
+\bibitem[Schulman et~al.(2016)Schulman, Moritz, Levine, Jordan, and Abbeel]{schulman2016gae}
+SCHULMAN J, MORITZ P, LEVINE S, et~al.
+\newblock High-dimensional continuous control using generalized advantage estimation\allowbreak[C]//\allowbreak
+International Conference on Learning Representations (ICLR).
+\newblock 2016.
+
+\bibitem[Precup et~al.(2000)Precup, Sutton, and Singh]{precup2000eligibility}
+PRECUP D, SUTTON R~S, SINGH S.
+\newblock Eligibility traces for off-policy policy evaluation\allowbreak[C]//\allowbreak
+Proceedings of the 17th International Conference on Machine Learning (ICML).
+\newblock Morgan Kaufmann, 2000: 759-766.
+
+\bibitem[Schulman et~al.(2017)Schulman, Wolski, Dhariwal, Radford, and Klimov]{schulman2017ppo}
+SCHULMAN J, WOLSKI F, DHARIWAL P, et~al.
+\newblock Proximal policy optimization algorithms\allowbreak[A].
+\newblock 2017.
+
+\bibitem[Brown(1951)]{brown1951fictitious}
+BROWN G~W.
+\newblock Iterative solution of games by fictitious play\allowbreak[M]//\allowbreak
+KOOPMANS T~C.
+\newblock Activity Analysis of Production and Allocation.
+\newblock New York: John Wiley \& Sons, 1951: 374-376.
+
+\bibitem[Heinrich et~al.(2016)Heinrich and Silver]{heinrich2016deepreinforcementlearningselfplay}
+HEINRICH J, SILVER D.
+\newblock Deep reinforcement learning from self-play in imperfect-information games\allowbreak[A/OL].
+\newblock 2016.
+\newblock arXiv: \eprint{https://arxiv.org/abs/1603.01121}{1603.01121}.
+\newblock \url{https://arxiv.org/abs/1603.01121}.
+
+\bibitem[Lanctot et~al.(2017)Lanctot, Zambaldi, Gruslys, Lazaridou, Tuyls, Perolat, Silver, and Graepel]{lanctot2017unifiedgametheoreticapproachmultiagent}
+LANCTOT M, ZAMBALDI V, GRUSLYS A, et~al.
+\newblock A unified game-theoretic approach to multiagent reinforcement learning\allowbreak[A/OL].
+\newblock 2017.
+\newblock arXiv: \eprint{https://arxiv.org/abs/1711.00832}{1711.00832}.
+\newblock \url{https://arxiv.org/abs/1711.00832}.
 
 \bibitem[Ng et~al.(1999)Ng, Harada, and Russell]{Ng1999PolicyIU}
 NG A, HARADA D, RUSSELL S~J.

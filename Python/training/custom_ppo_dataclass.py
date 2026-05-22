@@ -58,9 +58,9 @@ class PPOArgs:
     # PPO hyperparameters
     total_timesteps: int = 1_000_000
     """训练总时间步数,多环境并行时加速消耗"""
-    learning_rate: float = 3e-4
+    learning_rate: float = 0.0007221131969041414
     """学习率"""
-    num_steps: int = 128
+    num_steps: int = 256
     """每次 rollout 采集的步数（每个并行环境）"""
     gamma: float = 0.99
     """折扣因子"""
@@ -72,9 +72,9 @@ class PPOArgs:
     """每个 rollout 的更新轮数"""
     recurrent_seq_len: int = 128
     """循环网络（GRU）的序列截断长度"""
-    clip_coef: float = 0.2
+    clip_coef: float = 0.16557490394051463
     """PPO 裁剪系数 epsilon"""
-    ent_coef: float = 0.005
+    ent_coef: float = 0.0018160124315864958
     """策略熵损失系数"""
     vf_coef: float = 0.5
     """价值函数损失系数"""
@@ -94,7 +94,7 @@ class PPOArgs:
     """是否使用 CUDA 加速"""
     reward_norm: bool = True
     """是否启用奖励归一化"""
-    reward_clip: float = 3.0
+    reward_clip: float = 1.0
     """Reward normalization clipping range."""
 
     # Optuna hyperparameter tuning
@@ -136,7 +136,7 @@ class PPOArgs:
     """GRU_MLP 躯干层宽度（GRU 输出 + BALL 特征 融合后 -> 躯干 -> 融合特征）"""
 
     # MLP
-    mlp_hiddens: tuple = (256, 128, 64)
+    mlp_hiddens: tuple = (256,256,128)
     """MLP 主干网络各层宽度（直接拼接观测 -> MLP 输出）"""
 
     # GRU
@@ -182,7 +182,7 @@ class AgentConfig:
     """SEGMENTED_MLP 躯干层宽度"""
 
     # MLP
-    mlp_hiddens: tuple = (256, 128, 64)
+    mlp_hiddens: tuple = (256, 256, 128)
     """主干 MLP 各层宽度"""
 
     # GRU
@@ -195,16 +195,16 @@ class AgentConfig:
     gru_trunk_hiddens: tuple = (128, 64)
     """GRU_MLP 躯干层宽度"""
 
-    learning_rate: float = 3e-4
+    learning_rate: float = 0.0007221131969041414
     """学习率"""
 
     gamma: float = 0.99
     """折扣因子"""
     gae_lambda: float = 0.95
     """GAE lambda"""
-    clip_coef: float = 0.2
+    clip_coef: float = 0.16557490394051463
     """PPO 裁剪系数"""
-    ent_coef: float = 0.005
+    ent_coef: float = 0.0018160124315864958
     """熵系数"""
     vf_coef: float = 0.5
     """价值函数损失系数"""
@@ -213,7 +213,7 @@ class AgentConfig:
 
     reward_norm: bool = True
     """是否启用奖励归一化"""
-    reward_clip: float = 5.0
+    reward_clip: float = 1.0
     """奖励归一化裁剪范围"""
 
 @dataclass
@@ -238,7 +238,7 @@ class IppoArgs:
     """训练总时间步数"""
     count_steps_by: str = "env_steps"
     """步数统计维度：env_steps / agent_steps"""
-    num_steps: int = 128
+    num_steps: int = 256
     """每个 rollout 的步数"""
     num_minibatches: int = 4
     """将 rollout 数据分成多少个小批量"""
@@ -250,7 +250,7 @@ class IppoArgs:
     """是否标准化优势函数"""
     clip_vloss: bool = True
     """是否裁剪价值函数损失"""
-    anneal_lr: bool = False
+    anneal_lr: bool = True
     """是否线性退火学习率"""
     target_kl: Optional[float] = None
     """KL 散度早停阈值（None=禁用）"""
@@ -301,7 +301,7 @@ class IppoArgs:
     """WandB 用户 / 团队名"""
 
     # Opponent Pool (PFSP)
-    use_opponent_pool: bool = False
+    use_opponent_pool: bool = True
     """是否启用 PFSP 对手池训练模式（每局只更新一个智能体，其余从池中采样）"""
     pool_max_size: int = 40
     """对手池最大容量（~10/agent）"""
@@ -341,8 +341,8 @@ class IppoArgs:
     """新近偏置尺度因子"""
     pool_training_agent_selection: str = "round_robin"
     """训练 agent 选择策略: 'round_robin' / 'random'"""
-    pool_initial_checkpoint_dir: Optional[str] = None
-    """Phase 2 基线 checkpoint 目录，用于初始化对手池"""
+    pool_initial_checkpoint_dir: Optional[str] ="saved_models/ippo_bootstrap"
+    """ippo联合训练后的 checkpoint 目录，用于初始化对手池"""
     pool_log_every_n_updates: int = 10
     """每 N 个 update 打印一次对手池详细统计"""
     pool_delete_replaced_checkpoints: bool = False

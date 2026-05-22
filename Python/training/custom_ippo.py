@@ -424,22 +424,22 @@ def save_ippo_model(
     extra: Optional[dict] = None,
     train_only: bool = True,
 ) -> list[str]:
-    save_path = pathlib.Path(save_path).with_suffix(".pt")#鑷姩杩藉姞 .pt 鍚庣紑
+    save_path = pathlib.Path(save_path).with_suffix(".pt") #  确保保存路径以.pt结尾
     saved_paths = []
     for i, agent in enumerate(agents):
         if train_only and not args.agent_configs[i].train:
             continue
         agent_id = args.agent_configs[i].agent_id
         agent_save_path = _make_agent_model_path(str(save_path), agent_id)
-        agent_save_path.parent.mkdir(parents=True, exist_ok=True) # 鍒涘缓淇濆瓨鐩綍
+        agent_save_path.parent.mkdir(parents=True, exist_ok=True) 
         payload = {
             "args": _serialize_args(args),
             "agent_id": agent_id,
-            "agent_state_dict": agent.state_dict(), #缃戠粶鍙傛暟
-            "optimizer_state_dict": optimizers[i].state_dict(), #浼樺寲鍣ㄥ弬鏁?
+            "agent_state_dict": agent.state_dict(), 
+            "optimizer_state_dict": optimizers[i].state_dict(), 
         }
         if reward_normalizers[i] is not None:
-            payload["reward_normalizer"] = reward_normalizers[i].state_dict() #濂栧姳褰掍竴鍖栧櫒鍙傛暟
+            payload["reward_normalizer"] = reward_normalizers[i].state_dict()
         if extra:
             payload.update(extra)
         torch.save(payload, str(agent_save_path))
@@ -453,6 +453,9 @@ def _count_completed_episodes(rollouts: list[RolloutData]) -> int:
     if rollouts[0].dones.shape[0] > 1:
         done_rows.insert(0, rollouts[0].dones[1:])
     dones = torch.cat(done_rows, dim=0)
+    #所有时间步至少有1个环境done的次数；
+    #一个游戏进程中多个智能体会在同一个时间步 done，应视为一个回合
+    #并行环境时所有环境也会在同一个时间步 done，既可以视为一个回合，也可以视为多个回合，这里视为一个回合
     return int(torch.any(dones > 0.5, dim=1).sum().item())
 
 
@@ -637,9 +640,7 @@ def load_ppo_models_if_requested(
         if path is None:
             continue
         if i >= len(agents):
-            raise ValueError(
-                f"ppo_model_paths has more entries than agents: index={i}, n_agents={len(agents)}."
-            )
+            raise ValueError(f"ppo_model_paths has more entries than agents: index={i}, n_agents={len(agents)}.")
 
         print(f"[PPO Init] 加载 agent_{i} PPO model: {path}")
         ckpt = load_full_checkpoint(path, device)
