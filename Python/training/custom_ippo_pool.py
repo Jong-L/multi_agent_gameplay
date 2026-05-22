@@ -58,10 +58,10 @@ class IppoPoolArgs(IppoArgs):
     run_mode: str = "pool_cycle"
     """ippo_bootstrap / pool_cycle / evaluate / full"""
 
-    bootstrap_save_model_path: Optional[str] = "saved-models/ippo_bootstrap"
+    bootstrap_save_model_path: Optional[str] = "saved_models/ippo_bootstrap"
     """Base path for the first direct-IPPO stage and its episode checkpoints."""
 
-    bootstrap_final_save_model_path: Optional[str] = "saved-models/ippo_direct"
+    bootstrap_final_save_model_path: Optional[str] = "saved_models/ippo_direct"
     """Base path for the second direct-IPPO stage final checkpoint."""
 
     eval_ippo_agent0_path: Optional[str] = None
@@ -75,7 +75,6 @@ class IppoPoolArgs(IppoArgs):
 
     eval_deterministic: bool = True
     """Use argmax actions in evaluate mode instead of sampling."""
-
 
 @dataclass
 class TrainingContext:
@@ -93,17 +92,14 @@ class TrainingContext:
     episode_count: int
     episode_returns: list[deque]
 
-
 @dataclass
 class OpponentGroupStat:
     reward_ema: float
     n_games: int = 0
     last_reward: float = 0.0
 
-
 class OpponentPoolState:
     """Queue-backed opponent_pool[agent_id][slot_index]."""
-
     def __init__(
         self,
         agent_ids: list[int],
@@ -115,6 +111,7 @@ class OpponentPoolState:
         delete_replaced_checkpoints: bool = False,
     ):
         self.agent_ids = list(agent_ids)
+        
         self.entries_by_agent: dict[int, list[PoolEntry]] = {
             agent_id: [] for agent_id in self.agent_ids
         }
@@ -243,7 +240,6 @@ class OpponentPoolState:
         except OSError:
             pass
 
-
 def _parse_cli(args: IppoPoolArgs) -> IppoPoolArgs:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--run-mode", choices=["ippo_bootstrap", "pool_cycle", "evaluate", "full"])
@@ -301,10 +297,8 @@ def _parse_cli(args: IppoPoolArgs) -> IppoPoolArgs:
         args.ppo_model_paths = list(parsed.ppo_model_paths)
     return args
 
-
 def _agent_ids(args: IppoPoolArgs) -> list[int]:
     return [cfg.agent_id for cfg in args.agent_configs]
-
 
 def _with_train_flags(
     args: IppoPoolArgs,
@@ -314,7 +308,7 @@ def _with_train_flags(
     policy_opponent_ids = policy_opponent_ids or set()
     configs = []
     for cfg in args.agent_configs:
-        train = cfg.agent_id in train_ids
+        train = cfg.agent_id in train_ids#该智能体是否进行训练
         configs.append(
             replace(
                 cfg,
@@ -323,7 +317,6 @@ def _with_train_flags(
             )
         )
     return configs
-
 
 def _configure_runtime_args(args: IppoPoolArgs, envs: Any, seg: Any) -> None:
     n_agents = len(args.agent_configs)
@@ -334,7 +327,7 @@ def _configure_runtime_args(args: IppoPoolArgs, envs: Any, seg: Any) -> None:
             "IPPO expects Godot slots to be n_parallel * n_agents: "
             f"envs.num_envs={args.num_envs}, n_agents={n_agents}."
         )
-    args.num_game_envs = args.num_envs // n_agents
+    args.num_game_envs = args.num_envs // n_agents#并行环境数量
     if args.num_game_envs != args.n_parallel:
         raise ValueError(
             "Godot env slot count does not match args.n_parallel: "
@@ -352,7 +345,6 @@ def _configure_runtime_args(args: IppoPoolArgs, envs: Any, seg: Any) -> None:
             "num_minibatches is too large: "
             f"batch_size={args.batch_size}, num_minibatches={args.num_minibatches}."
         )
-
 
 def _make_agents(
     args: IppoPoolArgs,
@@ -380,9 +372,11 @@ def setup_training_context(args: IppoPoolArgs) -> TrainingContext:
     n_actions = int(envs.single_action_space.n)
     agents, optimizers, reward_normalizers = _make_agents(args, n_actions, seg, device)
 
+    #加载PPO模型参数
     load_ppo_models_if_requested(args.ppo_model_paths, agents, device)
     resume_path = args.resume_from or args.load_model_path
     is_resume = bool(args.resume_from)
+    #加载检查点，从四个模型开始ippo同时训练时应该保持检查点路径为None
     global_step, start_update, episode_count, episode_returns = load_checkpoint_if_requested(
         resume_path,
         is_resume,
@@ -524,11 +518,12 @@ def run_ippo_training_job(
 
 
 def run_ippo_bootstrap(args: IppoPoolArgs) -> None:
-    all_ids = set(_agent_ids(args))
+    all_ids = set(_agent_ids(args))#{0, 1, 2, 3...}
 
-    phase1 = copy.deepcopy(args)
+    #阶段1 同时训练并且给每个智能体保存检查点
+    phase1 = copy.deepcopy(args)#配置
     phase1.use_opponent_pool = False
-    phase1.agent_configs = _with_train_flags(phase1, all_ids)
+    phase1.agent_configs = _with_train_flags(phase1, all_ids)#所有智能体都训练
     phase1.total_timesteps = int(args.pool_bootstrap_checkpoint_timesteps)
     phase1.save_checkpoint = True
     phase1.max_checkpoints = max(
@@ -540,20 +535,20 @@ def run_ippo_bootstrap(args: IppoPoolArgs) -> None:
         "[Bootstrap] stage 1: "
         f"{phase1.total_timesteps} steps, checkpoints -> {phase1.save_model_path}"
     )
+    #ippo同时训练一段时间并给所有智能体保存检查点
     run_ippo_training_job(phase1, all_ids)
 
+    #阶段2 继续训练并给主智能体保存最终模型
     phase2 = copy.deepcopy(args)
     phase2.use_opponent_pool = False
-    phase2.agent_configs = _with_train_flags(phase2, all_ids)
-    phase2.ppo_model_paths = [None for _ in phase2.agent_configs]
-    phase2.resume_from = args.bootstrap_save_model_path
+    phase2.agent_configs = _with_train_flags(phase2, all_ids)#所有智能体都训练
+    phase2.ppo_model_paths = [None for _ in phase2.agent_configs]#不加载模型参数
+    phase2.resume_from = args.bootstrap_save_model_path #从1阶段保存的各个检查点恢复
     phase2.load_model_path = None
-    phase2.total_timesteps = int(
-        args.pool_bootstrap_checkpoint_timesteps + args.pool_bootstrap_extra_timesteps
-    )
-    phase2.save_checkpoint = False
-    phase2.save_model_path = args.bootstrap_final_save_model_path
-    final_ids = {int(agent_id) for agent_id in args.pool_final_save_agent_ids}
+    phase2.total_timesteps = int(args.pool_bootstrap_checkpoint_timesteps + args.pool_bootstrap_extra_timesteps)#因为是从中断点恢复，所以加
+    phase2.save_checkpoint = False#不保存检查点
+    phase2.save_model_path = args.bootstrap_final_save_model_path#保存最终模型
+    final_ids = {int(agent_id) for agent_id in args.pool_final_save_agent_ids}#最终保存的智能体ID
     print(
         "[Bootstrap] stage 2: "
         f"continue to {phase2.total_timesteps} total steps, final ids={sorted(final_ids)}"
@@ -1166,7 +1161,6 @@ def main() -> None:
         run_full_plan(args)
     else:
         raise ValueError(f"Unknown run_mode={args.run_mode!r}")
-
 
 if __name__ == "__main__":
     main()
