@@ -58,12 +58,6 @@ class IppoPoolArgs(IppoArgs):
     run_mode: str = "full"
     """ippo_bootstrap / pool_cycle / evaluate / full"""
 
-    bootstrap_exp_name: str = "ippo_bootstrap"
-    """TensorBoard exp_name prefix for bootstrap phases (phase1=_checkpoint, phase2=_direct)."""
-
-    pool_exp_name: str = "ippo_pool"
-    """TensorBoard exp_name for the opponent-pool training phase."""
-
     bootstrap_save_model_path: Optional[str] = "saved_models/ippo_bootstrap"
     """Base path for the first direct-IPPO stage and its episode checkpoints."""
 
@@ -271,8 +265,7 @@ def _parse_cli(args: IppoPoolArgs) -> IppoPoolArgs:
     parser.add_argument("--load-model-path")
     parser.add_argument("--resume-from")
     parser.add_argument("--ppo-model-paths", nargs=4)
-    parser.add_argument("--bootstrap-exp-name")
-    parser.add_argument("--pool-exp-name")
+    parser.add_argument("--run-name")
     parser.add_argument("--pool-initial-checkpoint-dir")
     parser.add_argument("--pool-checkpoint-dir")
     parser.add_argument("--pool-slots-per-agent", type=int)
@@ -297,8 +290,7 @@ def _parse_cli(args: IppoPoolArgs) -> IppoPoolArgs:
         "save_model_path": "save_model_path",
         "load_model_path": "load_model_path",
         "resume_from": "resume_from",
-        "bootstrap_exp_name": "bootstrap_exp_name",
-        "pool_exp_name": "pool_exp_name",
+        "run_name": "run_name",
         "pool_initial_checkpoint_dir": "pool_initial_checkpoint_dir",
         "pool_checkpoint_dir": "pool_checkpoint_dir",
         "pool_slots_per_agent": "pool_slots_per_agent",
@@ -547,10 +539,11 @@ def run_ippo_training_job(
 
 def run_ippo_bootstrap(args: IppoPoolArgs) -> None:
     all_ids = set(_agent_ids(args))#{0, 1, 2, 3...}
+    base_name = args.run_name or args.exp_name
 
     #阶段1 同时训练并且给每个智能体保存检查点
     phase1 = copy.deepcopy(args)#配置
-    phase1.exp_name = f"{args.bootstrap_exp_name}_checkpoint"
+    phase1.run_name = f"{base_name}_checkpoint"
     phase1.use_opponent_pool = False
     phase1.agent_configs = _with_train_flags(phase1, all_ids)#所有智能体都训练
     phase1.total_timesteps = int(args.pool_bootstrap_checkpoint_timesteps)
@@ -569,7 +562,7 @@ def run_ippo_bootstrap(args: IppoPoolArgs) -> None:
 
     #阶段2 继续训练并给主智能体保存最终模型
     phase2 = copy.deepcopy(args)
-    phase2.exp_name = f"{args.bootstrap_exp_name}_direct"
+    phase2.run_name = f"{base_name}_direct"
     phase2.use_opponent_pool = False
     phase2.agent_configs = _with_train_flags(phase2, all_ids)#所有智能体都训练
     phase2.ppo_model_paths = [None for _ in phase2.agent_configs]#不加载模型参数
@@ -919,7 +912,7 @@ def train_pool_phase(
 def run_pool_cycle(args: IppoPoolArgs) -> None:
     pool = build_initial_pool(args)
     setup_args = copy.deepcopy(args)
-    setup_args.exp_name = args.pool_exp_name
+    setup_args.run_name = f"{(args.run_name or args.exp_name)}_pool"
     setup_args.use_opponent_pool = True
     #所有智能体都进行训练
     setup_args.agent_configs = _with_train_flags(setup_args, set(_agent_ids(setup_args)))

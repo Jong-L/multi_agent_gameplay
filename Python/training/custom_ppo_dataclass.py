@@ -240,6 +240,10 @@ class IppoArgs:
     speedup: int = 10
     """游戏物理加速倍数"""
 
+    # Run identity
+    run_name: Optional[str] = "ippo_full_mode"
+    """TensorBoard 日志目录名；None 则自动生成 {exp_name}__{seed}__{timestamp}"""
+
     # Training
     total_timesteps: int = 5_000_000
     """训练总时间步数"""
