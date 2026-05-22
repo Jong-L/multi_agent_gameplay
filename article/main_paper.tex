@@ -324,57 +324,99 @@ AI 博弈能力每一次提升的背后，都是对对手建模、策略适应�
 多智能体强化学习（Multi-Agent RL, MARL）面临的核心挑战是非平稳性（non-stationarity）：
 每个智能体的策略更新都会改变其他智能体面对的环境转移概率，
 使单智能体 RL 中的 Markov 决策过程（MDP）假设不再成立\cite{lowe2017maddpg}。
-在博弈论视角下，多智能体对抗的本质不是"谁的学习算法更强"，
-而是"策略之间的对抗动力学将涌现出怎样的均衡或循环"——
-博弈中的策略循环（strategy cycle）与策略非传递性（non-transitivity）等
-现象，是对抗性多智能体系统的核心研究对象。
+因此在多智能体系统中进行InRL（Independent RL）
+独立训练时理论上不保证强化学习算法依旧有效，尽管对于近端策略梯度优化算法（PPO）来说，进行独立训练（independent PPO，IPPO）也能在SMAC等协作型任务中表现出色\cite{dewitt2020independentlearningneedstarcraft}，但这很大程度上源于PPO算法限制了新旧策略之间的差距，使得训练本身比较平稳，一定程度上克服了多智能体环境不平稳的问题，IPPO在能否用于博弈对抗型任务也不可明断，因此直接让多个智能体在同一环境中进行训练并希望能够提升智能体能力不是明智之举。
+
+因此能否找到一种训练方案来直接提高多智能体在博弈对抗类型任务中的性能？本文基于现有的强化学习算法和自博弈方法的研究，不考虑求解博弈均衡，探索了一种简单的虚拟博弈策略来试图解决环境不平稳的问题并希望能够有效提升智能体应对多种对手的泛化能力。
 
 \subsection{国内外研究现状}
 
 \subsubsection{强化学习}
+强化学习用于解决序列决策问题，试图最大化一个决策周期的收益，不同于传统机器学习方法，强化学习通过不断与环境交互获得反馈，并基于反馈进行策略更新，从而达到学习目标。强化学习算法主要分为两类，基于价值函数的方法和基于策略梯度的方法。
 
-\subsubsection{多智能体对抗}
+基于价值函数的方法从贝尔曼最优方程发展而来，大致可以分为基于模型的方法，免模型方法，增量学习方法，神经网络逼近价值函数方法等阶段，其中，基于模型的方法知道环境的状态转移矩阵，可以直接用动态规划进行求解，比如值迭代和策略迭代\cite[73--88]{sutton2018reinforcement}。免模型方法指用蒙特卡洛或随机近似方法近似Q值或价值，从而再使用动态规划进行求解，\cite{sutton1988learning}的工作说明了了一边进行迭代求解贝尔曼最优方程一边迭代近似Q值也能够求解策略，这直接引出了Q-learning和SARSA等算法。然而在面对连续状态或动作空间时，传统基于价值的方法需要一张巨大的Q表保存离散化地所有状态和动作的Q值，这对于计算机存储和实际查找都很困难，于是后来研究人员直接用函数逼近Q值，从保存Q表转而保存参数。但是选择什么样的函数同样是难题，\cite{cybenko1989approximation}和\cite{hornik1989multilayer}相继给出了答案，即多层感知机（MLP）可以近似任何连续函数，这种优秀的拟合能力使得神经网络成为拟合Q函数的主流选择，引入深度学习的基于价值的算法如DQN\cite{mnih2015human}能够处理连续高维空间，在49款雅达利游戏中远超传统算法。
 
-MARL 的研究可大致分为三类范式：集中训练集中执行（CTCE）、
-集中训练分散执行（CTDE）和分散训练分散执行（DTDE）。
 
-在 CTDE 范式下，MADDPG\cite{lowe2017maddpg}通过集中 Critic 利用全局信息、
-分散 Actor 仅依赖局部观测，有效缓解了非平稳性问题，在协作型任务中表现出色；
-QMIX\cite{rashid2018qmix}和 VDN\cite{sunehag2018valuedecomposition}通过值函数分解
-实现了多智能体协作。在 DTDE 范式下，IPPO\cite{dewitt2020independentlearningneedstarcraft}
-将 PPO 独立应用于每个智能体，同样用于协作型任务，以其简洁性和实用性在多个 MARL 基准上取得了有竞争力的结果。
+基于策略梯度的方法不直接求解贝尔曼最优方程，而是将策略参数化后，
+通过梯度上升优化一个性能目标函数；在充分参数化的极限下，该方法的
+最优解与贝尔曼最优方程的解一致，策略梯度方法的一个重要优势在于，策略本身被显式参数化为动作的概率分布或函数，在优化过程中天然具备探索能力，因此无需像值函数方法那样依赖$\varepsilon$-贪心
+等外部探索机制~\cite[321--337]{sutton2018reinforcement}。从策略梯度方法中诞生了演员-评论家（actor-critic）范式\cite{sutton1999policyandvalue}，在算法执行过程中，策略函数（演员）和价值函数（评论家）都同时在被优化，相比于纯梯度策略方法如REINFORCE\cite{williams1992simple}减小了价值估计的方差。直接用随机近似方法估计价值函数时在训练早期会有偏差过大导致策略梯度方向错误问题，因此John Schulman等人提出广义优势估计（GAE）\cite{schulman2016gae}，通过引入一个广义优势函数，平衡价值估计时的偏差与方差，该方法结合重要性采样\cite{precup2000eligibility}直接催生了近端策略优化算法（PPO）\cite{schulman2017ppo}，PPO使用广义优势估计和重要性采样来平衡价值估计的偏差与方差，同时采用新旧策略的kl散度惩罚函数或重要性裁剪使得每次更新策略时差异不至于过大导致训练不稳定。PPO以其稳健的性能是目前最为流行的强化学习算法，
 
-而对于博弈场景，如何让智能体学会博弈，能够对抗，主要有以下研究：
 
-自博弈（self-play）是驱动策略进化的重要范式。
-AlphaGo 通过自我对弈生成训练数据不断精进棋力；
-AlphaStar 引入了联盟训练（league training），维护多个历史策略版本的对手池，
-有效防止策略坍塌。Fictitious Play 和 Prioritized Fictitious Self-Play（PFSP）
-则为自博弈提供了博弈论基础。
+\subsubsection{自博弈与多智能体对抗}
+
+对于博弈对抗场景，核心问题在于如何在非平稳的对手环境中学会适应性决策。
+虚拟博弈（Fictitious Play）是博弈论中是一种经典的学习规则\cite{brown1951fictitious}，其核心是假设对手采用静态策略，玩家根据对手的实际策略情况进行最佳响应，最终的策略即为纳什均衡的估计。
+虚拟自博弈（Fictitious Self-Play）吸收了虚拟博弈的思路，是驱动智能体对抗策略进化的核心范式，其研究可按博弈论严格性分为三个层次。
+
+\textbf{朴素自博弈与策略循环}。
+最直接的自博弈形式是让智能体与自身当前的副本对抗。
+AlphaGo通过不断与自身对弈生成训练数据，
+结合蒙特卡洛树搜索（MCTS），
+在围棋这一两人零和完全信息博弈中达到了超人类水平。
+然而，朴素自博弈在非平稳的多智能体环境中存在内在缺陷：
+当多个智能体同时学习时，每个智能体仅对当前对手策略求最优响应，
+策略可能在空间中形成循环，
+从单个智能体视角看，环境转移概率随对手策略的持续变化而漂移，
+这正是前文所述非平稳性问题的直接体现。
+AlphaStar\cite{VinyalsAlphaStar2019}在星际争霸II的实践中观察到了这一现象，
+指出纯自博弈将导致策略循环与策略坍缩
+智能体在适应当前对手后丧失了应对其他策略风格的能力。
+为此，AlphaStar 引入了联盟训练（league training），
+通过维护包含多个历史策略版本的对手池、按优先级采样对手，
+在保持策略多样性的同时驱动持续进化。
+
+\textbf{Fictitious Self-Play 与博弈论收敛保证}。
+神经虚拟自博弈（Neural Fictitious Self-Play, NFSP）
+\cite{heinrich2016deepreinforcementlearningselfplay}
+将经典博弈论中的虚拟博弈与深度强化学习结合，
+为自博弈处理非平稳性提供了严格的理论基础。
+每个玩家不对对手的最新策略做最优响应，
+而是对对手的历史平均策略求最优响应。
+NFSP 通过维护一个监督学习网络来近似对手的历史平均策略，
+使 RL Agent 面对的是一个固定的优化目标而非移动靶，
+从而将非平稳的 MARL 问题转化为平稳的单智能体学习问题。
+
+\textbf{PSRO 与统一博弈论框架}。
+PSRO（Policy Space Response Oracles）
+\cite{lanctot2017unifiedgametheoreticapproachmultiagent}
+将 Double Oracle 算法从博弈论推广至深度强化学习，
+统一了自博弈、Fictitious Play 等多种范式的理论分析。
+在 PSRO 框架中，每个 Agent 维护一个策略池，
+每轮迭代对池中策略的元策略混合（meta-strategy mixture）求近似最优响应，
+将新策略加入池中后在扩展的策略空间上重新求解元博弈。
+Lanctot 等人证明了当 Oracle 为精确最优响应求解器时，
+PSRO 在有限博弈中保证收敛到纳什均衡；
+当 Oracle 由 DRL 策略梯度近似时，
+收敛性质取决于近似的质量。
+PSRO 框架为理解不同自博弈变种的非平稳性处理能力提供了统一视角：
+朴素自博弈仅针对最新策略做最优响应（无收敛保证），
+Fictitious Play 针对历史平均策略（零和博弈下收敛），
+Double Oracle 针对策略池混合（有限博弈下收敛）。
 
 \subsubsection{强化学习训练技术}
 在奖励工程方面，势能奖励塑形（PBRS）\cite{Ng1999PolicyIU}通过引入势函数
 为状态空间赋予先验知识，在保持最优策略不变的前提下加速学习。
 在 MARL 中，奖励设计还需考虑智能体间的激励相容问题。
 
-\subsection{研究内容与创新点}
+\subsection{论文研究内容}
 
-本文的主要研究内容与创新点包括：
+本文的主要研究内容包括：
 
 （1）构建了基于 Godot 引擎的 2D 多智能体竞技场博弈环境《Tiny Swords》，
 设计了 174 维分段式观测空间与 LiDAR 射线检测机制，
 实现了 4 人混战游戏模式，支持课程学习与 per-player 差异化奖励配置。
 
-（2）设计了包含奖励球势能引导、障碍物势能避障与事件稀疏奖励的
-多层 PBRS 奖励系统，通过系统的消融实验确定了最优的势函数形式
-（线性函数、最近球模式）与障碍物处理策略（稀疏惩罚 0.5 + 24 条射线）。
+（2）设计了包含奖励球势能引导、战斗奖励塑形与事件稀疏奖励的
+多层奖励系统，通过系统的消融实验确定了最优的势函数形式
+（线性函数、最近球模式）与障碍物处理策略（稀疏惩罚）。
 
-（3）对比了 MLP、Segmented MLP 与 GRU-MLP 三种网络架构在吃球任务
-与战斗任务中的性能差异，为观测空间的编码方式选择提供了实验依据。
+（3）对比了在构建的该特定环境下 MLP、Segmented MLP 与 GRU-MLP 三种网络架构在拾取奖励球任务
+与战斗任务中的性能差异，为后续更高效的训练提供参考。
 
-（4）提出了迭代自博弈训练框架，通过冻结对手策略、轮换微调的方式
+（4）提出了迭代自博弈训练框架，通过冻结对手策略、轮换训练的方式
 驱动智能体在竞争中持续进化，引入对手池管理与 ELO 评分机制追踪策略强度变迁，
-实验观察到策略循环与行为分化现象。
+观察研究该训练框架和独立强化学习方案在策略上的现象差异。
 
 \subsection{论文组织结构}
 
@@ -400,7 +442,7 @@ AlphaStar 引入了联盟训练（league training），维护多个历史策略�
 
 \subsection{强化学习基础}
 
-强化学习解决的是智能体在环境中通过试错学习最优策略的问题，
+强化学习解决的是智能体在环境中通过试错学习最优策略的问题，用于解决序列决策问题，
 其数学基础是马尔可夫决策过程（Markov Decision Process, MDP）。
 MDP 由状态空间 $\mathcal{S}$、动作空间 $\mathcal{A}$、状态转移概率
 $P(s'|s,a)$ 和奖励函数 $R(s,a)$ 构成。
@@ -1048,59 +1090,8 @@ $E_A$ 为期望胜率。
 % ----------------------------------------------------------
 \clearpage
 \appendix
-\section{附录A 核心算法伪代码}
 
-\begin{lstlisting}[language=Python, caption={IPPO Training Loop}]
-# IPPO training pseudocode
-for iteration in range(num_iterations):
-    # collect rollout data in parallel
-    observations = env.reset()
-    for step in range(num_steps):
-        for agent_id in range(num_agents):
-            actions[agent_id], log_probs[agent_id], values[agent_id] = \
-                agents[agent_id].get_action(observations[agent_id])
-        next_observations, rewards, dones = env.step(actions)
-        buffer.add(observations, actions, log_probs, rewards, values, dones)
-        observations = next_observations
-
-    # each agent updates independently
-    for agent_id in range(num_agents):
-        advantages = compute_gae(buffer[agent_id], gamma, lambda)
-        for epoch in range(update_epochs):
-            for minibatch in buffer[agent_id].sample(num_minibatches):
-                loss = ppo_clip_loss(minibatch) + value_loss(minibatch) \
-                       - ent_coef * entropy
-                optimizer[agent_id].step(loss)
-\end{lstlisting}
-
-\begin{lstlisting}[language=Python, caption={Iterative Self-Play Loop}]
-# iterative self-play pseudocode
-# Step 1: synchronized initial training
-for agent_id in range(num_agents):
-    agents[agent_id] = train_ippo_shared(env, total_timesteps=T0)
-    pool.add(agents[agent_id])
-
-# Step 2-K: round-robin training
-for round in range(1, K + 1):
-    for agent_id in range(num_agents):
-        # sample opponents from pool
-        opponents = [pool.sample(exclude=agent_id)
-                     for _ in range(num_agents - 1)]
-        # freeze opponents, train current agent
-        agents[agent_id] = train_with_frozen_opponents(
-            env, agent_id, opponents, total_timesteps=T_k
-        )
-        # evaluate and update ELO
-        update_elo_from_recent_matches()
-        pool.add(agents[agent_id])
-\end{lstlisting}
-
-\section{附录B 实验补充数据}
-
-（此处放置：势函数对比实验的详细数据表、
-网络架构消融实验完整结果、
-迭代自博弈各轮次的胜率矩阵与 ELO 变化数据、
-奖励塑形消融实验汇总表。）
+\section{附录A 实验补充数据}
 
 % ----------------------------------------------------------
 % 致谢
