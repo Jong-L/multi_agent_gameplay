@@ -258,6 +258,7 @@ class DiscreteActorCriticAgent(nn.Module):
         return self.encoder.recurrent_state_size
 
     def get_initial_state(self, batch_size: int, device: torch.device) -> Optional[torch.Tensor]:
+        """Get initial recurrent state. batch size指有多少个环境需要使用记忆网络"""
         if not self.is_recurrent:
             return None
         return self.encoder.initial_state(batch_size, device)

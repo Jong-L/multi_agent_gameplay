@@ -252,7 +252,7 @@ func _on_player_skill_activated(entity: Entity, _skill: Skill) -> void:
 #移动惩罚
 func on_player_moved(player: Player) -> void:
 	if player.is_moving:
-		#add_reward(player.player_id, _cfg(player.player_id).run, "run")
+		#print(_cfg(player.player_id).run)
 		player.ai_controller.reward+=_cfg(player.player_id).run
 
 #待机惩罚（中心区域待机豁免）
@@ -261,6 +261,7 @@ func idle_penalty(player:Player)->void:
 		return
 		
 	if not player.is_moving:
+		#print(_cfg(player.player_id).idle)
 		player.ai_controller.reward+=_cfg(player.player_id).idle
 
 func _reset_ball_shaping_after_ball_removed(removed_ball: RewardBall) -> void:

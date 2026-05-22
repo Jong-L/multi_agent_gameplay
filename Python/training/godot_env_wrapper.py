@@ -231,7 +231,7 @@ def _resolve_path(path: Optional[str], base: pathlib.Path) -> Optional[str]:
 def init_training_setup(args):
     """初始化 wandb、TensorBoard、随机种子、设备、环境和观测分段。
     """
-    run_name = f"{args.exp_name}__{args.seed}__{int(time.time())}"
+    run_name = args.run_name if args.run_name is not None else f"{args.exp_name}__{args.seed}__{int(time.time())}"
 
     # Weights & Biases
     if args.track:

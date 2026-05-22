@@ -94,9 +94,9 @@ class TrainingContext:
 
 @dataclass
 class OpponentGroupStat:
-    reward_ema: float
-    n_games: int = 0
-    last_reward: float = 0.0
+    reward_ema: float#指数平均奖励
+    n_games: int = 0#对战场次
+    last_reward: float = 0.0#最后奖励
 
 class OpponentPoolState:
     """Queue-backed opponent_pool[agent_id][slot_index]."""
@@ -106,7 +106,7 @@ class OpponentPoolState:
         per_agent_max_size: int,
         epsilon: float,
         temperature: float,
-        reward_ema: float,
+        reward_ema_coef: float,
         default_reward_score: float,
         delete_replaced_checkpoints: bool = False,
     ):
@@ -118,12 +118,13 @@ class OpponentPoolState:
         self.per_agent_max_size = int(per_agent_max_size)
         self.epsilon = float(epsilon)
         self.temperature = float(temperature)
-        self.reward_ema = float(reward_ema)
+        self.reward_ema_coef = float(reward_ema_coef)
         self.default_reward_score = float(default_reward_score)
         self.delete_replaced_checkpoints = bool(delete_replaced_checkpoints)
         self.stats: dict[tuple[int, tuple[str, ...]], OpponentGroupStat] = {}
 
     def add_entry(self, entry: PoolEntry) -> Optional[PoolEntry]:
+        """在对手池中加入记录"""
         items = self.entries_by_agent.setdefault(entry.agent_id, [])
         items.append(entry)
         removed = None
@@ -135,9 +136,11 @@ class OpponentPoolState:
         return removed
 
     def entries_for(self, agent_id: int) -> list[PoolEntry]:
+        """获取指定智能体的所有检查点"""
         return self.entries_by_agent.get(agent_id, [])
 
     def group_count(self, opponent_ids: list[int]) -> int:
+        """获取可用的对手group数量"""
         if not opponent_ids:
             return 0
         return min(len(self.entries_for(agent_id)) for agent_id in opponent_ids)
@@ -147,31 +150,33 @@ class OpponentPoolState:
         main_agent_id: int,
         opponent_ids: list[int],
         rng: random.Random,
-        force_uniform: bool = False,
+        force_uniform: bool = False,#是否强制均匀采样
     ) -> tuple[int, list[PoolEntry], np.ndarray]:
+        """从对手池中采样一个group"""
         count = self.group_count(opponent_ids)
         if count <= 0:
-            raise RuntimeError(
-                f"Opponent pool has no complete group for opponents={opponent_ids}."
-            )
+            raise RuntimeError(f"Opponent pool has no complete group for opponents={opponent_ids}.")
 
         candidates = [
             [self.entries_by_agent[agent_id][slot] for agent_id in opponent_ids]
             for slot in range(count)
-        ]
+        ]#candidates[opponent_count][count]
         if force_uniform or rng.random() < self.epsilon:
             probs = np.full(count, 1.0 / count, dtype=np.float64)
         else:
+            # 计算所有候选对手group的奖励
             rewards = np.asarray(
                 [self._group_reward(main_agent_id, group) for group in candidates],
                 dtype=np.float64,
             )
             temp = max(self.temperature, 1e-6)
             logits = -(rewards - rewards.min()) / temp
-            logits -= logits.max()
+            logits -= logits.max()#减去最大值以避免数值不稳定
+            #softmax计算采样概率
             weights = np.exp(logits)
             probs = weights / weights.sum()
 
+        # 从候选对手group中采样一个
         slot_index = int(rng.choices(range(count), weights=probs.tolist(), k=1)[0])
         return slot_index, candidates[slot_index], probs
 
@@ -182,24 +187,28 @@ class OpponentPoolState:
         mean_reward: float,
         n_games: int,
     ) -> None:
+        """记录对战结果"""
         key = self._group_key(main_agent_id, group)
         stat = self.stats.get(key)
         if stat is None:
             stat = OpponentGroupStat(reward_ema=float(mean_reward))
             self.stats[key] = stat
         else:
+            # 更新指数平均奖励
             stat.reward_ema = (
-                self.reward_ema * stat.reward_ema
-                + (1.0 - self.reward_ema) * float(mean_reward)
+                self.reward_ema_coef * stat.reward_ema
+                + (1.0 - self.reward_ema_coef) * float(mean_reward)
             )
         stat.n_games += int(n_games)
         stat.last_reward = float(mean_reward)
 
+        # 更新组中每个检查点的数据
         for entry in group:
             entry.main_reward_ema = stat.reward_ema
             entry.n_games += int(n_games)
 
     def to_rows(self) -> list[dict[str, Any]]:
+        """将对手池数据转换为字典列表"""
         rows = []
         for agent_id, entries in self.entries_by_agent.items():
             for entry in entries:
@@ -217,10 +226,12 @@ class OpponentPoolState:
         return rows
 
     def _refresh_slot_indices(self, agent_id: int) -> None:
+        """刷新指定智能体的快照索引"""
         for slot_index, entry in enumerate(self.entries_by_agent.get(agent_id, [])):
             entry.slot_index = slot_index
 
     def _group_reward(self, main_agent_id: int, group: list[PoolEntry]) -> float:
+        """获取对战group的指数平均奖励"""
         stat = self.stats.get(self._group_key(main_agent_id, group))
         if stat is None:
             return self.default_reward_score
@@ -228,6 +239,7 @@ class OpponentPoolState:
 
     @staticmethod
     def _group_key(main_agent_id: int, group: list[PoolEntry]) -> tuple[int, tuple[str, ...]]:
+        """获取主智能体查找group状态的key"""
         return (
             int(main_agent_id),
             tuple(str(pathlib.Path(entry.checkpoint_path).resolve()) for entry in group),
@@ -352,6 +364,7 @@ def _make_agents(
     seg: Any,
     device: torch.device,
 ) -> tuple[list[IPPOAgent], list[optim.Optimizer], list[Optional[RewardNormalizer]]]:
+    """创建IPPO智能体、优化器和奖励归一化器"""
     agents: list[IPPOAgent] = []
     optimizers: list[optim.Optimizer] = []
     reward_normalizers: list[Optional[RewardNormalizer]] = []
@@ -367,16 +380,17 @@ def _make_agents(
 
 
 def setup_training_context(args: IppoPoolArgs) -> TrainingContext:
+    """设置训练上下文，初始化训练环境和智能体"""
     writer, device, envs, seg, _ = init_training_setup(args)
     _configure_runtime_args(args, envs, seg)
     n_actions = int(envs.single_action_space.n)
     agents, optimizers, reward_normalizers = _make_agents(args, n_actions, seg, device)
 
-    #加载PPO模型参数
+    #加载PPO模型参数，单独进行pool cycle时应该保证args.ppo_model_paths为None
     load_ppo_models_if_requested(args.ppo_model_paths, agents, device)
     resume_path = args.resume_from or args.load_model_path
     is_resume = bool(args.resume_from)
-    #加载检查点，从四个模型开始ippo同时训练时应该保持检查点路径为None
+    #加载检查点，从四个模型开始ippo同时训练或单独跑pool cycle时应该保持检查点路径为None
     global_step, start_update, episode_count, episode_returns = load_checkpoint_if_requested(
         resume_path,
         is_resume,
@@ -433,6 +447,7 @@ def _restore_agent_state(
     state_dict: dict[str, torch.Tensor],
     device: torch.device,
 ) -> None:
+    """将智能体网络参数加载到指定设备上"""
     agent.load_state_dict({k: v.to(device) for k, v in state_dict.items()})
 
 
@@ -442,6 +457,7 @@ def _load_agent_state(
     agent: IPPOAgent,
     device: torch.device,
 ) -> dict:
+    """从检查点中加载智能体网络参数"""
     ckpt = load_full_checkpoint(str(path), device)
     ckpt_agent_id = ckpt.get("agent_id")
     if ckpt_agent_id is not None and int(ckpt_agent_id) != int(agent_id):
@@ -463,11 +479,13 @@ def save_selected_agents(
     args: IppoPoolArgs,
     extra: Optional[dict] = None,
 ) -> list[str]:
+    """保存指定的智能体的检查点"""
     if save_path is None:
         return []
     original_configs = args.agent_configs
     args.agent_configs = _with_train_flags(args, selected_agent_ids)
     try:
+        #不训练的智能体不会保存，直接复用保存函数
         return save_ippo_model(
             save_path,
             agents,
@@ -562,13 +580,29 @@ _STEP_RE = re.compile(r"_step(\d+)")
 
 
 def _checkpoint_sort_key(path: pathlib.Path) -> tuple[int, float, str]:
+    """
+    生成检查点文件的排序键，用于对检查点文件进行排序。
+    
+    排序优先级：
+    1. episode/step编号（主要排序依据）
+    2. 文件修改时间（次要排序依据，处理相同编号的情况）
+    3. 文件名（最终排序依据，确保确定性）
+    Returns:
+        三元组 (episode/step编号, 修改时间戳, 文件名)
+    """
     name = path.name
+    # 从文件名中提取episode或step编号
+    # 优先匹配_episodeN，如果没有则匹配_stepN
     match = _EPISODE_RE.search(name) or _STEP_RE.search(name)
+    # 如果找到匹配，提取数字；否则默认为0
     number = int(match.group(1)) if match else 0
     try:
+        # 获取文件的最后修改时间戳
         mtime = path.stat().st_mtime
     except OSError:
+        # 如果无法获取文件状态（如文件被删除），使用默认值0.0
         mtime = 0.0
+    # 返回排序键：先按编号排序，再按时间排序，最后按文件名排序
     return number, mtime, name
 
 
@@ -581,11 +615,14 @@ def find_recent_agent_checkpoints(
     if not root.exists():
         raise FileNotFoundError(f"Checkpoint directory does not exist: {checkpoint_dir}")
     agent_re = re.compile(_AGENT_RE_TEMPLATE.format(agent_id=agent_id))
+    #查找所有匹配的检查点文件
     candidates = [
         path for path in root.rglob("*.pt")
         if agent_re.search(path.name)
     ]
+    # 对检查点文件进行排序
     candidates.sort(key=_checkpoint_sort_key)
+    # 保留最新k个检查点
     if keep_latest > 0:
         candidates = candidates[-keep_latest:]
     if not candidates:
@@ -611,12 +648,15 @@ def build_initial_pool(args: IppoPoolArgs) -> OpponentPoolState:
         default_reward_score=args.pool_default_reward_score,
         delete_replaced_checkpoints=args.pool_delete_replaced_checkpoints,
     )
+    #加载中断点，初始化对手池
     for agent_id in _agent_ids(args):
+        #查找最近的检查点文件
         paths = find_recent_agent_checkpoints(
             checkpoint_dir,
             agent_id,
             args.pool_initial_keep_per_agent,
         )
+        #将检查点文件添加到对手池中
         for path in paths:
             number, _, _ = _checkpoint_sort_key(path)
             pool.add_entry(
@@ -649,6 +689,7 @@ def save_main_agent_to_pool(
     ctx: TrainingContext,
     phase_name: str,
 ) -> None:
+    """更新主智能体的对手池"""
     checkpoint_dir = _pool_checkpoint_dir(ctx.args)
     checkpoint_dir.mkdir(parents=True, exist_ok=True)
     base_path = checkpoint_dir / f"{phase_name}_step{ctx.global_step}"
@@ -688,6 +729,7 @@ def _load_latest_pool_entries_into_agents(
     pool: OpponentPoolState,
     ctx: TrainingContext,
 ) -> None:
+    """从对手池中加载最新检查点到智能体"""
     for agent_id in _agent_ids(ctx.args):
         entries = pool.entries_for(agent_id)
         if not entries:
@@ -702,9 +744,10 @@ def _load_latest_pool_entries_into_agents(
 
 
 def _phase_update_count(args: IppoPoolArgs, phase_timesteps: int) -> tuple[int, int]:
+    """计算阶段更新次数和步进增量"""
     n_agents = len(args.agent_configs)
     if args.count_steps_by == "env_steps":
-        denom = args.num_game_envs * args.num_steps
+        denom = args.num_game_envs * args.num_steps#每次采样后的总样本数
         step_increment = args.num_game_envs
     elif args.count_steps_by == "agent_steps":
         denom = args.num_game_envs * n_agents * args.num_steps
@@ -735,12 +778,13 @@ def _sample_and_load_opponents(
     ctx: TrainingContext,
     rng: random.Random,
 ) -> tuple[int, list[PoolEntry]]:
+    """从对手池中采样并加载对手智能体的模型"""
     opponent_ids = [agent_id for agent_id in _agent_ids(ctx.args) if agent_id != main_agent_id]
+    #从对手池中采样一个对手智能体组
     slot_index, group, probs = pool.sample_group(main_agent_id, opponent_ids, rng)
+    #加载采样的对手智能体组的模型
     _load_opponent_group(group, ctx)
-    opponent_desc = " ".join(
-        f"agent_{entry.agent_id}[{entry.slot_index}]" for entry in group
-    )
+    opponent_desc = " ".join(f"agent_{entry.agent_id}[{entry.slot_index}]" for entry in group)
     print(
         f"[Pool Sample] main=agent_{main_agent_id} slot={slot_index} "
         f"opponents={opponent_desc} prob={probs[slot_index]:.3f}"
@@ -757,30 +801,36 @@ def train_pool_phase(
     phase_name: str,
     rng: random.Random,
 ) -> None:
+    """对手池迭代轮回训练"""
     args = ctx.args
     n_agents = len(args.agent_configs)
     n_game_envs = args.num_game_envs
 
     _restore_agent_state(ctx.agents[main_agent_id], current_agent_states[main_agent_id], ctx.device)
+    #划分训练智能体和非训练智能体
     args.agent_configs = _with_train_flags(
         args,
         train_ids={main_agent_id},
         policy_opponent_ids=set(_agent_ids(args)) - {main_agent_id},
     )
+
     phase_updates, step_increment = _phase_update_count(args, phase_timesteps)
+    #每个智能体在不同并行环境中的累计奖励不同
     accum_rewards = np.zeros((n_agents, n_game_envs), dtype=np.float64)
     rnn_states = [agent.get_initial_state(n_game_envs, ctx.device) for agent in ctx.agents]
     _, current_group = _sample_and_load_opponents(pool, main_agent_id, ctx, rng)
 
     start_time = time.time()
+    #记录上次保存检查点的步数
     last_pool_save_step = ctx.global_step
 
     for local_update in range(1, phase_updates + 1):
-        if args.anneal_lr:
+        if args.anneal_lr:#退火学习率
             progress = 1.0 - (local_update - 1.0) / phase_updates
             cfg = args.agent_configs[main_agent_id]
             ctx.optimizers[main_agent_id].param_groups[0]["lr"] = progress * cfg.learning_rate
 
+        #收集数据
         rollouts, ctx.global_step, rnn_states, new_episode_returns = collect_parallel_rollout_ippo(
             args.agent_configs,
             ctx.agents,
@@ -800,8 +850,8 @@ def train_pool_phase(
         ctx.next_done = torch.stack([r.next_done for r in rollouts], dim=1).reshape(args.num_envs)
         ctx.episode_count += _count_completed_episodes(rollouts)
 
-        completed_returns = new_episode_returns[main_agent_id]
-        if completed_returns:
+        completed_returns = new_episode_returns[main_agent_id]#收集数据时所有回合的奖励
+        if completed_returns:#如果经历过回合结束
             mean_reward = float(np.mean(np.asarray(completed_returns, dtype=np.float64)))
             pool.record_result(
                 main_agent_id,
@@ -809,7 +859,9 @@ def train_pool_phase(
                 mean_reward,
                 n_games=len(completed_returns),
             )
+            #重新采样，current_group仅用于统计
             _, current_group = _sample_and_load_opponents(pool, main_agent_id, ctx, rng)
+            #重置RNN状态
             rnn_states = [
                 agent.get_initial_state(n_game_envs, ctx.device)
                 for agent in ctx.agents
@@ -856,14 +908,16 @@ def run_pool_cycle(args: IppoPoolArgs) -> None:
     pool = build_initial_pool(args)
     setup_args = copy.deepcopy(args)
     setup_args.use_opponent_pool = True
+    #所有智能体都进行训练
     setup_args.agent_configs = _with_train_flags(setup_args, set(_agent_ids(setup_args)))
 
     ctx = None
     try:
         ctx = setup_training_context(setup_args)
         if not any(ctx.args.ppo_model_paths) and not ctx.args.resume_from and not ctx.args.load_model_path:
-            _load_latest_pool_entries_into_agents(pool, ctx)
-        current_agent_states = _capture_agent_states(ctx.agents)
+            _load_latest_pool_entries_into_agents(pool, ctx)#用最近的检查点模型
+        #所有智能体的网络参数，shape(n_agents)
+        current_agent_states: list[dict[str, torch.Tensor]] = _capture_agent_states(ctx.agents)
         rng = random.Random(ctx.args.seed)
 
         for round_idx in range(int(ctx.args.pool_rounds)):
@@ -883,6 +937,7 @@ def run_pool_cycle(args: IppoPoolArgs) -> None:
                     rng,
                 )
 
+        #结束轮训后对主智能体进行额外训练
         final_id = int(ctx.args.pool_final_agent_id)
         print(
             f"[Pool Final] agent_{final_id}: "
@@ -907,6 +962,7 @@ def run_pool_cycle(args: IppoPoolArgs) -> None:
             ctx.optimizers,
             ctx.episode_returns,
         )
+        #保存主智能体模型
         final_ids = {int(agent_id) for agent_id in ctx.args.pool_final_save_agent_ids}
         save_selected_agents(
             ctx.args.save_model_path,
@@ -929,9 +985,11 @@ def _build_eval_agent(
     seg: Any,
     device: torch.device,
 ) -> IPPOAgent:
+    """将指定id的智能体设置为评估模型"""
     cfg = args.agent_configs[agent_id]
     agent = IPPOAgent(n_actions, seg, cfg).to(device)
     _load_agent_state(path, agent_id, agent, device)
+    #设置为评估模式
     agent.eval()
     return agent
 
@@ -971,6 +1029,8 @@ def _write_eval_rows(path: Optional[str], rows: list[dict[str, Any]]) -> None:
 
 
 def run_evaluation(args: IppoPoolArgs) -> None:
+    """评估模型"""
+    #寻找评估模型的目录
     eval_dir = (
         args.eval_opponent_checkpoint_dir
         or args.pool_initial_checkpoint_dir
@@ -982,6 +1042,7 @@ def run_evaluation(args: IppoPoolArgs) -> None:
     eval_args = copy.deepcopy(args)
     eval_args.n_parallel = int(args.pool_eval_groups)
     eval_args.pool_initial_checkpoint_dir = eval_dir
+    #都进行推理不参与训练
     eval_args.agent_configs = _with_train_flags(
         eval_args,
         train_ids=set(),
@@ -993,14 +1054,17 @@ def run_evaluation(args: IppoPoolArgs) -> None:
         n_actions = int(envs.single_action_space.n)
         pool = build_initial_pool(eval_args)
         rng = random.Random(eval_args.seed)
+        #智能体0的对手
         opponent_ids = [agent_id for agent_id in _agent_ids(eval_args) if agent_id != 0]
         group_count = pool.group_count(opponent_ids)
         if group_count >= int(eval_args.pool_eval_groups):
+            #不放回采样对手组
             slot_indices = rng.sample(range(group_count), int(eval_args.pool_eval_groups))
-        else:
+        else:#放回采样对手组
             slot_indices = [
                 rng.randrange(group_count) for _ in range(int(eval_args.pool_eval_groups))
             ]
+        
         opponent_groups = [
             [pool.entries_by_agent[agent_id][slot] for agent_id in opponent_ids]
             for slot in slot_indices
@@ -1010,6 +1074,7 @@ def run_evaluation(args: IppoPoolArgs) -> None:
             "direct_ippo": eval_args.eval_ippo_agent0_path,
             "opponent_pool": eval_args.eval_pool_agent0_path,
         }
+
         rows: list[dict[str, Any]] = []
         for model_label, model_path in model_paths.items():
             if model_path is None:
@@ -1017,9 +1082,8 @@ def run_evaluation(args: IppoPoolArgs) -> None:
             policies: list[list[IPPOAgent]] = []
             for group in opponent_groups:
                 group_agents: list[Optional[IPPOAgent]] = [None for _ in _agent_ids(eval_args)]
-                group_agents[0] = _build_eval_agent(
-                    model_path, 0, eval_args, n_actions, seg, device
-                )
+                #把智能体0设置为评估模型
+                group_agents[0] = _build_eval_agent(model_path, 0, eval_args, n_actions, seg, device)
                 for entry in group:
                     group_agents[entry.agent_id] = _build_eval_agent(
                         entry.checkpoint_path,
