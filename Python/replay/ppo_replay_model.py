@@ -36,22 +36,22 @@ from custom_ppo_dataclass import NetworkType
 class ReplayConfig:
     """PPO 模型回放配置 — 直接修改默认值即可。"""
 
-    model_path: str = "saved_models\\mlp_s3_agent0.pt"
+    model_path: str = "saved_models\curriculum\ppo_agent_0.pt"
     """要加载的模型文件路径 (.pt)。"""
 
-    env_path: Optional[str] = "curriculum_envs\\s3-enemy-and-ball\\build0\\game.exe"
+    env_path: Optional[str] = "godot-game\\build0\\game.exe"
     """Godot 可执行文件路径 (None 连接编辑器)。"""
 
-    config_path: str = "curriculum_envs\\s1-no-wall-for ball\\configs\\game_config.tres"
+    config_path: str = "godot-game\\configs\\game_config.tres"
     """game_config.tres 路径, 用于读取观测维度配置。"""
 
-    speedup: int = 1
+    speedup: int = 2
     """物理引擎加速倍数 (1=正常速度)。"""
 
     show_window: bool = True
     """显示游戏窗口。"""
 
-    deterministic: bool = True
+    deterministic: bool = False
     """确定性推理 (argmax 而非采样)。"""
 
     cuda: bool = False
