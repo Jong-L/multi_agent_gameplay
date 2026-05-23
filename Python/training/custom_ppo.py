@@ -803,12 +803,19 @@ def _sample_optuna_args(base_args: PPOArgs, trial: Any) -> PPOArgs:
     # args.seed = int(base_args.seed + trial.number)
     args.exp_name = f"{base_args.exp_name}_optuna_trial_{trial.number}"
     args.total_timesteps = int(base_args.optuna_timesteps)
+    args.port_offset = base_args.port_offset + trial.number*args.n_parallel
 
+    args.network_type = trial.suggest_categorical("network_type", ["mlp", "segmented_mlp", "gru_mlp"])
     args.learning_rate = trial.suggest_float("learning_rate", 1e-5, 1e-3, log=True)
-    args.num_steps = trial.suggest_categorical("num_steps", [64, 128, 256])
+    args.gae_lambda = trial.suggest_float("gae_lambda", 0.9, 0.99)
+    args.num_minibatches = trial.suggest_categorical("num_minibatches", [2, 4, 8,16])
+    args.update_epochs = trial.suggest_categorical("update_epochs", [3, 5, 8, 10])
+    args.max_grad_norm = trial.suggest_categorical("max_grad_norm", [0.5, 1.0, 2.0, 4.0])
+    args.num_steps = trial.suggest_categorical("num_steps", [64, 128, 256, 512])
+    args.vf_coef = trial.suggest_float("vf_coef", 0.1, 1.0, log=True)
 
-    args.clip_coef = trial.suggest_float("clip_coef", 0.15, 0.25)
-    args.ent_coef = trial.suggest_float("ent_coef", 1e-4, 5e-2, log=True)
+    args.clip_coef = trial.suggest_float("clip_coef", 0.15, 0.3)
+    args.ent_coef = trial.suggest_float("ent_coef", 1e-3, 5e-2, log=True)
     args.reward_norm = trial.suggest_categorical("reward_norm", [True, False])
     args.anneal_lr = trial.suggest_categorical("anneal_lr", [False, True])
 
@@ -830,11 +837,14 @@ def _sample_optuna_args(base_args: PPOArgs, trial: Any) -> PPOArgs:
         args.seg_trunk_hiddens = _parse_hiddens(hidden_choice)
 
     if args.network_type == NetworkType.GRU_MLP:
-        args.gru_hidden = trial.suggest_categorical("gru_hidden", [64, 128, 196])
+        args.recurrent_seq_len = trial.suggest_categorical(
+            "recurrent_seq_len", [32, 64, 128, 196, 256, 512]
+        )
+        args.gru_hidden = trial.suggest_categorical("gru_hidden", [64, 128, 196, 256])
         args.gru_num_layers = trial.suggest_int("gru_num_layers", 1, 2)
         hidden_choice = trial.suggest_categorical(
             "gru_trunk_hiddens",
-            ["64,64", "128,64", "128,128"],
+            ["64,32", "128,64", "128,64,32"],
         )
         args.gru_trunk_hiddens = _parse_hiddens(hidden_choice)
 
@@ -881,7 +891,7 @@ def run_optuna(args: PPOArgs):
     pruner = (
         optuna.pruners.MedianPruner(
             n_warmup_steps=100,
-            n_startup_trials=8,
+            n_startup_trials=10,
             interval_steps=10,
         )
         if args.optuna_prune

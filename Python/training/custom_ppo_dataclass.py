@@ -17,11 +17,11 @@ class NetworkType(str, Enum):
 class PPOArgs:
     """Single-agent PPO training config."""
     # Environment
-    env_path: Optional[str] = "godot-game/build3\game.exe"
+    env_path: Optional[str] = "godot-game\\optuna-env\\game.exe"
     """游戏环境路径（Godot 可执行文件）"""
     config_path: str = "godot-game/configs/game_config.tres"
     """游戏配置文件路径（.tres）"""
-    n_parallel: int = 4
+    n_parallel: int = 16
     """并行环境（智能体）数量"""
     seed: int = 1
     """随机种子"""
@@ -30,8 +30,7 @@ class PPOArgs:
     speedup: int = 16
     """游戏物理加速倍数"""
     port_offset: int = 0
-    """Godot 通信端口偏移量。基础端口 11008，实际端口 = 11008 + port_offset。
-    多进程并行训练时，每个进程设置不同偏移量避免端口冲突（如 0, 100, 200, 300）。"""
+    """Godot 通信端口偏移量。基础端口 11008，实际端口 = 11008 + port_offset"""
 
     # Logging/checkpointing
     exp_name: str = "custom_ppo"
@@ -105,11 +104,11 @@ class PPOArgs:
     """Reward normalization clipping range."""
 
     # Optuna hyperparameter tuning
-    enable_optuna: bool = False
+    enable_optuna: bool = True
     """Enable Optuna hyperparameter search instead of one normal training run."""
-    optuna_trials: int = 100
+    optuna_trials: int = 500
     """Number of Optuna trials to run."""
-    optuna_timesteps: int = 500_000
+    optuna_timesteps: int = 1000_000
     """Training timesteps used by each trial."""
     optuna_study_name: str = "custom_ppo_optuna"
     """Optuna study name."""

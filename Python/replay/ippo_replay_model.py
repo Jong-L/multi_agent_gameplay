@@ -1,7 +1,7 @@
 """
 IPPO 模型推理回放脚本
 ======================
-加载 custom_ippo.py 训练产生的 .pt 模型文件，
+加载 custom_ippo.py 训练产生的 per-agent .pt 模型文件,
 连接到 Godot 环境进行可视化推理回放。
 
 支持:
@@ -10,8 +10,9 @@ IPPO 模型推理回放脚本
   - GRU_MLP 自动维护每个 agent 的 RNN 隐藏态
   - --agent_ids 指定使用哪些 agent 的策略 (其余随机动作)
 
-注意: save_ippo_model 使用 vars(args) 直接 pickle 保存,
-Enum 对象保持原样, 无需额外反序列化。
+保存格式: save_ippo_model 将 4 个 agent 分别存为独立文件:
+  {base}_agent0.pt, {base}_agent1.pt, {base}_agent2.pt, {base}_agent3.pt
+回放时 model_path 指向基础路径 (不含 _agentN 后缀), 自动加载全部 agent。
 """
 import pathlib
 import sys
@@ -29,13 +30,9 @@ from godot_env_wrapper import (
     GodotDiscreteEnvWrapper,
     ObsSegmentDims,
 )
-from custom_ippo import (
-    NetworkType,
-    IPPOAgent,
-    IppoArgs,
-    AgentConfig,
-    SegmentedObsHelper,
-)
+from custom_ppo_dataclass import NetworkType, AgentConfig, IppoArgs
+from ppo_networks import SegmentedObsHelper
+from custom_ippo import IPPOAgent
 
 
 # ╔══════════════════════════════════════════════════════════╗
@@ -45,16 +42,17 @@ from custom_ippo import (
 class ReplayConfig:
     """IPPO 模型回放配置 — 直接修改默认值即可。"""
 
-    model_path: str = "saved_models\\mlp_s1_agent0.pt"
-    """要加载的模型文件路径 (.pt)。"""
+    model_path: str = "saved_models\\ippo_bootstrap_episode45.pt"
+    """IPPO 模型基础路径 (不含 _agentN 后缀)。
+    自动加载 {stem}_agent0.pt ~ {stem}_agent3.pt。"""
 
-    env_path: Optional[str] = "godot-game/build/game.exe"
+    env_path: Optional[str] = "godot-game\\build-multiagent\\game.exe"
     """Godot 可执行文件路径 (None 连接编辑器)。"""
 
     config_path: str = "godot-game/configs/game_config.tres"
     """game_config.tres 路径, 用于读取观测维度配置。"""
 
-    speedup: int = 10
+    speedup: int = 2
     """物理引擎加速倍数 (1=正常速度)。"""
 
     show_window: bool = True
@@ -81,18 +79,45 @@ class ReplayConfig:
 # ╚══════════════════════════════════════════════════════════╝
 
 
-def load_checkpoint(model_path: pathlib.Path, device: torch.device) -> dict:
-    """加载 save_ippo_model() 保存的 .pt 模型文件。
+def _make_agent_model_path(save_path: str, agent_id: int) -> pathlib.Path:
+    """从基础路径推导 per-agent 文件名: {stem}_agent{id}.pt"""
+    save_path = pathlib.Path(save_path).with_suffix(".pt")
+    return save_path.with_name(f"{save_path.stem}_agent{agent_id}{save_path.suffix}")
 
-    格式: {"args": {...pickle objects...}, "agent_{i}_state_dict": ..., ...}
+
+def load_agent_checkpoints(model_base_path: pathlib.Path, device: torch.device) -> dict:
+    """加载 save_ippo_model() 保存的 per-agent .pt 文件。
+
+    每个 agent 独立存储为 {base}_agentN.pt，格式:
+      {"args": {...}, "agent_id": N, "agent_state_dict": ...}
+
+    返回统一格式: {"agent_0_state_dict": ..., "agent_1_state_dict": ..., ...,
+                   ...args 字段...}
     """
-    checkpoint = torch.load(str(model_path), map_location=device, weights_only=False)
-    result = dict(checkpoint.get("args", {}))
-    for key, value in checkpoint.items():
-        if key != "args" and "_state_dict" in key:
-            result[key] = value
-    if "reward_normalizer" in checkpoint:
-        result["reward_normalizer"] = checkpoint["reward_normalizer"]
+    model_base_path = model_base_path.with_suffix(".pt")
+
+    # 先加载 agent_0 获取 args, 确定 agent 数量
+    agent0_path = _make_agent_model_path(str(model_base_path), 0)
+    if not agent0_path.exists():
+        raise FileNotFoundError(f"找不到 agent_0 checkpoint: {agent0_path}")
+
+    agent0_ckpt = torch.load(str(agent0_path), map_location=device, weights_only=False)
+    raw_args = agent0_ckpt.get("args", {})
+    agent_configs = raw_args.get("agent_configs", [])
+    n_agents = len(agent_configs) if agent_configs else 4
+
+    result = dict(raw_args)
+
+    for agent_id in range(n_agents):
+        agent_path = _make_agent_model_path(str(model_base_path), agent_id)
+        if not agent_path.exists():
+            print(f"[Warn] 缺少 agent_{agent_id} 文件: {agent_path}, 跳过。")
+            continue
+
+        ckpt = (agent0_ckpt if agent_id == 0
+                else torch.load(str(agent_path), map_location=device, weights_only=False))
+        result[f"agent_{agent_id}_state_dict"] = ckpt["agent_state_dict"]
+
     return result
 
 
@@ -145,12 +170,10 @@ def main():
     device = torch.device("cuda" if torch.cuda.is_available() and replay_cfg.cuda else "cpu")
 
     model_path = pathlib.Path(replay_cfg.model_path).resolve()
-    if not model_path.exists():
-        raise FileNotFoundError(f"模型文件不存在: {model_path}")
 
     # ── 1. 加载 checkpoint ──
-    print(f"加载模型: {model_path}")
-    checkpoint_data = load_checkpoint(model_path, device)
+    print(f"加载模型 (基础路径): {model_path}")
+    checkpoint_data = load_agent_checkpoints(model_path, device)
 
     # ── 2. 重建配置 + agents ──
     args, agent_configs = build_replay_args_and_agents(checkpoint_data)
