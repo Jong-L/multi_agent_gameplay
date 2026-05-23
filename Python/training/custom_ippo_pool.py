@@ -661,7 +661,7 @@ def build_initial_pool(args: IppoPoolArgs) -> OpponentPoolState:
         per_agent_max_size=args.pool_slots_per_agent,
         epsilon=args.pool_epsilon,
         temperature=args.pool_pfsp_temperature,
-        reward_ema=args.pool_reward_ema,
+        reward_ema_coef=args.pool_reward_ema,
         default_reward_score=args.pool_default_reward_score,
         delete_replaced_checkpoints=args.pool_delete_replaced_checkpoints,
     )
