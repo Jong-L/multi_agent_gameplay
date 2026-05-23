@@ -8,14 +8,14 @@ Supported modes:
   - ippo_bootstrap: load four single-agent PPO checkpoints, train all four
     agents together, save intermediate IPPO checkpoints, then continue direct
     IPPO training and save selected final agents.
+  - bootstrap_checkpoint: Phase 1 only — train jointly, save episode checkpoints.
+  - bootstrap_direct: Phase 2 only — resume from Phase 1 checkpoint, train direct IPPO.
   - pool_cycle: build opponent_pool[agent_id][slot_index] from recent IPPO
     checkpoints, train one main agent per phase, and sample frozen opponents
     with higher probability for groups that produced lower main-agent returns.
   - evaluate: compare two agent0 checkpoints against the same sampled opponent
     groups and write a CSV summary.
-
-The defaults mirror the experiment idea in the prompt, but all important
-numbers are dataclass fields or CLI overrides.
+  - full: run bootstrap_checkpoint + bootstrap_direct + pool_cycle sequentially.
 """
 from __future__ import annotations
 
@@ -56,7 +56,7 @@ class IppoPoolArgs(IppoArgs):
     """Configuration for the staged IPPO/opponent-pool experiment."""
 
     run_mode: str = "full"
-    """ippo_bootstrap / pool_cycle / evaluate / full"""
+    """ippo_bootstrap / bootstrap_checkpoint / bootstrap_direct / pool_cycle / evaluate / full"""
 
     bootstrap_save_model_path: Optional[str] = "saved_models/ippo_bootstrap"
     """Base path for the first direct-IPPO stage and its episode checkpoints."""
@@ -254,7 +254,7 @@ class OpponentPoolState:
 
 def _parse_cli(args: IppoPoolArgs) -> IppoPoolArgs:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--run-mode", choices=["ippo_bootstrap", "pool_cycle", "evaluate", "full"])
+    parser.add_argument("--run-mode", choices=["ippo_bootstrap", "bootstrap_checkpoint", "bootstrap_direct", "pool_cycle", "evaluate", "full"])
     parser.add_argument("--env-path")
     parser.add_argument("--config-path")
     parser.add_argument("--n-parallel", type=int)
@@ -274,6 +274,7 @@ def _parse_cli(args: IppoPoolArgs) -> IppoPoolArgs:
     parser.add_argument("--pool-rounds", type=int)
     parser.add_argument("--pool-final-timesteps", type=int)
     parser.add_argument("--pool-save-interval", type=int)
+    parser.add_argument("--port-offset", type=int)
     parser.add_argument("--eval-ippo-agent0-path")
     parser.add_argument("--eval-pool-agent0-path")
     parser.add_argument("--eval-opponent-checkpoint-dir")
@@ -299,6 +300,7 @@ def _parse_cli(args: IppoPoolArgs) -> IppoPoolArgs:
         "pool_rounds": "pool_rounds",
         "pool_final_timesteps": "pool_final_timesteps",
         "pool_save_interval": "pool_save_interval",
+        "port_offset": "port_offset",
         "eval_ippo_agent0_path": "eval_ippo_agent0_path",
         "eval_pool_agent0_path": "eval_pool_agent0_path",
         "eval_opponent_checkpoint_dir": "eval_opponent_checkpoint_dir",
@@ -308,7 +310,7 @@ def _parse_cli(args: IppoPoolArgs) -> IppoPoolArgs:
         if value is not None:
             setattr(args, field_name, value)
     if parsed.ppo_model_paths is not None:
-        args.ppo_model_paths = list(parsed.ppo_model_paths)
+        args.ppo_model_paths = [None if isinstance(p, str) and p.lower() == "none" else p for p in parsed.ppo_model_paths]
     return args
 
 def _agent_ids(args: IppoPoolArgs) -> list[int]:
@@ -537,15 +539,15 @@ def run_ippo_training_job(
         close_context(ctx)
 
 
-def run_ippo_bootstrap(args: IppoPoolArgs) -> None:
-    all_ids = set(_agent_ids(args))#{0, 1, 2, 3...}
+def run_ippo_bootstrap_checkpoint(args: IppoPoolArgs) -> None:
+    """Phase 1 only: train all agents jointly, save episode checkpoints + final model."""
+    all_ids = set(_agent_ids(args))
     base_name = args.run_name or args.exp_name
 
-    #阶段1 同时训练并且给每个智能体保存检查点
-    phase1 = copy.deepcopy(args)#配置
+    phase1 = copy.deepcopy(args)
     phase1.run_name = f"{base_name}_checkpoint"
     phase1.use_opponent_pool = False
-    phase1.agent_configs = _with_train_flags(phase1, all_ids)#所有智能体都训练
+    phase1.agent_configs = _with_train_flags(phase1, all_ids)
     phase1.total_timesteps = int(args.pool_bootstrap_checkpoint_timesteps)
     phase1.save_checkpoint = True
     phase1.max_checkpoints = max(
@@ -557,26 +559,36 @@ def run_ippo_bootstrap(args: IppoPoolArgs) -> None:
         "[Bootstrap] stage 1: "
         f"{phase1.total_timesteps} steps, checkpoints -> {phase1.save_model_path}"
     )
-    #ippo同时训练一段时间并给所有智能体保存检查点
     run_ippo_training_job(phase1, all_ids)
 
-    #阶段2 继续训练并给主智能体保存最终模型
+
+def run_ippo_bootstrap_direct(args: IppoPoolArgs) -> None:
+    """Phase 2 only: continue training from Phase 1 checkpoint, save final direct-IPPO model."""
+    all_ids = set(_agent_ids(args))
+    base_name = args.run_name or args.exp_name
+
     phase2 = copy.deepcopy(args)
     phase2.run_name = f"{base_name}_direct"
     phase2.use_opponent_pool = False
-    phase2.agent_configs = _with_train_flags(phase2, all_ids)#所有智能体都训练
-    phase2.ppo_model_paths = [None for _ in phase2.agent_configs]#不加载模型参数
-    phase2.resume_from = args.bootstrap_save_model_path #从1阶段保存的各个检查点恢复
+    phase2.agent_configs = _with_train_flags(phase2, all_ids)
+    phase2.ppo_model_paths = [None for _ in phase2.agent_configs]
+    phase2.resume_from = args.bootstrap_save_model_path
     phase2.load_model_path = None
-    phase2.total_timesteps = int(args.pool_bootstrap_checkpoint_timesteps + args.pool_bootstrap_extra_timesteps)#因为是从中断点恢复，所以加
-    phase2.save_checkpoint = False#不保存检查点
-    phase2.save_model_path = args.bootstrap_final_save_model_path#保存最终模型
-    final_ids = {int(agent_id) for agent_id in args.pool_final_save_agent_ids}#最终保存的智能体ID
+    phase2.total_timesteps = int(args.pool_bootstrap_checkpoint_timesteps + args.pool_bootstrap_extra_timesteps)
+    phase2.save_checkpoint = False
+    phase2.save_model_path = args.bootstrap_final_save_model_path
+    final_ids = {int(agent_id) for agent_id in args.pool_final_save_agent_ids}
     print(
         "[Bootstrap] stage 2: "
         f"continue to {phase2.total_timesteps} total steps, final ids={sorted(final_ids)}"
     )
     run_ippo_training_job(phase2, final_ids)
+
+
+def run_ippo_bootstrap(args: IppoPoolArgs) -> None:
+    """Convenience: run both Phase 1 and Phase 2 sequentially."""
+    run_ippo_bootstrap_checkpoint(args)
+    run_ippo_bootstrap_direct(args)
 
 
 _AGENT_RE_TEMPLATE = r"_agent{agent_id}(?:\.pt|$)"
@@ -1226,6 +1238,10 @@ def main() -> None:
     args = _parse_cli(IppoPoolArgs())
     if args.run_mode == "ippo_bootstrap":
         run_ippo_bootstrap(args)
+    elif args.run_mode == "bootstrap_checkpoint":
+        run_ippo_bootstrap_checkpoint(args)
+    elif args.run_mode == "bootstrap_direct":
+        run_ippo_bootstrap_direct(args)
     elif args.run_mode == "pool_cycle":
         run_pool_cycle(args)
     elif args.run_mode == "evaluate":

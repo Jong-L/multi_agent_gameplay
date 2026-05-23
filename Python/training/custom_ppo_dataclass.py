@@ -80,8 +80,8 @@ class PPOArgs:
     """循环网络（GRU）的序列截断长度"""
     clip_coef: float = 0.2
     """PPO 裁剪系数 epsilon"""
-    ent_coef: float = 0.005
-    # ent_coef: float = 0.01
+    # ent_coef: float = 0.005
+    ent_coef: float = 0.01
     """策略熵损失系数"""
     vf_coef: float = 0.5
     """价值函数损失系数"""
@@ -211,7 +211,7 @@ class AgentConfig:
     """GAE lambda"""
     clip_coef: float = 0.2
     """PPO 裁剪系数"""
-    ent_coef: float = 0.005
+    ent_coef: float = 0.01
     """熵系数"""
     vf_coef: float = 0.5
     """价值函数损失系数"""
@@ -231,13 +231,13 @@ class IppoArgs:
     """游戏可执行文件路径"""
     config_path: str = "godot-game/configs/game_config.tres"
     """Godot 游戏配置文件路径（.tres）"""
-    n_parallel: int = 3
+    n_parallel: int = 16
     """并行 Godot 进程数"""
     seed: int = 1
     """随机种子"""
     show_window: bool = False
     """是否显示 Godot 窗口"""
-    speedup: int = 10
+    speedup: int = 16
     """游戏物理加速倍数"""
 
     # Run identity
@@ -251,7 +251,7 @@ class IppoArgs:
     """步数统计维度：env_steps / agent_steps"""
     num_steps: int = 256
     """每个 rollout 的步数"""
-    num_minibatches: int = 4
+    num_minibatches: int = 16
     """将 rollout 数据分成多少个小批量"""
     update_epochs: int = 8
     """每次 rollout 更新的 epoch 数"""
@@ -277,6 +277,8 @@ class IppoArgs:
         AgentConfig(agent_id=2, train=False),
         AgentConfig(agent_id=3, train=False),
     ])
+    
+    port_offset: int =0
 
     # Logging/checkpointing
     exp_name: str = "custom_ippo"
@@ -300,7 +302,7 @@ class IppoArgs:
         "saved_models\\curriculum\\ppo_agent_2.pt",
         "saved_models\\curriculum\\ppo_agent_3.pt",])
     """按 agent 下标加载 PPO 预训练模型权重，None 表示不加载"""
-    save_every_n_episodes: int = 10
+    save_every_n_episodes: int = 5
     """每 N 个 episode 保存一次中断点"""
     max_checkpoints: int = 3
     """最多保留多少个中断点文件，超出则删除最旧的"""
