@@ -36,7 +36,7 @@ from custom_ppo_dataclass import NetworkType
 class ReplayConfig:
     """PPO 模型回放配置 — 直接修改默认值即可。"""
 
-    model_path: str = "saved_models\curriculum\ppo_agent_0.pt"
+    model_path: str = "saved_models\ippo_bootstrap_agent0.pt"
     """要加载的模型文件路径 (.pt)。"""
 
     env_path: Optional[str] = "godot-game\\build0\\game.exe"
@@ -46,7 +46,7 @@ class ReplayConfig:
     """game_config.tres 路径, 用于读取观测维度配置。"""
 
     speedup: int = 2
-    """物理引擎加速倍数 (1=正常速度)。"""
+    """物理引擎加速倍数"""
 
     show_window: bool = True
     """显示游戏窗口。"""
