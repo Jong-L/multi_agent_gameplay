@@ -64,13 +64,13 @@ class IppoPoolArgs(IppoArgs):
     bootstrap_final_save_model_path: Optional[str] = "saved_models/ippo_direct"
     """Base path for the second direct-IPPO stage final checkpoint."""
 
-    eval_ippo_agent0_path: Optional[str] = None
+    eval_ippo_agent0_path: Optional[str] = "saved_models/ippo_direct_agent0.pt"
     """Direct-IPPO agent0 checkpoint used by evaluate mode."""
 
-    eval_pool_agent0_path: Optional[str] = None
+    eval_pool_agent0_path: Optional[str] = "saved_models/ippo_pool_final_agent0.pt"
     """Opponent-pool-trained agent0 checkpoint used by evaluate mode."""
 
-    eval_opponent_checkpoint_dir: Optional[str] = None
+    eval_opponent_checkpoint_dir: Optional[str] = "saved_models/ippo_pool_checkpoints"
     """Opponent checkpoint directory for evaluate mode; falls back to pool dirs."""
 
     eval_deterministic: bool = True
@@ -1094,14 +1094,16 @@ def run_evaluation(args: IppoPoolArgs) -> None:
         }
 
         rows: list[dict[str, Any]] = []
-        for model_label, model_path in model_paths.items():
+        for model_label, model_path in model_paths.items():#待评估的模型
             if model_path is None:
                 continue
+            #参与评估的所有模型策略
             policies: list[list[IPPOAgent]] = []
             #对于采样到的每个对手组
             for group in opponent_groups:
+                #组内智能体
                 group_agents: list[Optional[IPPOAgent]] = [None for _ in _agent_ids(eval_args)]
-                #把智能体0设置为评估模型
+                #智能体0为待评估模型
                 group_agents[0] = _build_eval_agent(model_path, 0, eval_args, n_actions, seg, device)
                 for entry in group:
                     group_agents[entry.agent_id] = _build_eval_agent(
@@ -1137,63 +1139,104 @@ def _evaluate_policy_groups(
     envs: Any,
     device: torch.device,
 ) -> list[dict[str, Any]]:
-    n_groups = len(policies)
-    n_agents = len(args.agent_configs)
+    """
+    评估多个智能体组的性能
+    
+    Args:
+        model_label: 模型标签，用于标识被评估的模型类型（如'direct_ippo'或'opponent_pool'）
+        policies: 策略列表，每个元素是一个智能体组，包含该组中所有智能体的策略网络
+        args: IPPO池化训练的参数配置对象
+        envs: 向量化环境实例，支持并行执行多个episode
+        device: PyTorch设备（CPU/GPU）
+    
+    Returns:
+        包含评估结果的字典列表，每个字典记录一个episode的奖励信息
+    """
+    n_groups = len(policies)  # 智能体组的数量（即并行评估的episode数）
+    n_agents = len(args.agent_configs)  # 每组中智能体的数量
+    
+    # 重置环境，获取初始观测值
     obs_raw, _ = envs.reset(seed=args.seed)
-    next_obs = np.asarray(obs_raw, dtype=np.float32)
-    episode_rewards = np.zeros((n_groups, n_agents), dtype=np.float64)
-    episode_counts = np.zeros(n_groups, dtype=np.int64)
+    next_obs = np.asarray(obs_raw, dtype=np.float32)  # 转换为numpy数组并指定数据类型
+    
+    # 初始化奖励累加器和episode计数器
+    episode_rewards = np.zeros((n_groups, n_agents), dtype=np.float64)  # 记录每组每个智能体的累计奖励
+    episode_counts = np.zeros(n_groups, dtype=np.int64)  # 记录每组已完成的episode数量
+    
+    # 初始化RNN隐藏状态（如果智能体使用循环神经网络）
     rnn_states: list[list[Optional[torch.Tensor]]] = []
     for group in policies:
+        # 为每个智能体创建初始RNN状态，如果不是循环网络则为None
         rnn_states.append([
             agent.get_initial_state(1, device) if agent.is_recurrent else None
             for agent in group
         ])
 
-    rows: list[dict[str, Any]] = []
+    rows: list[dict[str, Any]] = []  # 存储评估结果的列表
+    
+    # 主评估循环：直到所有组都完成指定的episode数量
     while np.any(episode_counts < args.pool_eval_episodes_per_group):
+        # 将观测值转换为PyTorch张量并重塑为(group, agent, feature)格式
         obs_t = torch.tensor(next_obs, dtype=torch.float32, device=device)
-        obs_by_env = obs_t.view(n_groups, n_agents, -1)
+        obs_by_env = obs_t.view(n_groups, n_agents, -1)  # 重塑为[n_groups, n_agents, obs_dim]
+        
+        # 初始化动作数组
         actions_by_env = np.zeros((n_groups, n_agents), dtype=np.int64)
+        
+        # 对每个组和每个智能体进行动作选择
         for group_idx in range(n_groups):
             for agent_idx in range(n_agents):
+                # 根据当前策略选择动作
                 action, next_state = _select_action(
-                    policies[group_idx][agent_idx],
-                    obs_by_env[group_idx, agent_idx].unsqueeze(0),
-                    rnn_states[group_idx][agent_idx],
-                    args.eval_deterministic,
+                    policies[group_idx][agent_idx],  # 当前智能体的策略
+                    obs_by_env[group_idx, agent_idx].unsqueeze(0),  # 添加batch维度
+                    rnn_states[group_idx][agent_idx],  # 当前RNN状态
+                    args.eval_deterministic,  # 是否采用确定性策略
                 )
-                actions_by_env[group_idx, agent_idx] = action
-                rnn_states[group_idx][agent_idx] = next_state
+                actions_by_env[group_idx, agent_idx] = action  # 保存选择的动作
+                rnn_states[group_idx][agent_idx] = next_state  # 更新RNN状态
 
+        # 执行动作并获取环境反馈
         next_obs, rewards, terms, truncs, _ = envs.step(actions_by_env.reshape(-1))
-        next_obs = np.asarray(next_obs, dtype=np.float32)
+        next_obs = np.asarray(next_obs, dtype=np.float32)  # 转换新观测值
+        
+        # 处理奖励和终止信号
         rewards_by_env = np.asarray(rewards, dtype=np.float32).reshape(n_groups, n_agents)
-        dones_by_env = np.logical_or(terms, truncs).reshape(n_groups, n_agents)
-        episode_rewards += rewards_by_env
+        dones_by_env = np.logical_or(terms, truncs).reshape(n_groups, n_agents)  # 合并终止和截断信号
+        episode_rewards += rewards_by_env  # 累加奖励
 
+        # 检查每个组是否有episode结束
         for group_idx in range(n_groups):
+            # 如果该组已达到目标episode数，则跳过
             if episode_counts[group_idx] >= args.pool_eval_episodes_per_group:
                 continue
+            
+            # 如果该组中有任何智能体完成episode
             if np.any(dones_by_env[group_idx]):
-                episode = int(episode_counts[group_idx])
+                episode = int(episode_counts[group_idx])  # 当前episode编号
+                
+                # 为该组中每个智能体记录结果
                 for agent_idx in range(n_agents):
                     rows.append(
                         {
-                            "model_label": model_label,
-                            "group_id": group_idx,
-                            "episode": episode,
-                            "agent_id": args.agent_configs[agent_idx].agent_id,
-                            "reward": float(episode_rewards[group_idx, agent_idx]),
+                            "model_label": model_label,  # 模型标签
+                            "group_id": group_idx,  # 组ID
+                            "episode": episode,  # episode编号
+                            "agent_id": args.agent_configs[agent_idx].agent_id,  # 智能体ID
+                            "reward": float(episode_rewards[group_idx, agent_idx]),  # 累计奖励
                         }
                     )
+                
+                # 更新计数器并重置该组的奖励和RNN状态
                 episode_counts[group_idx] += 1
-                episode_rewards[group_idx, :] = 0.0
+                episode_rewards[group_idx, :] = 0.0  # 重置奖励累加器
+                # 重置RNN状态以开始新的episode
                 rnn_states[group_idx] = [
                     agent.get_initial_state(1, device) if agent.is_recurrent else None
                     for agent in policies[group_idx]
                 ]
-    return rows
+    
+    return rows  # 返回所有评估结果
 
 
 def _print_eval_summary(rows: list[dict[str, Any]]) -> None:

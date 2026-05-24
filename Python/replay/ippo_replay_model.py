@@ -44,7 +44,13 @@ class ReplayConfig:
 
     model_path: str = "saved_models\\ippo_bootstrap_episode45.pt"
     """IPPO 模型基础路径 (不含 _agentN 后缀)。
-    自动加载 {stem}_agent0.pt ~ {stem}_agent3.pt。"""
+    自动加载 {stem}_agent0.pt ~ {stem}_agent3.pt。
+    当 model_paths 不为空时此字段被忽略。"""
+
+    model_paths: Optional[list[str]] = None
+    """分别指定 agent 模型文件路径列表。
+    示例: ["saved_models/agent0.pt", "saved_models/agent1.pt", ...]
+    设置后优先使用此字段, model_path 被忽略。"""
 
     env_path: Optional[str] = "godot-game\\build-multiagent\\game.exe"
     """Godot 可执行文件路径 (None 连接编辑器)。"""
@@ -128,6 +134,41 @@ def _ensure_network_type(value) -> NetworkType:
     return NetworkType(str(value).lower())
 
 
+def load_agent_checkpoints_from_paths(
+    model_paths: list[str], device: torch.device
+) -> dict:
+    """从分别指定的 per-agent .pt 文件路径加载 checkpoint。
+
+    model_paths: ["path/agent0.pt", "path/agent1.pt", ...]
+    每个文件的格式: {"args": {...}, "agent_id": N, "agent_state_dict": ...}
+
+    返回统一格式: {"agent_0_state_dict": ..., "agent_1_state_dict": ..., ...args 字段...}
+    """
+    if len(model_paths) == 0:
+        raise ValueError("model_paths 不能为空")
+
+    # 加载第一个获取 args
+    path0 = pathlib.Path(model_paths[0])
+    if not path0.exists():
+        raise FileNotFoundError(f"找不到 checkpoint: {path0}")
+
+    ckpt0 = torch.load(str(path0), map_location=device, weights_only=False)
+    raw_args = ckpt0.get("args", {})
+    result = dict(raw_args)
+
+    for i, p in enumerate(model_paths):
+        p = pathlib.Path(p)
+        if not p.exists():
+            print(f"[Warn] 缺少文件: {p}, 跳过。")
+            continue
+        ckpt = ckpt0 if i == 0 else torch.load(str(p), map_location=device, weights_only=False)
+        # 使用 checkpoint 中记录的 agent_id, 回退到索引
+        agent_id = ckpt.get("agent_id", i)
+        result[f"agent_{agent_id}_state_dict"] = ckpt["agent_state_dict"]
+
+    return result
+
+
 def build_replay_args_and_agents(checkpoint_data: dict) -> tuple[IppoArgs, list[AgentConfig]]:
     """从 checkpoint 数据重建 IppoArgs 和 agent_configs。
 
@@ -169,11 +210,16 @@ def main():
 
     device = torch.device("cuda" if torch.cuda.is_available() and replay_cfg.cuda else "cpu")
 
-    model_path = pathlib.Path(replay_cfg.model_path).resolve()
-
     # ── 1. 加载 checkpoint ──
-    print(f"加载模型 (基础路径): {model_path}")
-    checkpoint_data = load_agent_checkpoints(model_path, device)
+    if replay_cfg.model_paths:
+        print(f"加载模型 (分别指定路径, 共 {len(replay_cfg.model_paths)} 个):")
+        for p in replay_cfg.model_paths:
+            print(f"  {p}")
+        checkpoint_data = load_agent_checkpoints_from_paths(replay_cfg.model_paths, device)
+    else:
+        model_path = pathlib.Path(replay_cfg.model_path).resolve()
+        print(f"加载模型 (基础路径): {model_path}")
+        checkpoint_data = load_agent_checkpoints(model_path, device)
 
     # ── 2. 重建配置 + agents ──
     args, agent_configs = build_replay_args_and_agents(checkpoint_data)
