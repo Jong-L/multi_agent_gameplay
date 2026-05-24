@@ -81,7 +81,16 @@
   year      = {1988},
   doi       = {10.1007/BF00115009}
 }
-
+%q learning
+@article{2020QLearning,
+  title={Q-Learning: Theory and Applications},
+  author={ Clifton, Jesse  and  Laber, Eric },
+  journal={Annual Review of Statistics and Its Application},
+  volume={7},
+  number={1},
+  pages={279-301},
+  year={2020},
+}
 % ============================================================
 % Step 5: 神经网络万能逼近 + 深度强化学习
 % ============================================================
@@ -215,15 +224,19 @@
 % 补充: 多智能体强化学习 (MARL)
 % ============================================================
 
-@inproceedings{lowe2017maddpg,
-  author    = {Ryan Lowe and Yi Wu and Aviv Tamar and Jean Harb and Pieter Abbeel and Igor Mordatch},
-  title     = {Multi-Agent Actor-Critic for Mixed Cooperative-Competitive Environments},
-  booktitle = {Advances in Neural Information Processing Systems (NeurIPS)},
-  volume    = {30},
-  pages     = {6379--6390},
-  year      = {2017},
-  note      = {arXiv:1706.02275}
+@article{Hernandez-Leal2019,
+  author = {Hernandez-Leal, Pablo and Kartal, Bilal and Taylor, Matthew
+    E.},
+  title = {A Survey and Critique of Multiagent Deep Reinforcement
+    Learning},
+  journal = {Autonomous Agents and Multi-Agent Systems},
+  volume = {33},
+  number = {6},
+  pages = {750-797},
+  year = {2019},
+  url = {https://doi.org/10.1007/s10458-019-09421-1}
 }
+
 
 @misc{dewitt2020independentlearningneedstarcraft,
       title={Is Independent Learning All You Need in the StarCraft Multi-Agent Challenge?}, 
@@ -250,7 +263,7 @@
   journal   = {arXiv preprint arXiv:2011.09533},
   year      = {2020}
 }
-
+% 缓解环境非平稳性的方案主要分为以下三类
 @article{suncao2020multi,
   author={孙彧 and 曹雷 and 陈希亮 and 徐志雄 and 赖俊},
   title={多智能体深度强化学习研究综述},
@@ -260,6 +273,7 @@
   number={5},
   pages={13--24}
 }
+
 @misc{lanctot2017unifiedgametheoreticapproachmultiagent,
       title={A Unified Game-Theoretic Approach to Multiagent Reinforcement Learning}, 
       author={Marc Lanctot and Vinicius Zambaldi and Audrunas Gruslys and Angeliki Lazaridou and Karl Tuyls and Julien Perolat and David Silver and Thore Graepel},
@@ -465,4 +479,262 @@ url = {https://www.sciencedirect.com/science/article/pii/S0004370201001291},
 author = {Murray Campbell and A.Joseph Hoane and Feng-hsiung Hsu},
 keywords = {Computer chess, Game tree search, Parallel search, Selective search, Search extensions, Evaluation function},
 abstract = {Deep Blue is the chess machine that defeated then-reigning World Chess Champion Garry Kasparov in a six-game match in 1997. There were a number of factors that contributed to this success, including: •a single-chip chess search engine,•a massively parallel system with multiple levels of parallelism,•a strong emphasis on search extensions,•a complex evaluation function, and•effective use of a Grandmaster game database. This paper describes the Deep Blue system, and gives some of the rationale that went into the design decisions behind Deep Blue.}
+}
+
+%ppo应用场景
+@Article{lujingguihua20230406,
+title = {基于多智能体深度强化学习的无人机路径规划},
+journal = {北京工业大学学报},
+volume = {49},
+number = {4},
+pages = {449-458},
+year = {2023},
+issn = {0254-0037},
+doi = {10.11936/bjutxb2022080007},
+url = {https://journal.bjut.edu.cn/bjgydxxb/cn/article/doi/10.11936/bjutxb2022080007},
+author = {司鹏搏 and 吴兵 and 杨睿哲 and 李萌 and 孙艳华}
+}
+@article{yaoyue2023improvedppo,
+  title={基于改进PPO算法的自动驾驶技术研究},
+  author={姚悦 and 吉明佳 and 杨霄},
+  journal={电子测量技术},
+  volume={46},
+  number={8},
+  pages={162-168},
+  year={2023},
+}
+
+@article{wanyuhang2025improvedppo,
+  title={基于改进PPO算法的机械臂动态路径规划},
+  author={万宇航 and 朱子璐 and 钟春富 and 刘永奎 and 林廷宇 and 张霖},
+  journal={系统仿真学报},
+  volume={37},
+  number={6},
+  pages={1462-1473},
+  year={2025},
+}
+
+% ============================================================
+% 补充: 1.2.3 奖励工程新增参考文献
+% ============================================================
+
+% 奖励工程综述
+@inproceedings{Dewey2014reinforcementlearningrewardengineering,
+  author    = {Daniel Dewey},
+  title     = {Reinforcement Learning and the Reward Engineering Principle},
+  booktitle = {AAAI Spring Symposium Series},
+  year      = {2014},
+  pages     = {1--12}
+}
+@misc{devidze2025rewarddesignreinforcementlearning,
+      title={Reward Design for Reinforcement Learning Agents}, 
+      author={Rati Devidze},
+      year={2025},
+      eprint={2503.21949},
+      archivePrefix={arXiv},
+      primaryClass={cs.LG},
+      url={https://arxiv.org/abs/2503.21949}, 
+}
+
+@article{Ibrahim2024comprehensive,
+  author    = {Sinan Ibrahim and Mostafa Mostafa and Ali Jnadi and Hadi Salloum and Pavel Osinenko},
+  title     = {Comprehensive Overview of Reward Engineering and Shaping in Advancing Reinforcement Learning Applications},
+  journal   = {IEEE Access},
+  volume    = {12},
+  pages     = {175473--175500},
+  year      = {2024},
+  doi       = {10.1109/ACCESS.2024.3504735}
+}
+
+% PBRS 变体
+@inproceedings{Devlin2014dynamicpotential,
+  author    = {Sam Devlin and Daniel Kudenko},
+  title     = {Dynamic Potential-Based Reward Shaping},
+  booktitle = {Proceedings of the 11th International Conference on Autonomous Agents and Multiagent Systems (AAMAS)},
+  pages     = {433--440},
+  year      = {2012}
+}
+
+@inproceedings{Devlin2014theoretical,
+  author    = {Sam Devlin and Daniel Kudenko},
+  title     = {Theoretical Considerations of Potential-Based Reward Shaping for Multi-Agent Systems},
+  booktitle = {Proceedings of the 10th International Conference on Autonomous Agents and Multiagent Systems (AAMAS)},
+  pages     = {225--232},
+  year      = {2011}
+}
+
+% 安全约束 PBRS
+@misc{Nilaksh2024barrier,
+  author    = {Nilaksh Nilaksh and Amol Ranjan and Shubham Agrawal and Ayush Jain and Pushpak Jagtap and Shishir Kolathaya},
+  title     = {Barrier Functions Inspired Reward Shaping for Reinforcement Learning},
+  year      = {2024},
+  eprint    = {2403.01410},
+  archivePrefix = {arXiv},
+  primaryClass  = {cs.RO}
+}
+
+@inproceedings{Qian2023rewardshapinghybrid,
+  author    = {Miaohong Qian and Stefan Mitsch},
+  title     = {Reward Shaping from Hybrid Systems Models in Reinforcement Learning},
+  booktitle = {NASA Formal Methods Symposium},
+  pages     = {122--139},
+  year      = {2023}
+}
+
+% 逆强化学习
+@inproceedings{Ng2000algorithmsinversereinforcementlearning,
+  author    = {Andrew Y. Ng and Stuart Russell},
+  title     = {Algorithms for Inverse Reinforcement Learning},
+  booktitle = {Proceedings of the 17th International Conference on Machine Learning (ICML)},
+  pages     = {663--670},
+  year      = {2000}
+}
+
+@inproceedings{Ziebart2008maximum,
+  author    = {Brian D. Ziebart and Andrew Maas and J. Andrew Bagnell and Anind K. Dey},
+  title     = {Maximum Entropy Inverse Reinforcement Learning},
+  booktitle = {Proceedings of the 23rd AAAI Conference on Artificial Intelligence},
+  pages     = {1433--1438},
+  year      = {2008}
+}
+
+@misc{Wulfmeier2015maximum,
+  author    = {Markus Wulfmeier and Peter Ondruska and Ingmar Posner},
+  title     = {Maximum Entropy Deep Inverse Reinforcement Learning},
+  year      = {2015},
+  eprint    = {1507.04888},
+  archivePrefix = {arXiv},
+  primaryClass  = {cs.LG}
+}
+
+@article{Self2022modelbased,
+  author    = {Ryan Self and Moad Abudia and S. M. N. Mahmud and Rushikesh Kamalapurkar},
+  title     = {Model-Based Inverse Reinforcement Learning for Deterministic Systems},
+  journal   = {Automatica},
+  volume    = {140},
+  pages     = {110242},
+  year      = {2022}
+}
+
+@misc{hadfieldmenell2020inverserewarddesign,
+      title={Inverse Reward Design}, 
+      author={Dylan Hadfield-Menell and Smitha Milli and Pieter Abbeel and Stuart Russell and Anca Dragan},
+      year={2020},
+      eprint={1711.02827},
+      archivePrefix={arXiv},
+      primaryClass={cs.AI},
+      url={https://arxiv.org/abs/1711.02827}, 
+}
+
+% RLHF / 人类偏好
+@inproceedings{Christiano2017deepreinforcementlearninghuman,
+  author    = {Paul Christiano and Jan Leike and Tom B. Brown and Miljan Martic and Shane Legg and Dario Amodei},
+  title     = {Deep Reinforcement Learning from Human Preferences},
+  booktitle = {Advances in Neural Information Processing Systems (NeurIPS)},
+  volume    = {30},
+  pages     = {4299--4307},
+  year      = {2017}
+}
+
+@inproceedings{Ouyang2022traininglanguagemodelsfollow,
+  author    = {Long Ouyang and Jeff Wu and Xu Jiang and Diogo Almeida and Carroll L. Wainwright and Pamela Mishkin and Chong Zhang and Sandhini Agarwal and Katarina Slama and Alex Ray and John Schulman and Jacob Hilton and Fraser Kelton and Luke Miller and Maddie Simens and Amanda Askell and Peter Welinder and Paul Christiano and Jan Leike and Ryan Lowe},
+  title     = {Training Language Models to Follow Instructions with Human Feedback},
+  booktitle = {Advances in Neural Information Processing Systems (NeurIPS)},
+  volume    = {35},
+  pages     = {27730--27744},
+  year      = {2022}
+}
+
+@inproceedings{Lee2021pebble,
+  author    = {Kimin Lee and Laura Smith and Pieter Abbeel},
+  title     = {{PEBBLE}: Feedback-Efficient Interactive Reinforcement Learning via Relabeling Experience and Unsupervised Pre-training},
+  booktitle = {Proceedings of the 38th International Conference on Machine Learning (ICML)},
+  volume    = {139},
+  pages     = {6152--6163},
+  year      = {2021}
+}
+
+@inproceedings{Park2022surf,
+  author    = {Jongjin Park and Younggyo Seo and Jinwoo Shin and Honglak Lee and Pieter Abbeel and Kimin Lee},
+  title     = {{SURF}: Semi-supervised Reward Learning with Data Augmentation for Feedback-efficient Preference-based Reinforcement Learning},
+  booktitle = {International Conference on Learning Representations (ICLR)},
+  year      = {2022}
+}
+
+@misc{Liang2022rewarduncertainty,
+  author    = {Xinran Liang and Katherine Shu and Kimin Lee and Pieter Abbeel},
+  title     = {Reward Uncertainty for Exploration in Preference-Based Reinforcement Learning},
+  year      = {2022},
+  eprint    = {2205.12401},
+  archivePrefix = {arXiv},
+  primaryClass  = {cs.LG}
+}
+
+% 内在奖励与好奇心驱动
+@misc{pathak2017curiositydrivenexplorationselfsupervisedprediction,
+      title={Curiosity-driven Exploration by Self-supervised Prediction}, 
+      author={Deepak Pathak and Pulkit Agrawal and Alexei A. Efros and Trevor Darrell},
+      year={2017},
+      eprint={1705.05363},
+      archivePrefix={arXiv},
+      primaryClass={cs.LG},
+      url={https://arxiv.org/abs/1705.05363}, 
+}
+
+@misc{burda2018explorationrandomnetworkdistillation,
+      title={Exploration by Random Network Distillation}, 
+      author={Yuri Burda and Harrison Edwards and Amos Storkey and Oleg Klimov},
+      year={2018},
+      eprint={1810.12894},
+      archivePrefix={arXiv},
+      primaryClass={cs.LG},
+      url={https://arxiv.org/abs/1810.12894}, 
+}
+
+@inproceedings{Devidze2022explorationguided,
+  author    = {Rati Devidze and Parameswaran Kamalaruban and Adish Singla},
+  title     = {Exploration-Guided Reward Shaping for Reinforcement Learning under Sparse Rewards},
+  booktitle = {Advances in Neural Information Processing Systems (NeurIPS)},
+  volume    = {35},
+  pages     = {5829--5842},
+  year      = {2022}
+}
+
+% 基于 LLM 的奖励生成
+@misc{xie2024text2rewardrewardshapinglanguage,
+      title={Text2Reward: Reward Shaping with Language Models for Reinforcement Learning}, 
+      author={Tianbao Xie and Siheng Zhao and Chen Henry Wu and Yitao Liu and Qian Luo and Victor Zhong and Yanchao Yang and Tao Yu},
+      year={2024},
+      eprint={2309.11489},
+      archivePrefix={arXiv},
+      primaryClass={cs.LG},
+      url={https://arxiv.org/abs/2309.11489}, 
+}
+
+%分层强化学习
+@ARTICLE{10120651hierarchical,
+  author={Gu, Ziqing and Gao, Lingping and Ma, Haitong and Li, Shengbo Eben and Zheng, Sifa and Jing, Wei and Chen, Junbo},
+  journal={IEEE Transactions on Intelligent Transportation Systems}, 
+  title={Safe-State Enhancement Method for Autonomous Driving via Direct Hierarchical Reinforcement Learning}, 
+  year={2023},
+  volume={24},
+  number={9},
+  pages={9966-9983},
+  keywords={Safety;Autonomous vehicles;Reinforcement learning;Vehicle dynamics;Training;Trajectory;Markov processes;Autonomous vehicle;decision making;reinforcement learning (RL);safety enhancement},
+  doi={10.1109/TITS.2023.3271642}}
+
+%课程学习
+@article{2009Curriculum,
+  title={Curriculum learning},
+  author={ Bengio, Yoshua  and Jérme Louradour and  Collobert, Ronan  and  Weston, Jason },
+  journal={ACM},
+  year={2009},
+}
+%策略迁移
+@article{Tseng2022OfflineMR,
+  title={Offline Multi-Agent Reinforcement Learning with Knowledge Distillation},
+  author={Wei-Cheng Tseng and Tsun-Hsuan Wang and Lin Yen-Chen and Phillip Isola},
+  journal={Advances in Neural Information Processing Systems 35},
+  year={2022},
+  url={https://api.semanticscholar.org/CorpusID:254128961}
 }

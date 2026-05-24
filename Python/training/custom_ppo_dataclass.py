@@ -104,7 +104,7 @@ class PPOArgs:
     """Reward normalization clipping range."""
 
     # Optuna hyperparameter tuning
-    enable_optuna: bool = True
+    enable_optuna: bool = False
     """Enable Optuna hyperparameter search instead of one normal training run."""
     optuna_trials: int = 500
     """Number of Optuna trials to run."""
