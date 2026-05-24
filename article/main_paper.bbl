@@ -1,4 +1,4 @@
-\begin{thebibliography}{22}
+\begin{thebibliography}{38}
 \providecommand{\natexlab}[1]{#1}
 \providecommand{\url}[1]{#1}
 \expandafter\ifx\csname urlstyle\endcsname\relax\else
@@ -37,11 +37,11 @@ CAMPBELL M, HOANE A, HSIUNG HSU F.
 \newblock \url{https://www.sciencedirect.com/science/article/pii/S0004370201001291}.
 \newblock DOI: \doi{https://doi.org/10.1016/S0004-3702(01)00129-1}.
 
-\bibitem[Lowe et~al.(2017)Lowe, Wu, Tamar, Harb, Abbeel, and Mordatch]{lowe2017maddpg}
-LOWE R, WU Y, TAMAR A, et~al.
-\newblock Multi-agent actor-critic for mixed cooperative-competitive environments\allowbreak[C]//\allowbreak
-Advances in Neural Information Processing Systems (NeurIPS): Vol.~30.
-\newblock 2017: 6379-6390.
+\bibitem[Hernandez-Leal et~al.(2019)Hernandez-Leal, Kartal, and Taylor]{Hernandez-Leal2019}
+HERNANDEZ-LEAL P, KARTAL B, TAYLOR M~E.
+\newblock A survey and critique of multiagent deep reinforcement learning\allowbreak[J/OL].
+\newblock Autonomous Agents and Multi-Agent Systems, 2019, 33\allowbreak (6): 750-797.
+\newblock \url{https://doi.org/10.1007/s10458-019-09421-1}.
 
 \bibitem[de~Witt et~al.(2020)de~Witt, Gupta, Makoviichuk, Makoviychuk, Torr, Sun, and Whiteson]{dewitt2020independentlearningneedstarcraft}
 DE~WITT C~S, GUPTA T, MAKOVIICHUK D, et~al.
@@ -50,18 +50,11 @@ DE~WITT C~S, GUPTA T, MAKOVIICHUK D, et~al.
 \newblock arXiv: \eprint{https://arxiv.org/abs/2011.09533}{2011.09533}.
 \newblock \url{https://arxiv.org/abs/2011.09533}.
 
-\bibitem[Sutton et~al.(2018)Sutton and Barto]{sutton2018reinforcement}
-SUTTON R~S, BARTO A~G.
-\newblock Reinforcement learning: An introduction\allowbreak[M/OL].
-\newblock 2nd ed.
-\newblock Cambridge, MA: MIT Press, 2018: 73-88,321-337.
-\newblock \url{http://incompleteideas.net/book/the-book.html}.
-
-\bibitem[Sutton(1988)]{sutton1988learning}
-SUTTON R~S.
-\newblock Learning to predict by the methods of temporal differences\allowbreak[J/OL].
-\newblock Machine Learning, 1988, 3\allowbreak (1): 9-44.
-\newblock DOI: \doi{10.1007/BF00115009}.
+\bibitem[Watkins et~al.(1992)Watkins and Dayan]{watkins1992qlearning}
+WATKINS C~J~C~H, DAYAN P.
+\newblock Q-learning\allowbreak[J/OL].
+\newblock Machine Learning, 1992, 8\allowbreak (3): 279-292.
+\newblock DOI: \doi{10.1007/BF00992698}.
 
 \bibitem[Cybenko(1989)]{cybenko1989approximation}
 CYBENKO G.
@@ -81,34 +74,49 @@ MNIH V, KAVUKCUOGLU K, SILVER D, et~al.
 \newblock Nature, 2015, 518\allowbreak (7540): 529-533.
 \newblock DOI: \doi{10.1038/nature14236}.
 
-\bibitem[Sutton et~al.(1999)Sutton, McAllester, Singh, and Mansour]{sutton1999policyandvalue}
-SUTTON R~S, MCALLESTER D, SINGH S, et~al.
-\newblock Policy gradient methods for reinforcement learning with function approximation\allowbreak[C]//\allowbreak
-Advances in Neural Information Processing Systems (NeurIPS): Vol.~12.
-\newblock MIT Press, 1999: 1057-1063.
+\bibitem[Schulman et~al.(2017)Schulman, Wolski, Dhariwal, Radford, and Klimov]{schulman2017ppo}
+SCHULMAN J, WOLSKI F, DHARIWAL P, et~al.
+\newblock Proximal policy optimization algorithms\allowbreak[A].
+\newblock 2017.
 
-\bibitem[Williams(1992)]{williams1992simple}
-WILLIAMS R~J.
-\newblock Simple statistical gradient-following algorithms for connectionist reinforcement learning\allowbreak[J/OL].
-\newblock Machine Learning, 1992, 8\allowbreak (3): 229-256.
-\newblock DOI: \doi{10.1007/BF00992696}.
-
-\bibitem[Schulman et~al.(2016)Schulman, Moritz, Levine, Jordan, and Abbeel]{schulman2016gae}
+\bibitem[Schulman et~al.(2016)Schulman, Moritz, Levine, Jordan, and Abbeel]{schulman2015highdimensional}
 SCHULMAN J, MORITZ P, LEVINE S, et~al.
 \newblock High-dimensional continuous control using generalized advantage estimation\allowbreak[C]//\allowbreak
 International Conference on Learning Representations (ICLR).
 \newblock 2016.
 
-\bibitem[Precup et~al.(2000)Precup, Sutton, and Singh]{precup2000eligibility}
-PRECUP D, SUTTON R~S, SINGH S.
-\newblock Eligibility traces for off-policy policy evaluation\allowbreak[C]//\allowbreak
-Proceedings of the 17th International Conference on Machine Learning (ICML).
-\newblock Morgan Kaufmann, 2000: 759-766.
+\bibitem[司鹏搏\ 等(2023)司鹏搏, 吴兵, 杨睿哲, 李萌, and 孙艳华]{lujingguihua20230406}
+司鹏搏, 吴兵, 杨睿哲, 等.
+\newblock 基于多智能体深度强化学习的无人机路径规划\allowbreak[J/OL].
+\newblock 北京工业大学学报, 2023, 49\allowbreak (4): 449-458.
+\newblock \url{https://journal.bjut.edu.cn/bjgydxxb/cn/article/doi/10.11936/bjutxb2022080007}.
 
-\bibitem[Schulman et~al.(2017)Schulman, Wolski, Dhariwal, Radford, and Klimov]{schulman2017ppo}
-SCHULMAN J, WOLSKI F, DHARIWAL P, et~al.
-\newblock Proximal policy optimization algorithms\allowbreak[A].
-\newblock 2017.
+\bibitem[姚悦\ 等(2023)姚悦, 吉明佳, and 杨霄]{yaoyue2023improvedppo}
+姚悦, 吉明佳, 杨霄.
+\newblock 基于改进PPO算法的自动驾驶技术研究\allowbreak[J].
+\newblock 电子测量技术, 2023, 46\allowbreak (8): 162-168.
+
+\bibitem[万宇航\ 等(2025)万宇航, 朱子璐, 钟春富, 刘永奎, 林廷宇, and 张霖]{wanyuhang2025improvedppo}
+万宇航, 朱子璐, 钟春富, 等.
+\newblock 基于改进PPO算法的机械臂动态路径规划\allowbreak[J].
+\newblock 系统仿真学报, 2025, 37\allowbreak (6): 1462-1473.
+
+\bibitem[Gu et~al.(2023)Gu, Gao, Ma, Li, Zheng, Jing, and Chen]{10120651hierarchical}
+GU Z, GAO L, MA H, et~al.
+\newblock Safe-state enhancement method for autonomous driving via direct hierarchical reinforcement learning\allowbreak[J/OL].
+\newblock IEEE Transactions on Intelligent Transportation Systems, 2023, 24\allowbreak (9): 9966-9983.
+\newblock DOI: \doi{10.1109/TITS.2023.3271642}.
+
+\bibitem[Bengio et~al.(2009)Bengio, Louradour, Collobert, and Weston]{2009Curriculum}
+BENGIO Y, LOURADOUR J, COLLOBERT R, et~al.
+\newblock Curriculum learning\allowbreak[J].
+\newblock ACM, 2009.
+
+\bibitem[Tseng et~al.(2022)Tseng, Wang, Yen-Chen, and Isola]{Tseng2022OfflineMR}
+TSENG W~C, WANG T~H, YEN-CHEN L, et~al.
+\newblock Offline multi-agent reinforcement learning with knowledge distillation\allowbreak[J/OL].
+\newblock Advances in Neural Information Processing Systems 35, 2022.
+\newblock \url{https://api.semanticscholar.org/CorpusID:254128961}.
 
 \bibitem[Brown(1951)]{brown1951fictitious}
 BROWN G~W.
@@ -131,6 +139,13 @@ LANCTOT M, ZAMBALDI V, GRUSLYS A, et~al.
 \newblock arXiv: \eprint{https://arxiv.org/abs/1711.00832}{1711.00832}.
 \newblock \url{https://arxiv.org/abs/1711.00832}.
 
+\bibitem[Devidze(2025)]{devidze2025rewarddesignreinforcementlearning}
+DEVIDZE R.
+\newblock Reward design for reinforcement learning agents\allowbreak[A/OL].
+\newblock 2025.
+\newblock arXiv: \eprint{https://arxiv.org/abs/2503.21949}{2503.21949}.
+\newblock \url{https://arxiv.org/abs/2503.21949}.
+
 \bibitem[Ng et~al.(1999)Ng, Harada, and Russell]{Ng1999PolicyIU}
 NG A, HARADA D, RUSSELL S~J.
 \newblock Policy invariance under reward transformations: Theory and application to reward shaping\allowbreak[C/OL]//\allowbreak
@@ -138,11 +153,91 @@ International Conference on Machine Learning.
 \newblock 1999.
 \newblock \url{https://api.semanticscholar.org/CorpusID:5730166}.
 
-\bibitem[Schulman et~al.(2016)Schulman, Moritz, Levine, Jordan, and Abbeel]{schulman2015highdimensional}
-SCHULMAN J, MORITZ P, LEVINE S, et~al.
-\newblock High-dimensional continuous control using generalized advantage estimation\allowbreak[C]//\allowbreak
-International Conference on Learning Representations (ICLR).
-\newblock 2016.
+\bibitem[Devlin et~al.(2012)Devlin and Kudenko]{Devlin2014dynamicpotential}
+DEVLIN S, KUDENKO D.
+\newblock Dynamic potential-based reward shaping\allowbreak[C]//\allowbreak
+Proceedings of the 11th International Conference on Autonomous Agents and Multiagent Systems (AAMAS).
+\newblock 2012: 433-440.
+
+\bibitem[Devlin et~al.(2011)Devlin and Kudenko]{Devlin2014theoretical}
+DEVLIN S, KUDENKO D.
+\newblock Theoretical considerations of potential-based reward shaping for multi-agent systems\allowbreak[C]//\allowbreak
+Proceedings of the 10th International Conference on Autonomous Agents and Multiagent Systems (AAMAS).
+\newblock 2011: 225-232.
+
+\bibitem[Ng et~al.(2000)Ng and Russell]{Ng2000algorithmsinversereinforcementlearning}
+NG A~Y, RUSSELL S.
+\newblock Algorithms for inverse reinforcement learning\allowbreak[C]//\allowbreak
+Proceedings of the 17th International Conference on Machine Learning (ICML).
+\newblock 2000: 663-670.
+
+\bibitem[Ziebart et~al.(2008)Ziebart, Maas, Bagnell, and Dey]{Ziebart2008maximum}
+ZIEBART B~D, MAAS A, BAGNELL J~A, et~al.
+\newblock Maximum entropy inverse reinforcement learning\allowbreak[C]//\allowbreak
+Proceedings of the 23rd AAAI Conference on Artificial Intelligence.
+\newblock 2008: 1433-1438.
+
+\bibitem[Wulfmeier et~al.(2015)Wulfmeier, Ondruska, and Posner]{Wulfmeier2015maximum}
+WULFMEIER M, ONDRUSKA P, POSNER I.
+\newblock Maximum entropy deep inverse reinforcement learning\allowbreak[A].
+\newblock 2015.
+\newblock arXiv: \eprint{https://arxiv.org/abs/1507.04888}{1507.04888}.
+
+\bibitem[Self et~al.(2022)Self, Abudia, Mahmud, and Kamalapurkar]{Self2022modelbased}
+SELF R, ABUDIA M, MAHMUD S~M~N, et~al.
+\newblock Model-based inverse reinforcement learning for deterministic systems\allowbreak[J].
+\newblock Automatica, 2022, 140: 110242.
+
+\bibitem[Hadfield-Menell et~al.(2020)Hadfield-Menell, Milli, Abbeel, Russell, and Dragan]{hadfieldmenell2020inverserewarddesign}
+HADFIELD-MENELL D, MILLI S, ABBEEL P, et~al.
+\newblock Inverse reward design\allowbreak[A/OL].
+\newblock 2020.
+\newblock arXiv: \eprint{https://arxiv.org/abs/1711.02827}{1711.02827}.
+\newblock \url{https://arxiv.org/abs/1711.02827}.
+
+\bibitem[Pathak et~al.(2017)Pathak, Agrawal, Efros, and Darrell]{pathak2017curiositydrivenexplorationselfsupervisedprediction}
+PATHAK D, AGRAWAL P, EFROS A~A, et~al.
+\newblock Curiosity-driven exploration by self-supervised prediction\allowbreak[A/OL].
+\newblock 2017.
+\newblock arXiv: \eprint{https://arxiv.org/abs/1705.05363}{1705.05363}.
+\newblock \url{https://arxiv.org/abs/1705.05363}.
+
+\bibitem[Burda et~al.(2018)Burda, Edwards, Storkey, and Klimov]{burda2018explorationrandomnetworkdistillation}
+BURDA Y, EDWARDS H, STORKEY A, et~al.
+\newblock Exploration by random network distillation\allowbreak[A/OL].
+\newblock 2018.
+\newblock arXiv: \eprint{https://arxiv.org/abs/1810.12894}{1810.12894}.
+\newblock \url{https://arxiv.org/abs/1810.12894}.
+
+\bibitem[Devidze et~al.(2022)Devidze, Kamalaruban, and Singla]{Devidze2022explorationguided}
+DEVIDZE R, KAMALARUBAN P, SINGLA A.
+\newblock Exploration-guided reward shaping for reinforcement learning under sparse rewards\allowbreak[C]//\allowbreak
+Advances in Neural Information Processing Systems (NeurIPS): Vol.~35.
+\newblock 2022: 5829-5842.
+
+\bibitem[Xie et~al.(2024)Xie, Zhao, Wu, Liu, Luo, Zhong, Yang, and Yu]{xie2024text2rewardrewardshapinglanguage}
+XIE T, ZHAO S, WU C~H, et~al.
+\newblock Text2reward: Reward shaping with language models for reinforcement learning\allowbreak[A/OL].
+\newblock 2024.
+\newblock arXiv: \eprint{https://arxiv.org/abs/2309.11489}{2309.11489}.
+\newblock \url{https://arxiv.org/abs/2309.11489}.
+
+\bibitem[王琦，杨毅远，江季(2022)]{EASYRL}
+王琦，杨毅远，江季.
+\newblock EASYRL：强化学习教程\allowbreak[M].
+\newblock 人民邮电出版社, 2022: 1-2.
+
+\bibitem[Sutton et~al.(1999)Sutton, McAllester, Singh, and Mansour]{sutton1999policyandvalue}
+SUTTON R~S, MCALLESTER D, SINGH S, et~al.
+\newblock Policy gradient methods for reinforcement learning with function approximation\allowbreak[C]//\allowbreak
+Advances in Neural Information Processing Systems (NeurIPS): Vol.~12.
+\newblock MIT Press, 1999: 1057-1063.
+
+\bibitem[Schulman et~al.(2015)Schulman, Levine, Abbeel, Jordan, and Moritz]{schulman2015trpo}
+SCHULMAN J, LEVINE S, ABBEEL P, et~al.
+\newblock Trust region policy optimization\allowbreak[C]//\allowbreak
+Proceedings of the 32nd International Conference on Machine Learning (ICML): Vol.~37.
+\newblock PMLR, 2015: 1889-1897.
 
 \bibitem[Schulman et~al.(2017)Schulman, Wolski, Dhariwal, Radford, and Klimov]{schulman2017proximal}
 SCHULMAN J, WOLSKI F, DHARIWAL P, et~al.

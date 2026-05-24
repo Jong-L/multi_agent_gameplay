@@ -48,11 +48,6 @@
 \usepackage[sort&compress]{gbt7714}
 \bibliographystyle{gbt7714-numerical}
 
-% === 字体设置（pdflatex 兼容） ===
-% ctex 已自动处理中文字体；英文使用 Times New Roman 风格
-\usepackage{mathptmx}       % Times 风格数学字体（pdflatex 可用）
-\usepackage[T1]{fontenc}    % 保证英文字体加粗有效
-
 % === 行距：Word 1.25 倍行距 ===
 \setstretch{1.354}          % = 1.25 * 1.3 / 1.2
 
@@ -251,7 +246,7 @@
 % ----------------------------------------------------------
 % 中文摘要
 % ----------------------------------------------------------
-\begin{cnabstract}{多智能体强化学习；独立近端策略优化；博弈对抗；奖励塑形；循环神经网络}
+\begin{cnabstract}{强化学习；独立近端策略优化；博弈对抗；奖励塑形；循环神经网络}
 
 强化学习是机器学习及人工智能领域比较重要的研究方向与工程方法，用于解决序列决策问题，近年来特别是在游戏，机器人路径规划，策略博弈等场景中被广泛使用。机器博弈研究多个智能体在环境中的对抗与合作行为，通过交互学习最优策略，在实时策略博弈、机器人集群协作等复杂决策场景中具有重要的研究价值与应用前景。
 
@@ -323,84 +318,103 @@ AI 博弈能力每一次提升的背后，都是对对手建模、策略适应�
 当多个自学习智能体共处同一博弈环境时，问题从单智能体优化升级为博弈动力学问题。
 多智能体强化学习（Multi-Agent RL, MARL）面临的核心挑战是非平稳性（non-stationarity）：
 每个智能体的策略更新都会改变其他智能体面对的环境转移概率，
-使单智能体 RL 中的 Markov 决策过程（MDP）假设不再成立\cite{lowe2017maddpg}。
+使单智能体 RL 中的 Markov 决策过程（MDP）假设不再成立\cite{Hernandez-Leal2019}。
 因此在多智能体系统中进行InRL（Independent RL）
 独立训练时理论上不保证强化学习算法依旧有效，尽管对于近端策略梯度优化算法（PPO）来说，进行独立训练（independent PPO，IPPO）也能在SMAC等协作型任务中表现出色\cite{dewitt2020independentlearningneedstarcraft}，但这很大程度上源于PPO算法限制了新旧策略之间的差距，使得训练本身比较平稳，一定程度上克服了多智能体环境不平稳的问题，IPPO在能否用于博弈对抗型任务也不可明断，因此直接让多个智能体在同一环境中进行训练并希望能够提升智能体能力不是明智之举。
 
 因此能否找到一种训练方案来直接提高多智能体在博弈对抗类型任务中的性能？本文基于现有的强化学习算法和自博弈方法的研究，不考虑求解博弈均衡，探索了一种简单的虚拟博弈策略来试图解决环境不平稳的问题并希望能够有效提升智能体应对多种对手的泛化能力。
 
 \subsection{国内外研究现状}
-
 \subsubsection{强化学习}
-强化学习用于解决序列决策问题，试图最大化一个决策周期的收益，不同于传统机器学习方法，强化学习通过不断与环境交互获得反馈，并基于反馈进行策略更新，从而达到学习目标。强化学习算法主要分为两类，基于价值函数的方法和基于策略梯度的方法。
+强化学习算法主要可分为两类，即基于价值的方法和基于策略的方法。基于价值的方法通过计算状态-动作对的价值函数Q，在每个状态下Q值最大的动作就是智能体应该采取的动作，目前主流的基于价值的算法思想是Q学习（Q-Learning）\cite{watkins1992qlearning}，其求解过程本质上是在直接求解贝尔曼最优方程；基于策略的方法直接求解最优策略函数$\pi(a|s)$，通过构造合适的优化目标，并采用梯度下降（上升）法进行优化；因此，强化学习算法有两条路线，一是求解最优价值，二是求解最优策略，而目前最主流的强化学习算法思想是将两者结合的演员-评论家模型（Actor-Critic），在算法中会同时求解价值和策略，用估计的价值指导策略的更新。
 
-基于价值函数的方法从贝尔曼最优方程发展而来，大致可以分为基于模型的方法，免模型方法，增量学习方法，神经网络逼近价值函数方法等阶段，其中，基于模型的方法知道环境的状态转移矩阵，可以直接用动态规划进行求解，比如值迭代和策略迭代\cite[73--88]{sutton2018reinforcement}。免模型方法指用蒙特卡洛或随机近似方法近似Q值或价值，从而再使用动态规划进行求解，\cite{sutton1988learning}的工作说明了了一边进行迭代求解贝尔曼最优方程一边迭代近似Q值也能够求解策略，这直接引出了Q-learning和SARSA等算法。然而在面对连续状态或动作空间时，传统基于价值的方法需要一张巨大的Q表保存离散化地所有状态和动作的Q值，这对于计算机存储和实际查找都很困难，于是后来研究人员直接用函数逼近Q值，从保存Q表转而保存参数。但是选择什么样的函数同样是难题，\cite{cybenko1989approximation}和\cite{hornik1989multilayer}相继给出了答案，即多层感知机（MLP）可以近似任何连续函数，这种优秀的拟合能力使得神经网络成为拟合Q函数的主流选择，引入深度学习的基于价值的算法如DQN\cite{mnih2015human}能够处理连续高维空间，在49款雅达利游戏中远超传统算法。
+强化学习算法通常与深度学习结合使用，这归功于神经网络极其优秀的拟合性能\cite{cybenko1989approximation,hornik1989multilayer}，无论面临如何复杂的环境，神经网络都能够拟合动作值（Q-value）函数，利用神经网络拟合Q值的DQN算法训练出的智能体性能在多款雅达利游戏中可以超越人类\cite{mnih2015human}，而在演员-评论家模型中，策略函数和优势函数也都可以用神经网络方便地拟合，这使得深度强化学习成为强化学习中的主要范式。
 
+近端策略优化算法（Proximal Policy Optimization, PPO）\cite{schulman2017ppo}
+是当前应用最广泛的强化学习算法之一。
+PPO 使用广义优势估计（Generalized Advantage Estimation, GAE）\cite{schulman2015highdimensional}配合重要性采样有效利用样本来计算策略梯度，
+同时裁剪新旧策略之间的重要性比例约束策略更新幅度，在保持训练稳定性的同时兼顾样本效率，
+且对超参数相对鲁棒，使其成为复杂任务中的首选算法。
+近年来，PPO 及其改进版本在游戏 AI、路径规划、自动驾驶和机器人控制等领域
+取得了广泛成功\cite{lujingguihua20230406,yaoyue2023improvedppo,wanyuhang2025improvedppo}，
+展现出从虚拟环境策略到现实世界应用的可迁移潜力。
 
-基于策略梯度的方法不直接求解贝尔曼最优方程，而是将策略参数化后，
-通过梯度上升优化一个性能目标函数；在充分参数化的极限下，该方法的
-最优解与贝尔曼最优方程的解一致，策略梯度方法的一个重要优势在于，策略本身被显式参数化为动作的概率分布或函数，在优化过程中天然具备探索能力，因此无需像值函数方法那样依赖$\varepsilon$-贪心
-等外部探索机制~\cite[321--337]{sutton2018reinforcement}。从策略梯度方法中诞生了演员-评论家（actor-critic）范式\cite{sutton1999policyandvalue}，在算法执行过程中，策略函数（演员）和价值函数（评论家）都同时在被优化，相比于纯梯度策略方法如REINFORCE\cite{williams1992simple}减小了价值估计的方差。直接用随机近似方法估计价值函数时在训练早期会有偏差过大导致策略梯度方向错误问题，因此John Schulman等人提出广义优势估计（GAE）\cite{schulman2016gae}，通过引入一个广义优势函数，平衡价值估计时的偏差与方差，该方法结合重要性采样\cite{precup2000eligibility}直接催生了近端策略优化算法（PPO）\cite{schulman2017ppo}，PPO使用广义优势估计和重要性采样来平衡价值估计的偏差与方差，同时采用新旧策略的kl散度惩罚函数或重要性裁剪使得每次更新策略时差异不至于过大导致训练不稳定。PPO以其稳健的性能是目前最为流行的强化学习算法，
+同时，有诸多训练方法用于提高智能体训练效率，比如分层强化学习\cite{10120651hierarchical}，课程学习\cite{2009Curriculum}，策略迁移\cite{Tseng2022OfflineMR}等。其中分层强化学习将一个复杂目标分解为多个阶段性简单子目标，每个子目标都用MDP进行建模，并分配给不同的智能体进行分层训练和执行，每个智能体专注于自身目标，相比于一个智能体解决整个任务，训练难度能显著降低。课程学习指在训练过程中，通过逐渐增加任务难度，使智能体不断适应更复杂的环境。通常课程的设计采用逆向生成，即从目标的最终状态开始，逐步分解出和上一个状态相近但是又在远离最终状态并靠近初始状态的状态，智能体将从最终状态逆向地学习在每个状态的策略。策略迁移则通过将已学策略迁移到新任务中，改进从头训练慢，样本获取率和利用率低等问题。
 
-
-\subsubsection{自博弈与多智能体对抗}
-
-对于博弈对抗场景，核心问题在于如何在非平稳的对手环境中学会适应性决策。
-虚拟博弈（Fictitious Play）是博弈论中是一种经典的学习规则\cite{brown1951fictitious}，其核心是假设对手采用静态策略，玩家根据对手的实际策略情况进行最佳响应，最终的策略即为纳什均衡的估计。
-虚拟自博弈（Fictitious Self-Play）吸收了虚拟博弈的思路，是驱动智能体对抗策略进化的核心范式，其研究可按博弈论严格性分为三个层次。
-
-\textbf{朴素自博弈与策略循环}。
-最直接的自博弈形式是让智能体与自身当前的副本对抗。
-AlphaGo通过不断与自身对弈生成训练数据，
+\subsubsection{对抗训练与自博弈}
+如果直接让两个智能体进行对抗并同时更新策略，那么对于其中任何一个智能体，由于另一个智能体的策略在变化，因此对其来说环境就在变化，即环境是不平稳的，单智能体 RL 的 Markov 决策过程假设不再成立。为了让智能体通过与对手对抗来提升技能，最直接的方式是自博弈（Self-Play），比如
+AlphaGo\cite{Silveralphago2016}通过不断与自身的历史版本对弈生成训练数据，
 结合蒙特卡洛树搜索（MCTS），
-在围棋这一两人零和完全信息博弈中达到了超人类水平。
-然而，朴素自博弈在非平稳的多智能体环境中存在内在缺陷：
-当多个智能体同时学习时，每个智能体仅对当前对手策略求最优响应，
-策略可能在空间中形成循环，
-从单个智能体视角看，环境转移概率随对手策略的持续变化而漂移，
-这正是前文所述非平稳性问题的直接体现。
-AlphaStar\cite{VinyalsAlphaStar2019}在星际争霸II的实践中观察到了这一现象，
-指出纯自博弈将导致策略循环与策略坍缩
-智能体在适应当前对手后丧失了应对其他策略风格的能力。
-为此，AlphaStar 引入了联盟训练（league training），
-通过维护包含多个历史策略版本的对手池、按优先级采样对手，
-在保持策略多样性的同时驱动持续进化。
+在围棋这一两人零和完全信息博弈中达到了超人类水平，
+展示了了自博弈在驱动策略进化方面的巨大潜力。
 
-\textbf{Fictitious Self-Play 与博弈论收敛保证}。
-神经虚拟自博弈（Neural Fictitious Self-Play, NFSP）
-\cite{heinrich2016deepreinforcementlearningselfplay}
-将经典博弈论中的虚拟博弈与深度强化学习结合，
-为自博弈处理非平稳性提供了严格的理论基础。
-每个玩家不对对手的最新策略做最优响应，
-而是对对手的历史平均策略求最优响应。
-NFSP 通过维护一个监督学习网络来近似对手的历史平均策略，
-使 RL Agent 面对的是一个固定的优化目标而非移动靶，
-从而将非平稳的 MARL 问题转化为平稳的单智能体学习问题。
+然而，自博弈会出现策略循环和过拟合问题，智能体尽管在不断地战胜上一个状态的自己，但有可能是在石头剪刀布的圈子里不断循环。于是通常会使用虚拟自我博弈（Fictitious Self-Play，FSP）来进行训练，这一方法基于经典博弈论中的虚拟博弈\cite{brown1951fictitious} ，FSP的对手不是自己的副本或最新的策略，而是自己历史策略的平均值，从而学到一个不会轻易被对手利用，更加鲁棒的策略，通常平均策略是用神经网络表达，即神经虚拟自我博弈（Neural Fictitious Self-Play，NFSP）\cite{heinrich2016deepreinforcementlearningselfplay}。
 
-\textbf{PSRO 与统一博弈论框架}。
-PSRO（Policy Space Response Oracles）
+以上方法都是采用自博弈绕过了多智能体博弈时环境不平稳问题，但是虚拟博弈技巧也不仅仅局限于自我博弈，在星际争霸II中能力达到宗师级别的强化学习智能体AlphaStar\cite{VinyalsAlphaStar2019}训练过程中，DeepMind团队采用了名为联盟训练的技术，一个联盟由3类智能体组成：Main Agents，Main Exploiter和Legue Exploiter，每类智能体训练时，其他智能体的策略冻结。其中Main Agents的目标是不断训练成为联盟中的最强策略，能够战胜联盟内的所有对手的策略；Main Exploiter每次从初始状态出发与Main Agents进行博弈，专门负责寻找Main Agents的策略漏洞，每次训练完成后Main Exploiter的策略会重置，每次从新的角度寻找Main Agents的策略漏洞；League Exploiter直接和联盟内所有对手博弈，每次训练后有一定几率重置。
+
+进一步地，PSRO（Policy Space Response Oracles）框架
 \cite{lanctot2017unifiedgametheoreticapproachmultiagent}
-将 Double Oracle 算法从博弈论推广至深度强化学习，
-统一了自博弈、Fictitious Play 等多种范式的理论分析。
-在 PSRO 框架中，每个 Agent 维护一个策略池，
-每轮迭代对池中策略的元策略混合（meta-strategy mixture）求近似最优响应，
-将新策略加入池中后在扩展的策略空间上重新求解元博弈。
-Lanctot 等人证明了当 Oracle 为精确最优响应求解器时，
-PSRO 在有限博弈中保证收敛到纳什均衡；
-当 Oracle 由 DRL 策略梯度近似时，
-收敛性质取决于近似的质量。
-PSRO 框架为理解不同自博弈变种的非平稳性处理能力提供了统一视角：
-朴素自博弈仅针对最新策略做最优响应（无收敛保证），
-Fictitious Play 针对历史平均策略（零和博弈下收敛），
-Double Oracle 针对策略池混合（有限博弈下收敛）。
+将上述思路推广为统一的理论框架：
+每个智能体维护一个策略池，
+每轮迭代对池中策略的元策略混合求近似最优响应，
+将新策略加入池中后继续下一轮。
+PSRO 在有限博弈中具有收敛到纳什均衡的理论保证，
+为理解不同自博弈变种的非平稳性处理能力提供了统一视角。
 
-\subsubsection{强化学习训练技术}
-在奖励工程方面，势能奖励塑形（PBRS）\cite{Ng1999PolicyIU}通过引入势函数
-为状态空间赋予先验知识，在保持最优策略不变的前提下加速学习。
-在 MARL 中，奖励设计还需考虑智能体间的激励相容问题。
+\subsubsection{奖励工程}
+奖励工程（Reward Engineering）是强化学习中决定智能体行为质量的核心环节，直接影响了学习效率和最终性能\cite{devidze2025rewarddesignreinforcementlearning}。目前主要包含以下核心方法：
+
+\textbf{势能奖励塑形（PBRS）}。
+奖励塑形通过在环境奖励基础上引入额外的塑形奖励 $F(s,a,s')$ 来加速学习，
+但任意添加塑形奖励可能改变最优策略。
+Ng 等人\cite{Ng1999PolicyIU}提出的 PBRS 理论证明，
+当塑形奖励具有 $F(s,a,s') = \gamma\Phi(s') - \Phi(s)$ 的形式时，
+不改变 MDP 的最优策略。
+这为游戏 AI 中的引导奖励设计提供了严格的理论基础——
+设计者可以通过构造势函数 $\Phi(s)$ 将领域知识注入学习过程，
+以稠密的引导信号替代稀疏的终局奖励，
+在保持最优解不变的前提下显著加速收敛。
+
+在此基础上，研究者发展出多种 PBRS 变体以适应更复杂场景。
+动态势能奖励塑形（DPBRS）\cite{Devlin2014dynamicpotential}将时间维度引入势函数
+$\Phi(s,t)$，使塑形信号随训练进度自适应调整，
+在多智能体系统中能够促进协作与协调。
+针对多智能体场景，Devlin 等人\cite{Devlin2014theoretical}进一步证明
+PBRS 在随机博弈中不改变纳什均衡，但会通过影响探索过程
+导致收敛到不同的联合策略。
+
+\textbf{逆强化学习（Inverse Reinforcement Learning, IRL）}。
+与手动设计奖励函数不同，逆强化学习从专家示范中推断隐含的奖励函数。
+Ng 和 Russell\cite{Ng2000algorithmsinversereinforcementlearning}
+最早提出 IRL 框架，后续发展了最大熵 IRL\cite{Ziebart2008maximum}、
+最大熵深度 IRL\cite{Wulfmeier2015maximum}以及基于模型的 IRL\cite{Self2022modelbased}等方法。
+IRL 的核心优势在于避免了人工设计奖励函数的困难，
+但需要高质量的专家示范数据，且推断出的奖励函数可能存在歧义——
+多个不同奖励函数都能解释同一组示范行为。
+Hadfield-Menell 等人\cite{hadfieldmenell2020inverserewarddesign}
+进一步提出逆奖励设计（Inverse Reward Design）框架，
+使智能体能够在奖励函数存在不确定性的情况下进行鲁棒的策略学习。
+
+\textbf{内在奖励与好奇心驱动}。
+为缓解稀疏奖励环境中的探索困难，
+研究者提出多种不依赖环境奖励的内在动机机制。
+Pathak 等人\cite{pathak2017curiositydrivenexplorationselfsupervisedprediction}的 ICM 模块
+通过预测动作后果的状态变化来生成探索奖励，
+鼓励智能体访问预测误差大的陌生状态；
+Burda 等人\cite{burda2018explorationrandomnetworkdistillation}的 RND 使用随机网络蒸馏的预测误差
+作为探索信号，在蒙特祖玛的复仇等极度稀疏奖励的雅达利游戏中取得突破。
+Devidze 等人\cite{Devidze2022explorationguided}进一步将探索与奖励塑形统一，
+利用探索过程的经验指导 PBRS 势函数的自动构造，
+为两类方法的融合提供了新思路。
+
+\textbf{基于大语言模型的奖励生成}。
+最新的研究方向利用大语言模型（LLM）的常识与推理能力自动生成奖励函数。
+Text2Reward\cite{xie2024text2rewardrewardshapinglanguage}通过 LLM 理解自然语言任务描述，
+生成稠密的、可执行的 Python 奖励代码，
+在机器人操作等任务中验证了自动奖励设计的可行性。
+这一方向为降低奖励工程中的人工设计成本、提升跨任务泛化能力提供了全新范式。
 
 \subsection{论文研究内容}
-
 本文的主要研究内容包括：
 
 （1）构建了基于 Godot 引擎的 2D 多智能体竞技场博弈环境《Tiny Swords》，
@@ -414,12 +428,11 @@ Double Oracle 针对策略池混合（有限博弈下收敛）。
 （3）对比了在构建的该特定环境下 MLP、Segmented MLP 与 GRU-MLP 三种网络架构在拾取奖励球任务
 与战斗任务中的性能差异，为后续更高效的训练提供参考。
 
-（4）提出了迭代自博弈训练框架，通过冻结对手策略、轮换训练的方式
+（4）训练提出了迭代自博弈训练框架，通过冻结对手策略、轮换训练的方式
 驱动智能体在竞争中持续进化，引入对手池管理与 ELO 评分机制追踪策略强度变迁，
 观察研究该训练框架和独立强化学习方案在策略上的现象差异。
 
 \subsection{论文组织结构}
-
 本文共分为六章，各章内容安排如下：
 
 第一章介绍研究背景、国内外研究现状、研究内容与论文组织结构。
@@ -440,56 +453,158 @@ Double Oracle 针对策略池混合（有限博弈下收敛）。
 % ==================== 第2章 ====================
 \section{相关理论与技术基础}
 
-\subsection{强化学习基础}
+\subsection{强化学习}
+强化学习是一门关于个体进化的科学，能够用于解决序列决策问题，智能体与环境不断交互试错并改进自身策略，逐步获取更高的奖励。强化学习过程由两部分组成：智能体和环境。
+智能体在环境中进行观测，并根据观测结果选择一个动作执行，环境接受智能体的动作并做出响应，包括
+环境的状态变化和给予智能体的奖励信号，智能体根据新的观测和上一步动作的奖励改进自身行为策略，
+以期望在长期内获得最大的累积奖励\cite{EASYRL}。\autoref{fig:rl_diagram}描述了强化学习的基本框架。
+%强化学习基本框架示意图
+\begin{figure}[h!]
+  \centering
+  \includegraphics[width=0.75\linewidth]{imgs/rl_diagram.png}
+  \caption{强化学习基本框架}
+  \label{fig:rl_diagram}
+\end{figure}
 
-强化学习解决的是智能体在环境中通过试错学习最优策略的问题，用于解决序列决策问题，
-其数学基础是马尔可夫决策过程（Markov Decision Process, MDP）。
-MDP 由状态空间 $\mathcal{S}$、动作空间 $\mathcal{A}$、状态转移概率
-$P(s'|s,a)$ 和奖励函数 $R(s,a)$ 构成。
-智能体的目标是最大化累计折扣回报：
+\subsubsection{马尔可夫决策过程}
+马尔可夫决策过程（Markov Decision Process, MDP）相比于马尔可夫过程增加了动作因素，用于在系统状态空间具有马尔可夫性质的环境中描述智能体的状态，动作和奖励的关系，用五元组$\langle \mathcal{S}, \mathcal{A}, \mathcal P, \mathcal R, \gamma \rangle$表示，其中$\mathcal{S}$ 为状态空间，$\mathcal{A}$ 为动作空间，$P(s'|s,a):\mathcal{S}\times \mathcal{A}\times \mathcal{S}\rightarrow [0,1]$ 为状态转移概率，$R(s,a):\mathcal{S}\times \mathcal{A}\rightarrow \mathbb{R}$为奖励函数，$\gamma\in [0,1]$ 为折扣因子。MDP依赖于马尔可夫性质，即状态转移概率只取决于当前状态和执行的动作，与过去的状态无关，即 $P(s_{i+1}|s_i,a_i) = P(s_{i+1}|s_i,a_i,s_{i-1},a_{i-1}\cdots s_0,a_0)$。轨迹是指MDP上的样本轨道，可定义为：
+\begin{equation}
+  \tau = (s_0, a_0, r_0, s_1, a_1, r_1, \cdots, s_T, a_T, r_T)
+  \label{eq:trajectory}
+\end{equation}
+
+求解MDP模型是要找到一条轨迹能够最大化累计折扣回报：
 \begin{equation}
   G_t = \sum_{k=0}^{\infty} \gamma^k R_{t+k+1}
   \label{eq:return}
 \end{equation}
+其中 $\gamma$ 代表了智能体对于未来奖励的重视程度，$\gamma$越接近0，表示智能体越看重眼前的奖励；$R_{t+k+1}$ 为 $t$ 时刻到 $t+k+1$ 时刻的奖励。
 
 值函数 $V^{\pi}(s)$ 表示从状态 $s$ 出发，遵循策略 $\pi$ 的期望回报；
-动作值函数 $Q^{\pi}(s,a)$ 则表示在状态 $s$ 采取动作 $a$ 后的期望回报。
-最优值函数满足贝尔曼最优方程：
+动作值函数 $Q^{\pi}(s,a)$ 则表示在状态 $s$ 采取动作 $a$ 后的期望回报。设策略函数为 $\pi(a|s)$，动作值函数和值函数分别定义为：
 \begin{equation}
-  V^{*}(s) = \max_{a} \left[ R(s, a) + \gamma \sum_{s'} P(s'|s, a) V^{*}(s') \right]
+  Q^{\pi}(s,a) =R(s, a) + \gamma \sum_{s'} P(s'|s, a) V^{\pi}(s')
+  \label{eq:bellman_q}
+\end{equation}
+\begin{equation}
+  V^{\pi}(s) = \sum_{a} \pi(a|s) \left[ R(s, a) + \gamma \sum_{s'} P(s'|s, a) V^{\pi}(s') \right]=\sum_{a} \pi(a|s)Q^{\pi}(s,a)
   \label{eq:bellman}
 \end{equation}
+\autoref{eq:bellman}中的$V^{\pi}(s')$可以根据轨迹继续递归求解,从而可以得知MDP的求解就是要找到一个策略$\pi^*$，使得对于每一个状态$s$，$V^{\pi}(s)$达到最大值$V^{\pi^*}(s)$,且求解方法就是准确地计算Q值，然后在每个状态选择Q值最大的动作。
 
-时序差分（Temporal Difference, TD）学习结合了动态规划与蒙特卡洛方法的优点，
-通过自举（bootstrapping）实现在线学习。
-
-策略梯度方法直接对策略 $\pi_{\theta}$ 的参数 $\theta$ 进行优化，
-目标是最大化期望回报 $J(\theta) = \mathbb{E}_{\pi_{\theta}}[G_t]$。
-策略梯度定理给出：
+MDP要求状态转移概率是恒定的，即环境是平稳的。对于多智能体系统，MDP被扩展为马尔可夫博弈（Markov Game）$\langle \mathcal{S}, \mathcal{N}, \mathcal{A}, \mathcal{P}, \mathcal{R}, \gamma \rangle$，其中$\mathcal{N}$是智能体数量，$\mathcal{A}= A_1 \times A_2 \times \cdots \times A_\mathcal{N}$为联合动作空间，状态转移和奖励均取决于所有智能体的联合动作：$\mathcal{P}: \mathcal{S} \times A_1 \times \cdots \times A_\mathcal{N} \rightarrow [0,1]$, $\mathcal{R}: \mathcal{S} \times A_1 \times \cdots \times A_\mathcal{N} \rightarrow \mathbb{R}$。尽管转移函数$\mathcal{P}$本身是平稳的，但从单个智能体$i$的视角看，其他智能体的策略$\pi_{-i}$构成了环境的一部分。当对手策略随学习过程不断更新时，智能体$i$所感知的有效转移动态
 \begin{equation}
-  \nabla_{\theta} J(\theta) = \mathbb{E}_{\pi_{\theta}}\left[ \nabla_{\theta} \log \pi_{\theta}(a|s) A^{\pi}(s,a) \right]
-  \label{eq:policy_gradient}
+  P_i(s' \mid s, a_i) = \sum_{a_{-i}} \mathcal{P}(s' \mid s, a_i, a_{-i}) \, \pi_{-i}(a_{-i} \mid s)
+  \label{eq:effective_transition}
 \end{equation}
-其中 $A^{\pi}(s,a) = Q^{\pi}(s,a) - V^{\pi}(s)$ 为优势函数（Advantage Function）。
+也随之漂移，破坏了单智能体视角下马尔可夫性质。
 
-广义优势估计（Generalized Advantage Estimation, GAE）\cite{schulman2015highdimensional}
-通过 TD 误差的指数加权和来平衡估计偏差与方差：
+
+\subsubsection{部分可观测马尔可夫决策过程}
+强化学习中很多场景下环境都被建模为部分可观测马尔可夫决策过程（Partially Observable Markov Decision Process, POMDP），POMDP假设系统动态依旧是MDP，但执行动作的智能体不能获得MDP中的完整状态信息。POMDP 用七元组 $\langle \mathcal{S}, \mathcal{A}, \mathcal{O}, \mathcal{P}, \mathcal{Z}, \mathcal{R}, \gamma \rangle$ 表示。 其中 $\mathcal{O}$ 为观测空间，$\mathcal{Z}(o \mid s', a)$ 为观测函数，描述智能体执行动作 $a$ 后到达状态 $s'$ 时 获得观测 $o$ 的概率分布；其余元素与 MDP 一致。 结合深度学习，POMDP的求解方法通常是使用记忆网络在观测历史序列 $h_t = (o_0, a_0, o_1, a_1, \ldots, o_t)$ 的基础上做出决策，缓解部分可观测带来的信息缺失问题。在本文所构建的《Tiny Swords》环境中， 智能体仅能观测到以自身为中心、有限半径内的玩家、怪物和奖励球， 超出视野范围的实体完全不可见， 且障碍物通过八方向射线检测提供距离信息——这意味着每个智能体的观测仅是全局状态的局部投影， 天然构成 POMDP。
+
+\subsubsection{近端策略优化算法}
+近端策略优化算法（PPO）是本文主要使用的算法，是一种策略梯度算法，
+策略梯度算法通过直接优化策略函数 $\pi_{\theta}(a|s)$ 的参数 $\theta$
+来最大化期望累计回报 $J(\theta) = \mathbb{E}_{\pi_{\theta}}[G_t]$，
+其梯度估计由策略梯度定理\cite{sutton1999policyandvalue}给出：
+$\nabla_{\theta} J(\theta) = \mathbb{E}_{\pi_{\theta}}[\nabla_{\theta} \log \pi_{\theta}(a|s) A^{\pi}(s,a)]$，
+其中 $A^{\pi}(s,a) = Q^{\pi}(s,a) - V^{\pi}(s)$ 为优势函数。
+然而，该梯度估计仅在当前策略 $\pi_{\theta}$ 的采样分布下成立：
+一旦策略参数更新，旧样本的分布即发生偏移，梯度估计的方差随之增大。
+若步长过大，策略性能可能出现灾难性崩溃（catastrophic collapse）——
+这一问题是驱动从普通策略梯度到置信域方法演进的根本动因。
+
+\textbf{置信域策略优化（TRPO）}。
+Schulman 等人\cite{schulman2015trpo}提出的置信域策略优化
+（Trust Region Policy Optimization, TRPO）通过引入显式的策略更新约束
+来应对上述挑战。TRPO 在最大化旧策略采样下的替代优势函数的同时，
+要求新旧策略间的 KL 散度不超过预设阈值 $\delta$：
+\begin{equation}
+  \begin{aligned}
+    \max_{\theta}\quad & \mathbb{E}_{t}\left[ 
+    \frac{\pi_{\theta}(a_t|s_t)}{\pi_{\theta_{\text{old}}}(a_t|s_t)} \hat{A}_t \right] \\
+    \text{s.t.}\quad & \mathbb{E}_{t}\left[ 
+    D_{\text{KL}}\left( \pi_{\theta_{\text{old}}}(\cdot|s_t) \,\|\, \pi_{\theta}(\cdot|s_t) \right) \right] \leq \delta
+  \end{aligned}
+  \label{eq:trpo}
+\end{equation}
+其中重要性采样比率 $r_t(\theta) = \pi_{\theta}(a_t|s_t) / \pi_{\theta_{\text{old}}}(a_t|s_t)$ 用于纠正当数据来自 $\pi_{\theta_{\text{old}}}$
+而非 $\pi_{\theta}$ 时产生的分布偏移。
+TRPO 采用共轭梯度法结合线搜索近似求解该约束优化问题，
+在理论上保证了策略的单调改进\cite{schulman2015trpo}。
+然而，其二阶优化的计算开销和工程实现复杂度
+限制了在大规模问题中的实用性。
+
+\textbf{PPO-Penalty}。
+为在保留 TRPO 稳定更新特性的同时大幅降低实现与计算复杂度，提出了近端策略优化
+（Proximal Policy Optimization, PPO）。
+PPO 的第一种变体——PPO-Penalty——将 TRPO 中的硬 KL 约束
+转化为目标函数中的自适应惩罚项：
+\begin{equation}
+  L^{\text{KLPEN}}(\theta) = \mathbb{E}_t\left[ 
+  r_t(\theta) \hat{A}_t - \beta\, D_{\text{KL}}\left( \pi_{\theta_{\text{old}}}(\cdot|s_t) \,\|\, \pi_{\theta}(\cdot|s_t) \right) 
+  \right]
+  \label{eq:ppo_penalty}
+\end{equation}
+其中 $\beta$ 为自适应惩罚系数。
+在每轮更新后，若实际 KL 散度超过目标阈值 $d_{\text{targ}}$ 的 1.5 倍，
+则 $\beta \leftarrow 2\beta$ 以强化约束；
+若实际 KL 散度低于 $d_{\text{targ}} / 1.5$，
+则 $\beta \leftarrow \beta / 2$ 以放宽步长限制。
+这一机制使策略更新的幅度在训练过程中自动调节，
+无需手动设定硬性 KL 阈值。
+
+\textbf{PPO-Clip}。
+PPO 的第二种变体——PPO-Clip——采用了更加直接的裁剪策略，
+完全免除了 KL 散度的显式计算：
+\begin{equation}
+  L^{\text{CLIP}}(\theta) = \mathbb{E}_t\left[ 
+  \min\left( r_t(\theta) \hat{A}_t,\; 
+  \operatorname{clip}\left(r_t(\theta),\, 1-\epsilon,\, 1+\epsilon\right) \hat{A}_t \right) 
+  \right]
+  \label{eq:ppo_clip}
+\end{equation}
+其中 $\epsilon$ 为裁剪超参数，通常取 0.1 或 0.2。
+\autoref{eq:ppo_clip}的核心机制在于 $\min$ 操作的巧妙设计：
+当优势 $\hat{A}_t > 0$ 时，$\min$ 截断 $r_t$ 的上限，
+避免因概率比过大而鼓励策略过度激进地偏向某一动作；
+当优势 $\hat{A}_t < 0$ 时，$\min$ 截断 $r_t$ 的下限，
+防止策略因负优势而过度偏离当前策略。
+换言之，PPO-Clip 通过简单的裁剪操作消除了
+将 $r_t$ 推出 $[1-\epsilon, 1+\epsilon]$ 区间的优化激励，
+从而以极低的实现成本隐式约束了单步策略更新幅度。
+
+在实际部署中，完整的 PPO 目标函数还需纳入
+价值函数误差和策略熵正则项：
+\begin{equation}
+  L^{\text{PPO}}(\theta, \phi) = \mathbb{E}_t\left[ 
+  L^{\text{CLIP}}(\theta) - c_1 (V_{\phi}(s_t) - V_t^{\text{targ}})^2 + c_2 S[\pi_{\theta}](\cdot|s_t) 
+  \right]
+  \label{eq:ppo_full}
+\end{equation}
+其中 $V_t^{\text{targ}}$ 为目标价值（通常由 GAE 累积回报构造），
+$S[\pi_{\theta}]$ 为策略熵，$c_1, c_2$ 为各损失项的权重系数。
+
+\textbf{广义优势估计}。
+PPO 中优势函数 $\hat{A}_t$ 的计算通常采用
+广义优势估计（Generalized Advantage Estimation, GAE）\cite{schulman2015highdimensional}，
+通过 TD 误差的指数加权和在偏差与方差之间取得平衡：
 \begin{equation}
   \hat{A}_t^{\text{GAE}(\gamma,\lambda)} = \sum_{l=0}^{\infty} (\gamma\lambda)^l \delta_{t+l}
   \label{eq:gae}
 \end{equation}
-其中 $\delta_t = r_t + \gamma V(s_{t+1}) - V(s_t)$ 为单步 TD 误差。
+其中 $\delta_t = r_t + \gamma V(s_{t+1}) - V(s_t)$ 为单步 TD 误差，
+$\lambda \in [0,1]$ 控制偏差--方差权衡（$\lambda = 0$ 退化为单步 TD，
+$\lambda = 1$ 退化为 Monte Carlo）。
 
-近端策略优化（Proximal Policy Optimization, PPO）\cite{schulman2017proximal}
-通过剪切目标函数约束策略更新幅度：
-\begin{equation}
-  L^{\text{CLIP}}(\theta) = \mathbb{E}_t\left[ \min\left( r_t(\theta)\hat{A}_t,\,
-  \text{clip}(r_t(\theta), 1-\epsilon, 1+\epsilon)\hat{A}_t \right) \right]
-  \label{eq:ppo_clip}
-\end{equation}
-其中 $r_t(\theta) = \frac{\pi_{\theta}(a_t|s_t)}{\pi_{\theta_{\text{old}}}(a_t|s_t)}$
-为新旧策略的概率比。
-PPO 以其稳定性、样本效率和实现简洁性，成为当前应用最广泛的 RL 算法之一。
+综合而言，PPO 在 TRPO 的理论基础上通过两种互补的策略约束机制
+实现了训练稳定性与实现简洁性的统一。
+PPO-Penalty 保留了显式的 KL 散度控制，适合需要精确调节更新幅度的场景；
+PPO-Clip 则因无需额外计算 KL 散度且超参数鲁棒性更强，
+在实际应用中占据主导地位。
+本研究考虑到多智能体训练的计算开销和工程复杂度，
+选择 PPO-Clip 作为核心强化学习算法。
 
 \subsection{多智能体强化学习}
 
