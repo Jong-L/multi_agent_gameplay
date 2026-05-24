@@ -317,7 +317,7 @@ class IppoArgs:
     """对手池最大容量（~10/agent）"""
     pool_slots_per_agent: int = 20
     """每个 agent slot 的队列容量，对应 opponent_pool[agent_id][slot_index]"""
-    pool_initial_keep_per_agent: int = 10
+    pool_initial_keep_per_agent: int = 20
     """从初始 IPPO 中断点目录中为每个 agent 载入最近多少个 checkpoint"""
     pool_phase_timesteps: int = 500_000
     """轮回对手池训练中，每个主 agent phase 的训练步数"""
@@ -363,9 +363,9 @@ class IppoArgs:
     """IPPO 直接训练阶段：不保存中断点的额外训练步数"""
     pool_final_save_agent_ids: tuple = (0,)
     """IPPO 直接训练或对手池最终保存时，需要保存的 agent id"""
-    pool_eval_groups: int = 4
+    pool_eval_groups: int = 20
     """对比评价时随机抽取多少组对手 checkpoint"""
-    pool_eval_episodes_per_group: int = 20
+    pool_eval_episodes_per_group: int = 3
     """每组对手评价多少个 episode"""
     pool_eval_output_path: Optional[str] = "logs/ippo_pool_eval.csv"
     """对比评价 CSV 输出路径"""
