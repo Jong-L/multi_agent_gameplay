@@ -55,7 +55,7 @@ from godot_env_wrapper import RewardNormalizer, init_training_setup, load_full_c
 class IppoPoolArgs(IppoArgs):
     """Configuration for the staged IPPO/opponent-pool experiment."""
 
-    run_mode: str = "full"
+    run_mode: str = "evaluate"
     """ippo_bootstrap / bootstrap_checkpoint / bootstrap_direct / pool_cycle / evaluate / full"""
 
     bootstrap_save_model_path: Optional[str] = "saved_models/ippo_bootstrap"
@@ -67,7 +67,7 @@ class IppoPoolArgs(IppoArgs):
     eval_ippo_agent0_path: Optional[str] = "saved_models/ippo_direct_agent0.pt"
     """Direct-IPPO agent0 checkpoint used by evaluate mode."""
 
-    eval_pool_agent0_path: Optional[str] = "saved_models/ippo_pool_final_agent0.pt"
+    eval_pool_agent0_path: Optional[str] = "saved_models/agent0_extra_pool_step102400_agent0.pt"
     """Opponent-pool-trained agent0 checkpoint used by evaluate mode."""
 
     eval_opponent_checkpoint_dir: Optional[str] = "saved_models/ippo_pool_checkpoints"

@@ -1,4 +1,4 @@
-\begin{thebibliography}{38}
+\begin{thebibliography}{47}
 \providecommand{\natexlab}[1]{#1}
 \providecommand{\url}[1]{#1}
 \expandafter\ifx\csname urlstyle\endcsname\relax\else
@@ -42,6 +42,19 @@ HERNANDEZ-LEAL P, KARTAL B, TAYLOR M~E.
 \newblock A survey and critique of multiagent deep reinforcement learning\allowbreak[J/OL].
 \newblock Autonomous Agents and Multi-Agent Systems, 2019, 33\allowbreak (6): 750-797.
 \newblock \url{https://doi.org/10.1007/s10458-019-09421-1}.
+
+\bibitem[Rashid et~al.(2018)Rashid, Samvelyan, de~Witt, Farquhar, Foerster, and Whiteson]{rashid2018qmix}
+RASHID T, SAMVELYAN M, DE~WITT C~S, et~al.
+\newblock {QMIX}: Monotonic value function factorisation for deep multi-agent reinforcement learning\allowbreak[C]//\allowbreak
+Proceedings of the 35th International Conference on Machine Learning (ICML): Vol.~80.
+\newblock PMLR, 2018: 4295-4304.
+
+\bibitem[Yu et~al.(2022)Yu, Velu, Vinitsky, Gao, Wang, Bayen, and Wu]{yu2022surprisingeffectivenessppocooperative}
+YU C, VELU A, VINITSKY E, et~al.
+\newblock The surprising effectiveness of ppo in cooperative, multi-agent games\allowbreak[A/OL].
+\newblock 2022.
+\newblock arXiv: \eprint{https://arxiv.org/abs/2103.01955}{2103.01955}.
+\newblock \url{https://arxiv.org/abs/2103.01955}.
 
 \bibitem[de~Witt et~al.(2020)de~Witt, Gupta, Makoviichuk, Makoviychuk, Torr, Sun, and Whiteson]{dewitt2020independentlearningneedstarcraft}
 DE~WITT C~S, GUPTA T, MAKOVIICHUK D, et~al.
@@ -117,6 +130,43 @@ TSENG W~C, WANG T~H, YEN-CHEN L, et~al.
 \newblock Offline multi-agent reinforcement learning with knowledge distillation\allowbreak[J/OL].
 \newblock Advances in Neural Information Processing Systems 35, 2022.
 \newblock \url{https://api.semanticscholar.org/CorpusID:254128961}.
+
+\bibitem[Bellemare et~al.(2013)Bellemare, Naddaf, Veness, and Bowling]{bellemare2013arcade}
+BELLEMARE M~G, NADDAF Y, VENESS J, et~al.
+\newblock The arcade learning environment: An evaluation platform for general agents\allowbreak[J].
+\newblock Journal of Artificial Intelligence Research, 2013, 47: 253-279.
+
+\bibitem[Brockman et~al.(2016)Brockman, Cheung, Pettersson, Schneider, Schulman, Tang, and Zaremba]{1606.01540Gym}
+BROCKMAN G, CHEUNG V, PETTERSSON L, et~al.
+\newblock Openai gym\allowbreak[A].
+\newblock 2016.
+\newblock arXiv:1606.01540.
+
+\bibitem[Samvelyan et~al.(2019)Samvelyan, Rashid, de~Witt, Farquhar, Nardelli, Rudner, Hung, Torr, Foerster, and Whiteson]{samvelyan2019starcraftmultiagentchallenge}
+SAMVELYAN M, RASHID T, DE~WITT C~S, et~al.
+\newblock The starcraft multi-agent challenge\allowbreak[A/OL].
+\newblock 2019.
+\newblock arXiv: \eprint{https://arxiv.org/abs/1902.04043}{1902.04043}.
+\newblock \url{https://arxiv.org/abs/1902.04043}.
+
+\bibitem[Mordatch et~al.(2018)Mordatch and Abbeel]{mordatch2018emergencegroundedcompositionallanguage}
+MORDATCH I, ABBEEL P.
+\newblock Emergence of grounded compositional language in multi-agent populations\allowbreak[A/OL].
+\newblock 2018.
+\newblock arXiv: \eprint{https://arxiv.org/abs/1703.04908}{1703.04908}.
+\newblock \url{https://arxiv.org/abs/1703.04908}.
+
+\bibitem[Juliani et~al.(2020)Juliani, Berges, Teng, Cohen, Harper, Elion, Goy, Gao, Henry, Mattar, and Lange]{juliani2020unitygeneralplatformintelligent}
+JULIANI A, BERGES V~P, TENG E, et~al.
+\newblock Unity: A general platform for intelligent agents\allowbreak[A/OL].
+\newblock 2020.
+\newblock arXiv: \eprint{https://arxiv.org/abs/1809.02627}{1809.02627}.
+\newblock \url{https://arxiv.org/abs/1809.02627}.
+
+\bibitem[Beeching et~al.(2021)Beeching, Dibangoye, Simonin, and Wolf]{beeching2021godotrlagents}
+BEECHING E, DIBANGOYE J, SIMONIN O, et~al.
+\newblock Godot reinforcement learning agents\allowbreak[A].
+\newblock 2021.
 
 \bibitem[Brown(1951)]{brown1951fictitious}
 BROWN G~W.
@@ -239,9 +289,17 @@ SCHULMAN J, LEVINE S, ABBEEL P, et~al.
 Proceedings of the 32nd International Conference on Machine Learning (ICML): Vol.~37.
 \newblock PMLR, 2015: 1889-1897.
 
-\bibitem[Schulman et~al.(2017)Schulman, Wolski, Dhariwal, Radford, and Klimov]{schulman2017proximal}
-SCHULMAN J, WOLSKI F, DHARIWAL P, et~al.
-\newblock Proximal policy optimization algorithms\allowbreak[A].
-\newblock 2017.
+\bibitem[Gao et~al.(2015)Gao and Toni]{10.5555/2832581.2832737pbrs}
+GAO Y, TONI F.
+\newblock Potential based reward shaping for hierarchical reinforcement learning\allowbreak[C]//\allowbreak
+IJCAI'15: Proceedings of the 24th International Conference on Artificial Intelligence.
+\newblock Buenos Aires, Argentina: AAAI Press, 2015: 3504–3510.
+
+\bibitem[Smirnov et~al.(2025)Smirnov and Gu]{smirnov2025rlbenchnetrightnetworkright}
+SMIRNOV I, GU S.
+\newblock Rlbenchnet: The right network for the right reinforcement learning task\allowbreak[A/OL].
+\newblock 2025.
+\newblock arXiv: \eprint{https://arxiv.org/abs/2505.15040}{2505.15040}.
+\newblock \url{https://arxiv.org/abs/2505.15040}.
 
 \end{thebibliography}

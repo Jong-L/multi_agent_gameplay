@@ -297,14 +297,13 @@
 \subsection{研究背景与意义}
 
 强化学习（Reinforcement Learning, RL）是机器学习的重要分支，
-通过试错与环境交互学习最优策略，已在复杂决策问题中展现出巨大潜力——
-从 AlphaGo\cite{Silveralphago2016} 在围棋中超越人类顶尖棋手，
+通过试错与环境交互学习最优策略，已在复杂决策问题中展现出巨大潜力——从 AlphaGo\cite{Silveralphago2016} 在围棋中超越人类顶尖棋手，
 到 AlphaStar\cite{VinyalsAlphaStar2019} 在星际争霸II中达到宗师级水平，
-再到 OpenAI Five 在 Dota 2 中击败世界冠军队伍\cite{openai2019dota2largescale}，
-这些里程碑不仅展示了 RL 的技术高度，更揭示了一个深层规律：
-AI 的重大突破往往发生在博弈对抗场景中。
+再到 OpenAI Five 在 Dota 2 中击败世界冠军队伍\cite{openai2019dota2largescale}。然而如何成功地应用强化学习是一系列工程性问题：如何从零设计并实现一个博弈环境并提供恰当的强化学习算法接口，如何将游戏状态编码为适合神经网络输入的观测向量，如何设计奖励函数以引导智能体逐步习得避障和战斗等基础技能，如何在部分可观测条件下选取合适的网络结构以平衡时序记忆与训练效率。本文针对这些问题给出了一套实践经验。
 
-博弈对抗之所以成为 AI 研究的试金石，在于它天然要求智能体具备适应性决策能力。
+AlphaGo等里程碑不仅展示了 RL 的技术高度，更揭示了一个深层规律：
+AI 的重大突破往往发生在博弈对抗场景中。
+博弈对抗能成为 AI 研究的试金石，在于它天然要求智能体具备适应性决策能力。
 在博弈场景中，智能体不仅需要利用环境资源、遵循游戏规则，
 更需要感知对手策略并作出动态调整——
 "最优"策略并非静态存在，而是相对于对手策略的函数。
@@ -313,16 +312,39 @@ AI 博弈能力每一次提升的背后，都是对对手建模、策略适应�
 与完全信息的棋盘博弈不同，实时策略博弈具有状态空间庞大、信息不完全、
 决策异步等特点，更贴近真实世界的决策场景。
 
-良好的博弈能力体现在智能体面对各种各样的对手时都有不错的表现，为了体现对手的丰富性，本课题将强化学习智能体作为对手，在多智能体博弈中研究智能体如何能够应对纷繁复杂，行为各不一致的对手。
-
-当多个自学习智能体共处同一博弈环境时，问题从单智能体优化升级为博弈动力学问题。
+良好的博弈能力体现在智能体面对各种各样的对手时都有不错的表现，为了体现对手的丰富性，本课题将强化学习智能体作为对手，在多智能体博弈中探索智能体如何能够应对纷繁复杂，行为各不一致的对手。当多个自学习智能体共处同一博弈环境时，问题从单智能体优化升级为博弈动力学问题。
 多智能体强化学习（Multi-Agent RL, MARL）面临的核心挑战是非平稳性（non-stationarity）：
 每个智能体的策略更新都会改变其他智能体面对的环境转移概率，
 使单智能体 RL 中的 Markov 决策过程（MDP）假设不再成立\cite{Hernandez-Leal2019}。
-因此在多智能体系统中进行InRL（Independent RL）
-独立训练时理论上不保证强化学习算法依旧有效，尽管对于近端策略梯度优化算法（PPO）来说，进行独立训练（independent PPO，IPPO）也能在SMAC等协作型任务中表现出色\cite{dewitt2020independentlearningneedstarcraft}，但这很大程度上源于PPO算法限制了新旧策略之间的差距，使得训练本身比较平稳，一定程度上克服了多智能体环境不平稳的问题，IPPO在能否用于博弈对抗型任务也不可明断，因此直接让多个智能体在同一环境中进行训练并希望能够提升智能体能力不是明智之举。
+多智能体强化学习的训练范式按其信息利用方式可大致划分为三类：
+集中式训练集中式执行（CTCE）、集中式训练分布式执行（CTDE）
+和分布式训练分布式执行（DTDE）。
 
-因此能否找到一种训练方案来直接提高多智能体在博弈对抗类型任务中的性能？本文基于现有的强化学习算法和自博弈方法的研究，不考虑求解博弈均衡，探索了一种简单的虚拟博弈策略来试图解决环境不平稳的问题并希望能够有效提升智能体应对多种对手的泛化能力。
+CTCE 范式假设训练和执行阶段均存在一个中心控制器，
+能够获取所有智能体的全局信息并输出联合动作。
+这一假设在多数实际场景中不成立，
+更常见的做法是采用 CTDE 范式：
+训练时利用全局信息学习 Critic 或价值函数，
+执行时每个智能体仅依赖局部观测做决策。
+代表性方法包括
+QMIX\cite{rashid2018qmix} 和 MAPPO\cite{yu2022surprisingeffectivenessppocooperative}。
+这些方法通过集中式 Critic 缓解多智能体环境的非平稳性问题，
+在协作型任务上有很好的表现。
+
+DTDE通常指独立 PPO（Independent PPO, IPPO）：
+每个智能体独立运行 PPO 算法，将其他智能体视为环境的一部分，
+不引入任何集中式组件。
+de Witt 等人\cite{dewitt2020independentlearningneedstarcraft}的研究
+表明，在 SMAC 协作任务上，IPPO能够在SMAC协作任务中
+能超越QMIX方法。其成功很大程度上源于 PPO 算法所固有的策略更新约束
+——通过裁剪机制限制新旧策略之间的差异，
+使得训练过程本身较为平稳，在一定程度上
+克服了多智能体环境非平稳性对单智能体算法的不利影响。
+
+本文首先通过实验对比给出了一套适合于构建的特定环境的强化学习训练方案，并将其运用于单智能体训练中，在智能体习得基础技能之后，本文进一步将其置于多智能体对抗环境中，
+以IPPO独立训练为基线，实现一种简化的PFSP对手池训练方案，
+对比两种模式下的策略表现，
+作为对抗型任务中独立训练与虚拟博弈差异的初步探索。
 
 \subsection{国内外研究现状}
 \subsubsection{强化学习}
@@ -341,6 +363,37 @@ PPO 使用广义优势估计（Generalized Advantage Estimation, GAE）\cite{sch
 
 同时，有诸多训练方法用于提高智能体训练效率，比如分层强化学习\cite{10120651hierarchical}，课程学习\cite{2009Curriculum}，策略迁移\cite{Tseng2022OfflineMR}等。其中分层强化学习将一个复杂目标分解为多个阶段性简单子目标，每个子目标都用MDP进行建模，并分配给不同的智能体进行分层训练和执行，每个智能体专注于自身目标，相比于一个智能体解决整个任务，训练难度能显著降低。课程学习指在训练过程中，通过逐渐增加任务难度，使智能体不断适应更复杂的环境。通常课程的设计采用逆向生成，即从目标的最终状态开始，逐步分解出和上一个状态相近但是又在远离最终状态并靠近初始状态的状态，智能体将从最终状态逆向地学习在每个状态的策略。策略迁移则通过将已学策略迁移到新任务中，改进从头训练慢，样本获取率和利用率低等问题。
 
+\subsubsection{博弈环境与训练平台}
+
+强化学习的研究进展与实验平台的发展密不可分。
+在单智能体领域，Arcade Learning Environment（ALE）\cite{bellemare2013arcade} 和
+OpenAI Gym\cite{1606.01540Gym} 提供了标准化的基准测试接口，
+推动了 DQN、PPO 等算法的快速发展。
+在多智能体领域，SMAC\cite{samvelyan2019starcraftmultiagentchallenge}
+和 MPE（Multi-Agent Particle Environment）\cite{mordatch2018emergencegroundedcompositionallanguage}
+被广泛采用，前者基于星际争霸II引擎提供协作战斗场景，
+后者以简化的二维粒子环境支持协作与竞争任务研究。
+
+上述标准化基准环境在降低入手门槛的同时也限制了研究的多样性——
+其观测空间与奖励函数通常由环境提供者预先定义，
+研究者在环境设计层面的探索空间极为有限。
+这种限制在博弈对抗研究场景中尤为突出：博弈策略的丰富性依赖于精心设计的对抗规则、差异化角色定位和各类环境交互元素的综合配置，仅依赖现有基准环境难以满足定制化需求。
+
+近年来，游戏引擎与 RL 的集成框架为定制环境的快速开发开辟了新路径。
+Unity ML-Agents\cite{juliani2020unitygeneralplatformintelligent}
+使开发者能够将 Unity 引擎中的游戏环境包装为标准的 Gym 训练环境，
+并通过 gRPC 通信机制与 Python 端进行高效对接。
+Beeching 等人开发的 Godot RL Agents\cite{beeching2021godotrlagents}
+同样提供了标准化的 Gym 环境接口和多种环境包装器，
+内置基于 TCP 的通信机制与 Python 训练端建立连接，
+在开源游戏引擎 Godot 上实现了训练智能体的便捷方案。
+与 Unity ML-Agents 相比，Godot RL Agents 依托 Godot 引擎的 MIT 开源协议，完全免费且无授权限制；其轻量化的架构设计和原生 GDScript 支持
+为学术研究中快速迭代环境原型提供了更具成本优势的选择。
+
+本文选择 Godot RL Agents 作为底层集成框架，
+将工程重心置于博弈规则设计、观测工程、
+基于 PBRS 的多层奖励系统与课程学习流程等更高层次的强化学习工程问题上，以此构建面向多智能体博弈对抗的定制化博弈系统。
+
 \subsubsection{对抗训练与自博弈}
 如果直接让两个智能体进行对抗并同时更新策略，那么对于其中任何一个智能体，由于另一个智能体的策略在变化，因此对其来说环境就在变化，即环境是不平稳的，单智能体 RL 的 Markov 决策过程假设不再成立。为了让智能体通过与对手对抗来提升技能，最直接的方式是自博弈（Self-Play），比如
 AlphaGo\cite{Silveralphago2016}通过不断与自身的历史版本对弈生成训练数据，
@@ -350,7 +403,7 @@ AlphaGo\cite{Silveralphago2016}通过不断与自身的历史版本对弈生成�
 
 然而，自博弈会出现策略循环和过拟合问题，智能体尽管在不断地战胜上一个状态的自己，但有可能是在石头剪刀布的圈子里不断循环。于是通常会使用虚拟自我博弈（Fictitious Self-Play，FSP）来进行训练，这一方法基于经典博弈论中的虚拟博弈\cite{brown1951fictitious} ，FSP的对手不是自己的副本或最新的策略，而是自己历史策略的平均值，从而学到一个不会轻易被对手利用，更加鲁棒的策略，通常平均策略是用神经网络表达，即神经虚拟自我博弈（Neural Fictitious Self-Play，NFSP）\cite{heinrich2016deepreinforcementlearningselfplay}。
 
-以上方法都是采用自博弈绕过了多智能体博弈时环境不平稳问题，但是虚拟博弈技巧也不仅仅局限于自我博弈，在星际争霸II中能力达到宗师级别的强化学习智能体AlphaStar\cite{VinyalsAlphaStar2019}训练过程中，DeepMind团队采用了名为联盟训练的技术，一个联盟由3类智能体组成：Main Agents，Main Exploiter和Legue Exploiter，每类智能体训练时，其他智能体的策略冻结。其中Main Agents的目标是不断训练成为联盟中的最强策略，能够战胜联盟内的所有对手的策略；Main Exploiter每次从初始状态出发与Main Agents进行博弈，专门负责寻找Main Agents的策略漏洞，每次训练完成后Main Exploiter的策略会重置，每次从新的角度寻找Main Agents的策略漏洞；League Exploiter直接和联盟内所有对手博弈，每次训练后有一定几率重置。
+以上方法都是采用自博弈绕过了多智能体博弈时环境不平稳问题，但是虚拟博弈技巧也不仅仅局限于自我博弈，在星际争霸II中能力达到宗师级别的强化学习智能体AlphaStar\cite{VinyalsAlphaStar2019}训练过程中，DeepMind团队采用了名为联盟训练的技术，一个联盟由3类智能体组成：Main Agents，Main Exploiter和League Exploiter，每类智能体训练时，其他智能体的策略冻结。其中Main Agents的目标是不断训练成为联盟中的最强策略，能够战胜联盟内的所有对手的策略；Main Exploiter每次从初始状态出发与Main Agents进行博弈，专门负责寻找Main Agents的策略漏洞，每次训练完成后Main Exploiter的策略会重置，每次从新的角度寻找Main Agents的策略漏洞；League Exploiter直接和联盟内所有对手博弈，每次训练后有一定几率重置。
 
 进一步地，PSRO（Policy Space Response Oracles）框架
 \cite{lanctot2017unifiedgametheoreticapproachmultiagent}
@@ -417,7 +470,7 @@ Text2Reward\cite{xie2024text2rewardrewardshapinglanguage}通过 LLM 理解自然
 \subsection{论文研究内容}
 本文的主要研究内容包括：
 
-（1）构建了基于 Godot 引擎的 2D 多智能体竞技场博弈环境《Tiny Swords》，
+（1）构建了基于Godot引擎的2D俯视角多智能体竞技场博弈环境《Tiny Swords》，
 设计了 174 维分段式观测空间与 LiDAR 射线检测机制，
 实现了 4 人混战游戏模式，支持课程学习与 per-player 差异化奖励配置。
 
@@ -425,12 +478,10 @@ Text2Reward\cite{xie2024text2rewardrewardshapinglanguage}通过 LLM 理解自然
 多层奖励系统，通过系统的消融实验确定了最优的势函数形式
 （线性函数、最近球模式）与障碍物处理策略（稀疏惩罚）。
 
-（3）对比了在构建的该特定环境下 MLP、Segmented MLP 与 GRU-MLP 三种网络架构在拾取奖励球任务
+（3）探讨了针对该特定环境的时序网络使用方案，将门控循环单元GRU引入了强化学习算法，对比了在构建的该特定环境下 MLP、Segmented MLP 与 GRU-MLP 三种网络架构在拾取奖励球任务
 与战斗任务中的性能差异，为后续更高效的训练提供参考。
 
-（4）训练提出了迭代自博弈训练框架，通过冻结对手策略、轮换训练的方式
-驱动智能体在竞争中持续进化，引入对手池管理与 ELO 评分机制追踪策略强度变迁，
-观察研究该训练框架和独立强化学习方案在策略上的现象差异。
+（4）对比了了独立近端策略优化与对手池博弈训练框架的结果。先通过冻结对手策略、轮换训练和基于ELO 评分的优先对手采样等方式驱动智能体在竞争中持续进化，初始化对手池，然后再进行比较评估。
 
 \subsection{论文组织结构}
 本文共分为六章，各章内容安排如下：
@@ -446,13 +497,12 @@ Text2Reward\cite{xie2024text2rewardrewardshapinglanguage}通过 LLM 理解自然
 第四章介绍单智能体基础训练与消融实验，涵盖奖励球势函数对比、
 障碍物避障策略、网络架构对比与观测空间消融等实验。
 
-第五章阐述多智能体迭代自博弈训练框架，分析策略循环与对抗行为的涌现。
+第五章对比IPPO和对手池博弈的训练结果。
 
 第六章总结全文工作，展望未来研究方向。
 
 % ==================== 第2章 ====================
 \section{相关理论与技术基础}
-
 \subsection{强化学习}
 强化学习是一门关于个体进化的科学，能够用于解决序列决策问题，智能体与环境不断交互试错并改进自身策略，逐步获取更高的奖励。强化学习过程由两部分组成：智能体和环境。
 智能体在环境中进行观测，并根据观测结果选择一个动作执行，环境接受智能体的动作并做出响应，包括
@@ -492,14 +542,6 @@ Text2Reward\cite{xie2024text2rewardrewardshapinglanguage}通过 LLM 理解自然
 \end{equation}
 \autoref{eq:bellman}中的$V^{\pi}(s')$可以根据轨迹继续递归求解,从而可以得知MDP的求解就是要找到一个策略$\pi^*$，使得对于每一个状态$s$，$V^{\pi}(s)$达到最大值$V^{\pi^*}(s)$,且求解方法就是准确地计算Q值，然后在每个状态选择Q值最大的动作。
 
-MDP要求状态转移概率是恒定的，即环境是平稳的。对于多智能体系统，MDP被扩展为马尔可夫博弈（Markov Game）$\langle \mathcal{S}, \mathcal{N}, \mathcal{A}, \mathcal{P}, \mathcal{R}, \gamma \rangle$，其中$\mathcal{N}$是智能体数量，$\mathcal{A}= A_1 \times A_2 \times \cdots \times A_\mathcal{N}$为联合动作空间，状态转移和奖励均取决于所有智能体的联合动作：$\mathcal{P}: \mathcal{S} \times A_1 \times \cdots \times A_\mathcal{N} \rightarrow [0,1]$, $\mathcal{R}: \mathcal{S} \times A_1 \times \cdots \times A_\mathcal{N} \rightarrow \mathbb{R}$。尽管转移函数$\mathcal{P}$本身是平稳的，但从单个智能体$i$的视角看，其他智能体的策略$\pi_{-i}$构成了环境的一部分。当对手策略随学习过程不断更新时，智能体$i$所感知的有效转移动态
-\begin{equation}
-  P_i(s' \mid s, a_i) = \sum_{a_{-i}} \mathcal{P}(s' \mid s, a_i, a_{-i}) \, \pi_{-i}(a_{-i} \mid s)
-  \label{eq:effective_transition}
-\end{equation}
-也随之漂移，破坏了单智能体视角下马尔可夫性质。
-
-
 \subsubsection{部分可观测马尔可夫决策过程}
 强化学习中很多场景下环境都被建模为部分可观测马尔可夫决策过程（Partially Observable Markov Decision Process, POMDP），POMDP假设系统动态依旧是MDP，但执行动作的智能体不能获得MDP中的完整状态信息。POMDP 用七元组 $\langle \mathcal{S}, \mathcal{A}, \mathcal{O}, \mathcal{P}, \mathcal{Z}, \mathcal{R}, \gamma \rangle$ 表示。 其中 $\mathcal{O}$ 为观测空间，$\mathcal{Z}(o \mid s', a)$ 为观测函数，描述智能体执行动作 $a$ 后到达状态 $s'$ 时 获得观测 $o$ 的概率分布；其余元素与 MDP 一致。 结合深度学习，POMDP的求解方法通常是使用记忆网络在观测历史序列 $h_t = (o_0, a_0, o_1, a_1, \ldots, o_t)$ 的基础上做出决策，缓解部分可观测带来的信息缺失问题。在本文所构建的《Tiny Swords》环境中， 智能体仅能观测到以自身为中心、有限半径内的玩家、怪物和奖励球， 超出视野范围的实体完全不可见， 且障碍物通过八方向射线检测提供距离信息——这意味着每个智能体的观测仅是全局状态的局部投影， 天然构成 POMDP。
 
@@ -509,16 +551,19 @@ MDP要求状态转移概率是恒定的，即环境是平稳的。对于多智�
 来最大化期望累计回报 $J(\theta) = \mathbb{E}_{\pi_{\theta}}[G_t]$，
 其梯度估计由策略梯度定理\cite{sutton1999policyandvalue}给出：
 $\nabla_{\theta} J(\theta) = \mathbb{E}_{\pi_{\theta}}[\nabla_{\theta} \log \pi_{\theta}(a|s) A^{\pi}(s,a)]$，
-其中 $A^{\pi}(s,a) = Q^{\pi}(s,a) - V^{\pi}(s)$ 为优势函数。
-然而，该梯度估计仅在当前策略 $\pi_{\theta}$ 的采样分布下成立：
-一旦策略参数更新，旧样本的分布即发生偏移，梯度估计的方差随之增大。
-若步长过大，策略性能可能出现灾难性崩溃（catastrophic collapse）——
-这一问题是驱动从普通策略梯度到置信域方法演进的根本动因。
+其中 $A^{\pi}(s,a) = Q^{\pi}(s,a) - V^{\pi}(s)$ 为优势函数。基于该思想提出的AC类算法如A2C等是单步估计优势函数，这种方法导致早期估计不准时有较大的偏差，而若使用多步估计优势函数，则又会引入较大的方差。因此研究者通过广义优势估计（Generalized Advantage Estimation, GAE）\cite{schulman2015highdimensional}来代替单步估计优势函数，通过 TD 误差的指数加权和在偏差与方差之间取得平衡：
+\begin{equation}
+  \hat{A}_t^{\text{GAE}(\gamma,\lambda)} = \sum_{l=0}^{\infty} (\gamma\lambda)^l \delta_{t+l}
+  \label{eq:gae}
+\end{equation}
+其中 $\delta_t = r_t + \gamma V(s_{t+1}) - V(s_t)$ 为单步 TD 误差，
+$\lambda \in [0,1]$ 控制偏差--方差权衡，$\lambda = 0$ 退化为单步 TD，
+$\lambda = 1$ 退化为 Monte Carlo。
 
 \textbf{置信域策略优化（TRPO）}。
-Schulman 等人\cite{schulman2015trpo}提出的置信域策略优化
+在使用广义优势估计时，需要先通过上一步更新后的策略与环境交互收集一条轨迹，再用轨迹更新策略，为了提高样本利用率，同一条轨迹可能会多次用来更新策略，因此需要使用重要性采样来纠正多次更新后新策略和旧策略之间的分布偏移。但是这个偏移可能会比较大进而导致策略更新剧烈，方差大，不稳定。Schulman 等人\cite{schulman2015trpo}提出的置信域策略优化
 （Trust Region Policy Optimization, TRPO）通过引入显式的策略更新约束
-来应对上述挑战。TRPO 在最大化旧策略采样下的替代优势函数的同时，
+来应对上述问题。TRPO 在最大化旧策略采样下的替代优势函数的同时，
 要求新旧策略间的 KL 散度不超过预设阈值 $\delta$：
 \begin{equation}
   \begin{aligned}
@@ -536,10 +581,10 @@ TRPO 采用共轭梯度法结合线搜索近似求解该约束优化问题，
 然而，其二阶优化的计算开销和工程实现复杂度
 限制了在大规模问题中的实用性。
 
-\textbf{PPO-Penalty}。
-为在保留 TRPO 稳定更新特性的同时大幅降低实现与计算复杂度，提出了近端策略优化
-（Proximal Policy Optimization, PPO）。
-PPO 的第一种变体——PPO-Penalty——将 TRPO 中的硬 KL 约束
+\textbf{近端策略优化}。
+为在保留 TRPO 稳定更新特性的同时大幅降低实现与计算复杂度，近端策略优化（PPO）使用了两种方式：
+
+一是PPO-Penalty——将 TRPO 中的硬 KL 约束
 转化为目标函数中的自适应惩罚项：
 \begin{equation}
   L^{\text{KLPEN}}(\theta) = \mathbb{E}_t\left[ 
@@ -555,8 +600,7 @@ PPO 的第一种变体——PPO-Penalty——将 TRPO 中的硬 KL 约束
 这一机制使策略更新的幅度在训练过程中自动调节，
 无需手动设定硬性 KL 阈值。
 
-\textbf{PPO-Clip}。
-PPO 的第二种变体——PPO-Clip——采用了更加直接的裁剪策略，
+二是PPO-Clip——采用了更加直接的裁剪策略，
 完全免除了 KL 散度的显式计算：
 \begin{equation}
   L^{\text{CLIP}}(\theta) = \mathbb{E}_t\left[ 
@@ -565,15 +609,7 @@ PPO 的第二种变体——PPO-Clip——采用了更加直接的裁剪策略�
   \right]
   \label{eq:ppo_clip}
 \end{equation}
-其中 $\epsilon$ 为裁剪超参数，通常取 0.1 或 0.2。
-\autoref{eq:ppo_clip}的核心机制在于 $\min$ 操作的巧妙设计：
-当优势 $\hat{A}_t > 0$ 时，$\min$ 截断 $r_t$ 的上限，
-避免因概率比过大而鼓励策略过度激进地偏向某一动作；
-当优势 $\hat{A}_t < 0$ 时，$\min$ 截断 $r_t$ 的下限，
-防止策略因负优势而过度偏离当前策略。
-换言之，PPO-Clip 通过简单的裁剪操作消除了
-将 $r_t$ 推出 $[1-\epsilon, 1+\epsilon]$ 区间的优化激励，
-从而以极低的实现成本隐式约束了单步策略更新幅度。
+其中 $\epsilon$ 为裁剪超参数。PPO-Clip 通过简单的裁剪操作以极低的实现成本隐式约束了单步策略更新幅度。
 
 在实际部署中，完整的 PPO 目标函数还需纳入
 价值函数误差和策略熵正则项：
@@ -583,140 +619,86 @@ PPO 的第二种变体——PPO-Clip——采用了更加直接的裁剪策略�
   \right]
   \label{eq:ppo_full}
 \end{equation}
-其中 $V_t^{\text{targ}}$ 为目标价值（通常由 GAE 累积回报构造），
+其中 $V_t^{\text{targ}}$ 为目标价值，由GAE估计的优势进行构造，
 $S[\pi_{\theta}]$ 为策略熵，$c_1, c_2$ 为各损失项的权重系数。
 
-\textbf{广义优势估计}。
-PPO 中优势函数 $\hat{A}_t$ 的计算通常采用
-广义优势估计（Generalized Advantage Estimation, GAE）\cite{schulman2015highdimensional}，
-通过 TD 误差的指数加权和在偏差与方差之间取得平衡：
-\begin{equation}
-  \hat{A}_t^{\text{GAE}(\gamma,\lambda)} = \sum_{l=0}^{\infty} (\gamma\lambda)^l \delta_{t+l}
-  \label{eq:gae}
-\end{equation}
-其中 $\delta_t = r_t + \gamma V(s_{t+1}) - V(s_t)$ 为单步 TD 误差，
-$\lambda \in [0,1]$ 控制偏差--方差权衡（$\lambda = 0$ 退化为单步 TD，
-$\lambda = 1$ 退化为 Monte Carlo）。
-
-综合而言，PPO 在 TRPO 的理论基础上通过两种互补的策略约束机制
-实现了训练稳定性与实现简洁性的统一。
-PPO-Penalty 保留了显式的 KL 散度控制，适合需要精确调节更新幅度的场景；
-PPO-Clip 则因无需额外计算 KL 散度且超参数鲁棒性更强，
-在实际应用中占据主导地位。
-本研究考虑到多智能体训练的计算开销和工程复杂度，
-选择 PPO-Clip 作为核心强化学习算法。
-
 \subsection{多智能体强化学习}
-
-多智能体强化学习将 MDP 扩展为马尔可夫博弈（Markov Game），
-定义为元组 $\langle N, \mathcal{S}, \{\mathcal{A}_i\}, P, \{R_i\}, \gamma \rangle$，
-其中 $N$ 为智能体数量。每个智能体 $i$ 的目标是最大化自身的期望累计回报。
-
-MARL 面临的核心挑战是非平稳性（non-stationarity）：
-当所有智能体同时学习时，每个智能体面对的环境转移概率
-$P(s'|s, a_1, \ldots, a_N)$ 随其他智能体策略的变化而不断改变，
-破坏了单智能体 RL 中 MDP 的平稳性假设。
-
-独立近端策略优化（Independent PPO, IPPO）是 MARL 中简洁而有效的 DTDE 方法。
-IPPO 为每个智能体维护独立的策略网络 $\pi_{\theta_i}$ 和价值网络 $V_{\phi_i}$，
-在训练期间仅使用各自的局部观测和奖励进行 PPO 更新，
-完全忽略其他智能体的存在：
+MDP要求状态转移概率是恒定的，即环境是平稳的。对于多智能体系统，MDP被扩展为马尔可夫博弈（Markov Game）$\langle \mathcal{S}, \mathcal{N}, \mathcal{A}, \mathcal{P}, \mathcal{R}, \gamma \rangle$，其中$\mathcal{N}$是智能体数量，$\mathcal{A}= A_1 \times A_2 \times \cdots \times A_\mathcal{N}$为联合动作空间，状态转移和奖励均取决于所有智能体的联合动作：$\mathcal{P}: \mathcal{S} \times A_1 \times \cdots \times A_\mathcal{N} \rightarrow [0,1]$, $\mathcal{R}: \mathcal{S} \times A_1 \times \cdots \times A_\mathcal{N} \rightarrow \mathbb{R}$。尽管转移函数$\mathcal{P}$本身是平稳的，但从单个智能体$i$的视角看，其他智能体的策略$\pi_{-i}$构成了环境的一部分。当对手策略随学习过程不断更新时，智能体$i$所感知的有效转移动态
 \begin{equation}
-  L_i^{\text{IPPO}}(\theta_i) = \mathbb{E}_{(s_i, a_i, r_i, s'_i)}\left[
-  L^{\text{CLIP}}(\theta_i; s_i, a_i, r_i, s'_i) \right]
-  \label{eq:ippo}
+  P_i(s' \mid s, a_i) = \sum_{a_{-i}} \mathcal{P}(s' \mid s, a_i, a_{-i}) \, \pi_{-i}(a_{-i} \mid s)
+  \label{eq:effective_transition}
 \end{equation}
+也随之漂移，破坏了单智能体视角下马尔可夫性质。
 
-尽管 IPPO 在理论上不处理非平稳性，
-但实证研究表明其在多个 MARL 基准上表现优异\cite{dewitt2020independentlearningneedstarcraft}，
-特别是在各智能体目标具有冲突性的博弈对抗场景中。
-IPPO 的简洁性使其成为多智能体博弈研究的理想基线方法。
 
 \subsection{奖励塑形理论}
-
 奖励塑形（Reward Shaping）通过在环境奖励基础上引入额外的塑形奖励
 $F(s,a,s')$ 来加速学习。然而，任意添加塑形奖励可能改变最优策略。
-Ng 等人\cite{Ng1999PolicyIU}证明了势能奖励塑形（Potential-Based Reward Shaping, PBRS）
-保持最优策略不变的充要条件：
+吴恩达等人\cite{Ng1999PolicyIU}证明了具有以下形式的势能奖励塑形（Potential-Based Reward Shaping, PBRS）
+可以在保持最优策略不变的情况下加速学习：
 \begin{equation}
   F(s, a, s') = \gamma \Phi(s') - \Phi(s)
   \label{eq:pbrs}
 \end{equation}
 其中 $\Phi: \mathcal{S} \to \mathbb{R}$ 为定义在状态空间上的势函数。
 
-式\ref{eq:pbrs}的直观含义是：塑形奖励等于状态转移前后势能值的折扣差分。
-这意味着任何形如 $\Phi(s)$ 的势函数都不会改变 MDP 的最优策略，
-因为塑形奖励在状态转移的完整周期中总和为零（模折扣因子）。
-
-PBRS 为游戏 AI 中的引导奖励设计提供了严格的理论基础。
-在本文中，奖励球引导和障碍物避障均基于 PBRS 框架，
-通过设计恰当的势函数将领域知识注入学习过程，同时保证收敛到环境定义的最优策略。
+PBRS为奖励塑形提供具有了严格的理论基础的方法，通过设计恰当的势函数可以将领域知识注入学习过程加速训练，同时保证收敛到环境定义的最优策略。式\ref{eq:pbrs}中势函数的具体形式设计需要考虑具体环境和充足的专业领域知识，不恰当的设计反而会拖慢训练\cite{10.5555/2832581.2832737pbrs}。该方法尤其适用于路径规划等空间引导型任务，在本文中，奖励球引导基于 PBRS 框架。
 
 \subsection{Godot 引擎与 RL 集成框架}
-
 Godot 是一款开源跨平台的 2D/3D 游戏引擎，提供完整的物理引擎、
-场景系统和脚本语言（GDScript），适合快速构建 RL 训练环境。
+场景系统和脚本语言（GDScript），尤其适合开发小型个人游戏，适合快速构建强化学习训练环境，是许多独立游戏开发者的首选引擎，2026年商业级游戏《杀戮尖塔2》使用了 Godot 引擎进行开发并取得成功，表明Godot引擎同时足以承载大型企业级游戏开发。
 
-Godot RL Agents 插件提供了一个标准化的 RL 训练接口，
-通过 AIController 节点将游戏逻辑与 RL 算法解耦。
-其通信架构基于 TCP Socket：Godot 作为服务器，
-在每个物理帧将智能体的观测向量序列化发送给 Python 客户端，
+Godot RL Agents 插件\cite{beeching2021godotrlagents}提供了一个标准化的 强化学习训练接口，
+通过 AIController 节点将游戏逻辑与 RL 算法解耦，只需要实现其中几个关键方法就能像使用gymnasium一样使用自定义的环境。
+其通信架构基于 TCP Socket：Godot 作为客户端，
+在每个物理帧将智能体的观测向量序列化发送给 Python 服务端，
 Python 端执行推理后将动作返回给 Godot，
 实现了游戏逻辑（GDScript）与训练逻辑（Python/PyTorch）的完全分离。
-
-在环境接口层面，本系统采用 PettingZoo 的 Parallel API 规范封装环境，
-支持多智能体同时步进（parallel stepping），
-使 IPPO 的同步训练范式得以高效实现。
-每个环境实例以 speedup=16 的速率运行（即 16 倍于实时速度），
-通过多环境并行采样提升数据收集效率。
+在环境接口层面，本系统采用Godot RL Agents提供的基于PettingZoo 的 Parallel API 规范封装环境，
+支持多智能体同时步进（parallel stepping），以支持并行运行多个环境加速采样。\autoref{fig:architecture}展示了整个系统架构。
+\begin{figure}
+  \centering
+  \includegraphics[width=0.8\textwidth]{imgs/gdrl.png}
+  \caption{系统架构}
+  \label{fig:architecture}
+\end{figure}
 
 % ==================== 第3章 ====================
 \section{博弈环境设计与实现}
 
 \subsection{游戏总体设计}
-
-《Tiny Swords》是一款 2D 俯视角多智能体竞技场混战游戏。
-游戏在封闭的正方形竞技场中进行，
-4 名智能体在限定时间内自由移动、收集资源并相互战斗，
-以累计得分作为排名依据。
+《Tiny Swords》 是一款基于 Godot 引擎的 2D 俯视角四人混战竞技场游戏，旨在作为多智能体强化学习的博弈环境。四名角色（Agent）在一个封闭的竞技场中进行自由对抗，通过移动与近战攻击争夺分数。游戏在核心对抗之上叠加了少量环境交互元素（野生怪物、分数球），以丰富策略空间并产生更具层次的博弈行为。
 
 游戏包含以下核心元素：
 \begin{itemize}
+  \item \textbf{竞技场}：竞技场为一个固定大小的矩形封闭地图，四周由不可通行的墙壁围成。四名智能体分别在地图的四个角落出生。竞技场内有不可通行的障碍物，增加对抗复杂性和路径规划难度。
   \item \textbf{智能体（玩家）}：拥有生命值系统，可执行移动（上下左右）、
-  待机和攻击共 6 种离散动作。死亡后在地图随机位置复活。
-  \item \textbf{野怪（敌人）}：由内置 AI 控制的 NPC，在巡逻与追击状态间切换，
-  击杀可获得奖励。
-  \item \textbf{奖励球}：分 A 类和 B 类两种，随机生成在地图各处，
-  收集可获得不同分值。被收集后经过冷却时间重新生成。
-  \item \textbf{障碍物}：不可穿越的地形元素，分布在竞技场各处，
-  增加了移动规划的难度。
+  待机和攻击共 6 种离散动作，死亡后在各自出生点重生。
+  \item \textbf{野怪（敌人）}：由内置程序控制的NPC，在竞技场中心区域内随机游走，附近出现智能体在一定范围内追杀智能体，被击杀后掉落分数并在一段时间后重新刷新。
+  \item \textbf{奖励球}：智能体拾取到可以获得奖励，分 A 类和 B 类两种，A类球出生在智能体的出生点附近，被拾取后不再重生，B类球出生在地图中央区域，被收集后经过冷却时间重新生成。
+  \item \textbf{中央资源密集区域}：为了增加智能体照面机会，将竞技场一定的中心区域设置为资源密集区，B类球只在该区域内重生，敌人只在该区域内巡逻。
   \item \textbf{视野限制}：智能体仅能感知视野半径内的实体，
   模拟部分可观测环境。
 \end{itemize}
 
-每局游戏持续 2000 物理帧，4 名智能体同时行动。
-为缓解连续决策的复杂性，采用动作重复机制：
-智能体每 8 帧执行一次动作决策，在此期间重复执行相同的物理动作。
-训练配置支持单智能体居中战斗模式和四角生成点-中心资源集中化布局的灵活切换。
+每局游戏持续3分钟，4 名智能体同时行动，每8个物理帧进行一次观测并执行一次动作，Godot引擎每秒会处理60个物理帧，因此总共有10800个物理帧，智能体在每局游戏会执行1350次动作。
 
 \subsection{观测空间设计}
-
-观测空间的设计直接影响策略网络对游戏状态的理解能力。
+观测空间的设计直接影响策略网络和价值网络对游戏状态的理解能力。
 本文设计了 174 维分段式观测向量，将异构的游戏信息按语义分组编码：
-
 \begin{table}[htbp]
   \centering
   \caption{\zihao{5} 观测空间组成}
   \label{tab:observation}
   \begin{tabular}{cccc}
     \toprule
-    分段 & 维度 & 槽位数 & 内容 \\
+    分段 & 维度 & 实体数$\times$实体维度 & 内容 \\
     \midrule
-    自身状态（SELF） & 15 & 1 & 坐标、血量、速度、上一动作 one-hot 等 \\
-    其他玩家（PLAYER） & 99 & 3$\times$33 & 相对位置、血量、距离、攻击状态等 \\
+    自身状态（SELF） & 15 & 1$\times$1 & 坐标、血量、速度、上一动作 one-hot 等 \\
+    其他玩家（PLAYER） & 33 & 3$\times$11 & 相对位置、血量、距离、攻击状态等 \\
     奖励球（BALL） & 40 & 8$\times$5 & 相对位置、类型、距离等 \\
     敌人（ENEMY） & 50 & 5$\times$10 & 相对位置、血量、攻击状态等 \\
-    地图射线（LiDAR） & 36 & 36 & 36 条射线检测距离，归一化到 [0,1] \\
+    地图射线（LiDAR） & 36 & 36$\times$1 & 36 条射线检测距离，归一化到 [0,1] \\
     \bottomrule
   \end{tabular}
 \end{table}
@@ -726,26 +708,57 @@ Python 端执行推理后将动作返回给 Godot，
   \item \textbf{以自身为中心}：所有坐标转换为相对于智能体的偏移量，
   除以视野半径归一化，确保平移不变性。
   \item \textbf{固定槽位编码}：玩家按 ID 固定槽位、敌人按名称排序、
-  奖励球按距离排序，每个实体槽位后附 1 维有效掩码（valid mask），
+  奖励球按距离排序，固定槽位的设定使得可以直接将观测信息送入时序网络而不使每个特征的隐藏状态错分配，因此不需要通过MLP投影层。
+  \item \textbf{有效位掩码}：在事视野外的实体属于无效信息，将采用0值填充，每个实体槽位后附 1 维有效掩码（valid mask），
   使网络明确区分有效信息与填充零值。
   \item \textbf{LiDAR 射线检测}：从智能体位置向四周均匀发射 36 条射线，
   记录与障碍物碰撞点的距离并归一化，提供简洁高效的局部地图感知。
-  \item \textbf{时序信息}：通过保留上一帧动作的 one-hot 编码
-  和可选的 GRU 循环层提供历史依赖。
 \end{enumerate}
 
 \subsection{奖励函数设计}
-
-奖励函数是智能体行为的主要驱动力。本文从事件稀疏奖励和密度塑形奖励
+奖励函数是智能体行为的主要驱动力。本文从事件稀疏奖励和稠密塑形奖励
 两个层次构建奖励体系。
 
-\textbf{事件奖励}定义游戏关键事件的奖罚值：
-拾取 A 球（+10）、拾取 B 球（+15）、对敌人造成伤害（+10）、
-对玩家造成伤害（+15）、击杀敌人（+30）、击杀玩家（+45）、
-受到伤害（-10）、攻击动作（-0.05/次）、死亡（-20）。
+\textbf{事件奖励}定义游戏关键事件的奖罚值。
+基础奖励体系包含以下事件类别：
+拾取得分（A 球/B 球）、撞墙、
+击杀（敌人/玩家）、死亡惩罚，此外，也有比较稠密的事件：
+造成伤害（对敌人/对玩家）、受到伤害、攻击惩罚、待机惩罚、移动惩罚，同时为了鼓励智能体在中心区域，相应的也有中心区域稠密奖励。
+
+为了观察到风格不同的智能体，引入了 \textbf{per-player 差异化}：为 4 名智能体配置不同的奖励以诱导多样化的策略风格。
+表~\ref{tab:reward_config} 列出了各智能体的完整奖励配置。同时也支持4个智能体共用一套奖励配置，由于4个智能体的环境虽不对称但是相似，在进行消融实验时同时统计每个智能体的数据，每个智能体都使用同一套奖励配置，有助于结果的鲁棒性。
+P1 显著提升吃球奖励并降低战斗收益，诱导避战采集策略；
+P0 和 P2 则相反，偏好战斗导向；P3是均衡型但是完美主义策略，没有任何一项奖励能够高过惩罚。
+
+\begin{table}[htbp]
+  \centering
+  \caption{各玩家奖励配置}
+  \label{tab:reward_config}
+  \begin{tabular}{lrrrr}
+    \toprule
+    奖励事件 & P0 (战士型) & P1 (采集型) & P2 (战士型) & P3 (均衡型) \\
+    \midrule
+    拾取 A 球       & 6   & 12  & 6   & 6   \\
+    拾取 B 球       & 3   & 10  & 3   & 4   \\
+    对敌人造成伤害  & 8   & 3   & 8   & 4.05 \\
+    对玩家造成伤害  & 10  & 4   & 10  & 6.05 \\
+    击杀敌人        & 16  & 6   & 16  & 8   \\
+    击杀玩家        & 20  & 8   & 20  & 12  \\
+    受到伤害        & -5  & -10 & -5  & -8  \\
+    死亡            & -10 & -20 & -10 & -15 \\
+    攻击动作（/次） & -0.01 & -0.06 & -0.01 & -0.05 \\
+    移动（/帧）     & -0.001 & -0.001 & -0.001 & -0.001 \\
+    静止（/帧）$^*$ & -0.005 & -0.005 & -0.005 & -0.005 \\
+    中心区域奖励（/帧） & 0.003 & 0.003 & 0.003 & 0.003 \\
+    撞墙惩罚        & -0.5 & -0.5 & -0.5 & -0.5 \\
+    \bottomrule
+  \end{tabular}
+  \\[4pt]
+  \footnotesize $^*$ 静止（待机）惩罚在中心区域内豁免：当智能体位于竞技场中心区域（patrol\_rect）时，不施加待机惩罚，同时每帧获得中心区域正奖励。
+\end{table}
 
 \textbf{奖励球势能塑形}基于 PBRS 理论设计，目标是将稀疏的吃球奖励
-转化为稠密的引导信号。势函数采用线性形式：
+转化为稠密的引导信号。经过在拾取奖励球任务上的测试，势函数采用以下线性形式：
 \begin{equation}
   \Phi_{\text{ball}}(s) = -\frac{R_{\text{ball}}}{r_{\text{vision}}} \cdot d + R_{\text{ball}}
   \label{eq:ball_potential}
@@ -754,30 +767,23 @@ Python 端执行推理后将动作返回给 Godot，
 $d$ 为智能体到球的距离。仅对视野内最近的奖励球计算势能，
 避免多球势能叠加导致的引导信号混淆。
 
-\textbf{障碍物避障}采用同样的 PBRS 框架设计线性势函数，
-结合 24 条 LiDAR 射线计算平均势能。
-经系统实验最终确定稀疏惩罚 0.5 为最优配置——
-在吃球得分不受影响的前提下将撞墙次数降低 29\%。
-
-\textbf{per-player 差异化奖励}：为 4 名玩家配置不同的奖励权重，
-以诱导多样化的策略风格。例如，Player0 和 Player2 设定较高战斗奖励
-诱导好战策略，Player1 设定较高吃球奖励诱导避战吃球策略。
+\textbf{障碍物避障}尽管在障碍物上也使用势函数奖励塑形可以有效减少撞墙次数，但多个势函数叠加会给智能体带来较为混淆的引导导致拾取奖励球数量下降，
+经系统实验最终确定稀疏惩罚 0.5 为最优配置。
 
 \textbf{奖励归一化}：采用 Welford 在线算法维护奖励的 running mean/variance，
-对奖励做 z-score 归一化，确保不同量级的奖励组件在训练中具有可比的影响。
+对奖励做 z-score 归一化，稳定价值网络的输出在[-1,1]之间，以减小拟合难度。
 
 \subsection{课程学习环境}
-
-为解决多智能体环境训练难度高、学习信号稀疏的问题，
+为解决智能体环境训练难度高、学习信号稀疏的问题，
 本文设计了 5 阶段课程学习（Curriculum Learning）方案，
-从简单到复杂逐步引入游戏元素：
+从简单到复杂逐步引入游戏元素，依次训练4个智能体，得到4个表现较好的模型：
 
 \begin{enumerate}[label=阶段\arabic*：, leftmargin=*]
-  \item \textbf{无障碍吃球}：无墙、无敌人，仅包含奖励球。
+  \item \textbf{无障碍拾取奖励球}：无墙、无敌人，仅包含奖励球。
   智能体学习基础的移动和吃球行为。
-  \item \textbf{有墙吃球}：引入障碍物，智能体需要在避障的同时收集奖励球。
-  \item \textbf{纯战斗}：仅包含玩家，无奖励球。智能体学习基础的战斗技巧。
-  \item \textbf{敌人战斗}：引入 NPC 敌人，智能体学习区分玩家与 NPC 目标。
+  \item \textbf{有障碍物拾取奖励球}：引入障碍物，智能体需要在避障的同时收集奖励球。
+  \item \textbf{敌人战斗}：将智能体围在中心的小区域内，仅包含敌人，无奖励球。智能体被迫学习基础的战斗技巧。
+  \item \textbf{敌人和障碍物}：在上一课程基础上加入障碍物和奖励球，但智能体还是被围在中心区域内，无需主动前往中央资源密集区。
   \item \textbf{完整环境}：包含所有游戏元素，智能体综合运用前述技能。
 \end{enumerate}
 
@@ -787,169 +793,324 @@ $d$ 为智能体到球的距离。仅对视野内最近的奖励球计算势能�
 
 % ==================== 第4章 ====================
 \section{单智能体基础训练与消融实验}
-
 在进入多智能体博弈之前，首先需要确保单智能体具备完成基础游戏任务的能力。
 本章通过系统的消融实验，确定最优的环境配置与训练策略。
 
-\subsection{训练框架与超参数}
-
-训练框架基于 CleanRL 风格的 PPO 实现，针对多智能体场景扩展为 IPPO。
-每个智能体拥有独立的 Actor 网络（策略网络）和 Critic 网络（价值网络），
-使用共享的 rollout buffer 收集交互数据，各自独立更新。
-
-关键超参数设置如下：
-\begin{table}[htbp]
-  \centering
-  \caption{\zihao{5} IPPO 训练超参数}
-  \label{tab:hyperparams}
-  \begin{tabular}{cc}
-    \toprule
-    参数 & 取值 \\
-    \midrule
-    学习率 & $3\times 10^{-4}$ \\
-    折扣因子 $\gamma$ & 0.99 \\
-    GAE 参数 $\lambda$ & 0.95 \\
-    Rollout 步数 & 128 \\
-    Minibatch 数 & 4 \\
-    更新轮数 & 8 \\
-    PPO 裁剪系数 $\epsilon$ & 0.2 \\
-    熵系数 & 0.005 \\
-    梯度裁剪 & 4.0 \\
-    总时间步 & 200 万（多智能体）/ 100 万（单智能体） \\
-    Speedup & 16 \\
-    \bottomrule
-  \end{tabular}
-\end{table}
-
+\subsection{训练框架}
+为了能有对算法良好的控制性，训练框架基于 CleanRL 风格的 手写PPO 实现，针对多智能体场景扩展为 IPPO：
+每个智能体拥有独立的 Actor 网络（策略网络）和 Critic 网络（价值网络），使用共享的 rollout buffer 同步收集交互数据，各自独立更新网络参数。
 网络架构支持三种模式：
 \begin{itemize}
   \item \textbf{MLP}：将所有 174 维观测拼接后输入多层全连接网络。
   \item \textbf{Segmented MLP}：5 个独立 MLP 分别编码
-  SELF/PLAYER/BALL/ENEMY/LiDAR 分段，拼接后通过共享 trunk。
+  SELF/PLAYER/BALL/ENEMY/LiDAR 分段，分别由一个MLP子网络处理，子网络的输出拼接后进入共享 MLP trunk。
   \item \textbf{GRU-MLP}：时序相关分段通过 GRU 循环层处理，
-  与球分段 MLP 输出拼接后进入 trunk。
+  奖励球分段送入 MLP，在输出后与GRU网络输出拼接后进入MLP trunk。
 \end{itemize}
 
-\subsection{奖励球势函数对比}
+\subsection{观测空间消融：有效掩码}
+有效掩码（valid mask）用于标记观测向量中哪些槽位包含有效信息，
+消除因视野内实体数量不足而产生的零填充噪声。
+\autoref{fig:valid_mask_comparison}展示了是否启用有效掩码对智能体表现的影响：
+\subref{fig:valid_mask_total}为所有智能体总吃球得分均值，
+\subref{fig:valid_mask_player}为各智能体单独吃球得分均值。
 
-奖励球的势函数形式直接影响智能体吃球行为的学习效率。
-本文设计了三种候选势函数进行对比：
+\begin{figure}[htbp!]
+  \centering
+  \begin{subfigure}[b]{0.48\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{imgs/valid_mask_comparison_total_ball_score.png}
+    \caption{所有智能体总吃球得分对比}
+    \label{fig:valid_mask_total}
+  \end{subfigure}
+  \hfill
+  \begin{subfigure}[b]{0.48\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{imgs/valid_mask_comparison_player_ball_score.png}
+    \caption{各智能体吃球得分对比}
+    \label{fig:valid_mask_player}
+  \end{subfigure}
+  \caption{有效掩码消融实验结果。
+  蓝色为未启用有效掩码，橙色为启用有效掩码。
+  曲线为 5 次独立运行均值。}
+  \label{fig:valid_mask_comparison}
+\end{figure}
+
+实验结果表明：
+\begin{itemize}
+  \item 启用有效掩码后全场总得分提升 9.9\%（254.7 $\rightarrow$ 279.8），
+  表明区分有效与无效观测信息有助于智能体做出更优决策。
+  \item 训练初期启用掩码的得分略低，因输入维度翻倍增加了学习难度，
+  但约在 50 回合后开始反超，说明网络逐渐学会了利用 valid 位筛选有效信息。
+  \item 智能体 3（出生点附近有障碍物，历史表现最弱）改善最为显著：
+  总得分提升 48.3\%（41.0 $\rightarrow$ 60.8），吃球得分提升 12.8\%（67.8 $\rightarrow$ 76.5），
+  有效掩码对弱势智能体的帮助尤为突出。
+  \item 为观测数据的真实性和训练稳定性，后续实验均启用有效掩码。
+\end{itemize}
+
+\subsection{奖励球塑形方案对比}
+正如前文所述，不同的势函数对训练效率有显著影响，而如何设计合适的势函数是需要专业领域知识的，不存在所谓的专家，因此每种方案都需要进行系统实验和对比。
+对于奖励球这类空间目标导航类任务，常见的奖励塑形方法有基于势能函数的塑形，距离奖励（每次靠近给予奖励，远离给予惩罚）。不同的奖励塑形方案直接影响智能体吃球行为的学习效率。
+
+针对势函数，本文设计了三种候选势函数进行对比：
 \begin{align}
   \Phi_{\text{linear}}(s) &= -\frac{R_{\text{ball}}}{r_{\text{vision}}} \cdot d + R_{\text{ball}} \label{eq:linear} \\
   \Phi_{\text{exp}}(s) &= R_{\text{ball}} \cdot e^{-d / r_{\text{vision}}} \label{eq:exponential} \\
   \Phi_{\text{inverse}}(s) &= R_{\text{ball}} \cdot \frac{r_{\text{vision}}}{d + r_{\text{vision}}} \label{eq:inverse}
 \end{align}
 
-三者在 500,000 时间步下的吃球得分对比如表\ref{tab:potential_compare}所示。
-线性势函数以每回合平均 252.08 的吃球得分显著优于
-指数函数（118.21）和反比例函数（80.17），
-这是因为线性函数在远距离处仍保持足够的梯度信号，
-而指数和反比例函数在远距离处势能变化趋于平坦，引导性不足。
-
-\begin{table}[htbp]
+在 500,000 时间步下，不同奖励塑形方案对拾取奖励球得分的影响如\autoref{fig:ball_score_shaping_comparison}所示。可以发现距离奖励，线性势函数，反比例势函数3个方案没有明显差距；而指数势函数则表现居中，这可能是因为指数函数变化剧烈，在离奖励球比较远时引导程度不如其他势函数大，导致在较远距离依旧呈现稀疏性；稀疏奖励效果最差，这是意料之中的。
+\begin{figure}[h!]
   \centering
-  \caption{\zihao{5} 势函数形式对比（50 万步）}
-  \label{tab:potential_compare}
-  \begin{tabular}{cc}
-    \toprule
-    势函数形式 & 每回合平均吃球得分 \\
-    \midrule
-    线性（Linear） & \textbf{252.08} \\
-    指数（Exponential） & 118.21 \\
-    反比例（Inverse） & 80.17 \\
-    \bottomrule
-  \end{tabular}
-\end{table}
+  \begin{subfigure}[b]{0.48\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{imgs/per_player_comparison-ball.png}
+    \caption{各智能体拾取奖励球得分与回合数关系}
+    \label{fig:per_player_ball_score_shaping_comparison}
+  \end{subfigure}
+  \hfill
+  \begin{subfigure}[b]{0.48\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{imgs/total_comparison-ball.png}
+    \caption{所有智能体平均拾取奖励球得分与回合数关系}
+    \label{fig:total_ball_score_shaping_comparison}
+  \end{subfigure}
+  \caption{不同奖励塑形方案对拾取奖励球得分的影响。
+  \subref{fig:per_player_ball_score_shaping_comparison}为各智能体得分，
+  \subref{fig:total_ball_score_shaping_comparison}为全场平均得分变化趋势。}
+  \label{fig:ball_score_shaping_comparison}
+\end{figure}
 
-此外，对比了仅对最近球计算势能和视野内所有球计算势能两种模式。
-实验表明，最近球模式的训练效率高出 67\%，
-原因是多球势能叠加在球之间的中点区域会相互抵消，
-形成势能平台区，削弱了引导效果。
-
-值得注意的是，早期实验中发现的捡球时 PBRS 差分导致负奖励的 Bug
-（因球被收集后势函数突变为 0 导致 $\gamma\Phi(s')-\Phi(s)$ 为负值）
-在修复后重新进行了对比验证，确认线性函数 + 最近球为最优配置。
+对于本文特定环境，智能体需要拾取多个奖励球，通常的奖励塑形方法都用于单目标引导，对于多目标引导，在采用线性势函数的情况下，还对比了仅对最近球计算势能和视野内所有球计算势能两种模式，即考虑是否要将多目标任务划分为多阶段的子目标，结果如\autoref{fig:nearest_vs_all_player_comparison}所示,最近球模式的训练效率高出 67\%，证明将多目标任务划分为多阶段的子目标可以显著提高训练效率。猜测原因是多球势能叠加在球之间的中点区域会相互抵消，形成势能平台区，削弱了引导效果，并且理论上在使用线性势函数时，该现象更明显，实验结果也符合这一点。
+\begin{figure}[h!]
+  \centering
+  \includegraphics[width=0.6\linewidth]{imgs/nearest_vs_all_player_comparison.png}
+  \caption{各智能体奖励球势能计算方式与回合奖励的关系}
+  \label{fig:nearest_vs_all_player_comparison}
+\end{figure}
 
 \subsection{障碍物避障策略}
-
 障碍物的存在显著增加了移动规划的难度。
 本文从惩罚力度和塑形方式两个维度进行系统实验。
 
 \textbf{撞墙惩罚力度对比}：在稀疏惩罚（仅碰撞时惩罚）策略下，
 分别测试了 0.05、0.5 和 5.0 三种惩罚值。
-如表\ref{tab:wall_penalty}所示，0.5 惩罚取得了最佳平衡点——
-吃球得分与 0.05 基本持平（274.1 vs 272.6），
-撞墙次数减少 29\%（114.8 vs 161.5）；
-5.0 惩罚虽将撞墙次数降至 16.7，但吃球得分大幅下降至 122.0，
-说明过强的惩罚导致过度保守策略。
+\autoref{fig:wall_penalty_comparison}展示了三种惩罚力度下智能体的撞墙行为与吃球收益随训练回合数的变化趋势：
+\subref{fig:wall_penalty_player_walls}为各智能体单独撞墙次数，
+\subref{fig:wall_penalty_total_walls}为全场平均撞墙次数，
+\subref{fig:wall_penalty_player_ball}为各智能体单独吃球得分，
+\subref{fig:wall_penalty_total_ball}为全场总吃球得分。
 
-\begin{table}[htbp]
+实验结果表明，0.5 惩罚取得了最佳平衡点：
+吃球得分与 0.05 基本持平（274.1 vs 272.6），
+撞墙次数减少 29\%（114.8 vs 161.5）。
+5.0 惩罚虽将撞墙次数降至 16.7，但吃球得分大幅下降至 122.0，
+说明过强的惩罚导致智能体为避免墙壁惩罚而过度保守，
+牺牲了大量靠近墙壁的奖励球收益。
+进一步观察各智能体子图可以发现，不同智能体在相同惩罚力度下的学习曲线存在显著差异：
+智能体 3 在低惩罚（0.05）下的撞墙次数最高（75次/回合），
+而智能体 2 在惩罚 0.5 下的吃球得分最高（65.3），
+反映出不同出生位置和局部障碍物分布对墙壁接触概率的结构性影响。
+\begin{figure}[h!]
   \centering
-  \caption{\zihao{5} 撞墙惩罚力度对比}
-  \label{tab:wall_penalty}
-  \begin{tabular}{ccc}
-    \toprule
-    撞墙惩罚值 & 平均吃球得分 & 平均撞墙次数 \\
-    \midrule
-    0.05 & 272.6 & 161.5 \\
-    0.5 & \textbf{274.1} & 114.8（-29\%） \\
-    5.0 & 122.0 & \textbf{16.7} \\
-    \bottomrule
-  \end{tabular}
-\end{table}
+  \begin{subfigure}[b]{0.35\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{imgs/wall-penalty-player_wall_count_comparison.png}
+    \caption{各智能体撞墙次数对比}
+    \label{fig:wall_penalty_player_walls}
+  \end{subfigure}
+  \hfill
+  \begin{subfigure}[b]{0.35\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{imgs/wall_collision_evolution.png}
+    \caption{所有智能体平均撞墙次数对比}
+    \label{fig:wall_penalty_total_walls}
+  \end{subfigure}
+
+  \vspace{6pt}
+
+  \begin{subfigure}[b]{0.35\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{imgs/wall-penalty-player_ball_score_comparison.png}
+    \caption{各智能体吃球得分对比}
+    \label{fig:wall_penalty_player_ball}
+  \end{subfigure}
+  \hfill
+  \begin{subfigure}[b]{0.35\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{imgs/wall-penalty-total_ball_score_comparison.png}
+    \caption{所有智能体总吃球得分对比}
+    \label{fig:wall_penalty_total_ball}
+  \end{subfigure}
+  \caption{不同撞墙惩罚力度（0.05、0.5、5.0）下智能体行为对比。
+  蓝色为 Penalty=0.05，橙色为 Penalty=0.5，绿色为 Penalty=5.0。
+  曲线为 5 次独立运行均值。
+  横轴为训练回合数（Episode），纵轴分别为撞墙次数（次/回合）和吃球奖励得分。}
+  \label{fig:wall_penalty_comparison}
+\end{figure}
 
 \textbf{障碍物塑形方案对比}：以 0.5 稀疏惩罚为基线，
 对比了线性 PBRS、反比例 PBRS 和距离直接惩罚三种方案。
-实验发现三种方案均显著减少了撞墙次数（52\%--61\%），
-但稠密塑形也导致吃球得分略有下降。
-综合权衡，采用 0.5 稀疏惩罚配合 24 条 LiDAR 射线取得了最均衡的效果。
+\autoref{fig:wall_shaping_comparison}展示了四种方案下智能体的行为对比：
+\subref{fig:wall_shaping_player_walls}和\subref{fig:wall_shaping_total_walls}分别为各智能体及全场平均撞墙次数，
+\subref{fig:wall_shaping_player_score}和\subref{fig:wall_shaping_total_score}分别为各智能体及全场总得分。
 
-\textbf{摇摆问题的分析与解决}：训练过程中观察到的"左右摇摆"现象，
-经分析源于多个障碍物势能叠加形成的局部极大值点。
-通过增加射线数量至 24 条并计算平均势能，有效缓解了该问题。
+实验发现三种塑形方案均显著减少了撞墙次数：
+线性 PBRS 减少 54.2\%（114.8 $\rightarrow$ 52.6），
+反比例 PBRS 减少 52.3\%（114.8 $\rightarrow$ 54.7），
+距离直接惩罚减少 61.1\%（114.8 $\rightarrow$ 44.7）。
+但稠密塑形也导致总得分略有下降（稀疏 209.5 vs 线性 203.4 / 反比例 199.3 / 距离 185.2），
+这主要是因为当对障碍物施加势能奖励时，远离障碍物可以获得奖励，但如果奖励球本身离障碍物很近，
+智能体同时受到奖励球和障碍物的双向势能影响，导致奖励球势能的引导性被削弱，
+对于障碍物附近的奖励球，智能体会倾向于忽略。
+障碍物与奖励球本质不同：障碍物并非"越远越好"，
+只要未发生实际碰撞就不应施加惩罚，
+综合权衡避障效果与得分损失，最终采用稀疏惩罚策略。
+
+\begin{figure}[h!]
+  \centering
+  \begin{subfigure}[b]{0.35\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{imgs/wall_potential_comparison_player_walls.png}
+    \caption{各智能体撞墙次数对比}
+    \label{fig:wall_shaping_player_walls}
+  \end{subfigure}
+  \hfill
+  \begin{subfigure}[b]{0.35\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{imgs/wall_potential_comparison_total_walls.png}
+    \caption{全场平均撞墙次数对比}
+    \label{fig:wall_shaping_total_walls}
+  \end{subfigure}
+
+  \vspace{6pt}
+
+  \begin{subfigure}[b]{0.35\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{imgs/wall_potential_comparison_player_score.png}
+    \caption{各智能体总得分对比}
+    \label{fig:wall_shaping_player_score}
+  \end{subfigure}
+  \hfill
+  \begin{subfigure}[b]{0.35\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{imgs/wall_potential_comparison_total_score.png}
+    \caption{全场总得分对比}
+    \label{fig:wall_shaping_total_score}
+  \end{subfigure}
+  \caption{不同障碍物塑形方案下智能体行为对比。
+  蓝色为 Sparse Penalty（基线 0.5），橙色为 Linear Potential，绿色为 Inverse Proportional Potential，粉色为 Distance Penalty。
+  曲线为 5 次独立运行均值。}
+  \label{fig:wall_shaping_comparison}
+\end{figure}
 
 \subsection{网络架构对比}
+对于部分可观测马尔可夫决策过程，时序网络的表现通常优于MLP等非时序网络\cite{smirnov2025rlbenchnetrightnetworkright}。
+在单智能体环境下，对比了 MLP、Segmented MLP 和 GRU-MLP 三种网络架构，其中GRU网络还对比了96和128两种隐藏层维度，MLP、Segmented MLP 和 GRU-96-MLP保持总参数量大体相当。
+\autoref{fig:network_architecture_comparison}展示了四种网络架构在两种任务场景下的表现对比：
+\subref{fig:network_s1}为拾取奖励球任务，即使用课程1，场景中只有奖励球，没有障碍物和敌人，
+\subref{fig:network_sarl}为单智能体战斗任务，即使用课程3，智能体和敌人被围在一个小的中心区域中，智能体将被迫战斗。
 
-在单智能体配置下，对比了 MLP、Segmented MLP 和 GRU-MLP 三种网络架构。
-表\ref{tab:network_compare}展示了战斗任务中的详细对比结果。
+\begin{figure}[h!]
+  \centering
+  \begin{subfigure}[b]{0.35\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{imgs/s1_total_ball_score.png}
+    \caption{拾取奖励球任务}
+    \label{fig:network_s1}
+  \end{subfigure}
+  \hfill
+  \begin{subfigure}[b]{0.35\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{imgs/sarl_total_score.png}
+    \caption{战斗任务}
+    \label{fig:network_sarl}
+  \end{subfigure}
+  \caption{不同网络架构在两种任务场景下的总得分对比。
+  蓝色为 MLP，橙色为 Segmented MLP，绿色为 GRU-MLP（隐藏层 96），粉色为 GRU-MLP（隐藏层 128）。
+  曲线为 4 次独立运行均值。}
+  \label{fig:network_architecture_comparison}
+\end{figure}
 
+\textbf{拾取奖励球任务}：Segmented MLP 表现最优（均值 911.1），
+略高于 MLP（857.4）和 GRU-MLP（853.6--856.4）。
+在仅需感知奖励球位置的简单任务中，
+Segmented MLP 对观测槽位的分段编码略有益处，因为分段子网络的设计使其在这个简单任务里不会受到其他大量0值输入的干扰。但四种架构在学习趋势上未呈现质变差异，
+表明该任务复杂度尚不足以充分体现网络结构的优劣。
+
+\textbf{战斗任务}：普通 MLP 在总分上表现最优（775.2），
+Segmented MLP 次之（714.6），
+GRU-MLP 总分显著落后（582.9 / 578.5）。
+值得注意的是 GRU-MLP 128 的攻击次数最高（79.0 vs MLP 的 69.5），
+且受击次数和死亡次数略优，但其撞墙次数极高（GRU-MLP 96：23.6 次/回合 vs MLP：3.4 次/回合），
+反映出时序网络在该环境中对空间避障信息的利用效率不足。
+在攻击密集的实时战斗场景中，GRU 的时序依赖带来的学习成本反而拖累了训练效率。
+考虑到时间约束和训练效果，最终选择 MLP 作为主训练网络架构。
+各网络在战斗任务中的详细指标对比见附录表\ref{tab:network_sarl_detail}。
+
+上述实验结果与直觉预期相反——在部分可观测环境中，时序网络通常应优于 MLP。
+经分析，这一现象主要源于本实验环境设计的两个特征。
+其一，如\autoref{fig:game_arena_view}所示，竞技场中央土色区域为资源密集区，随着训练进行，智能体会倾向于前往该区域并停留以试图获取更高奖励，在智能体的活动高度集中于该区域的情况下，智能体的视野半径设置较大，
+使得处于中央的智能体的视野可覆盖竞技场核心区域的大部分信息，大部分时间内智能体总能看到其他实体，MLP 的单帧观测已包含充分的决策依据。
+其二，观测向量中直接编码了对手的攻击状态（如是否在播放攻击动画以及攻击冷却时间）与移动速度等动态信息，网络无需依赖历史记忆来推断"上一秒发动攻击，现在无法攻击"这类时序关联关系。
+因此在本环境中，GRU 的时序建模能力未能转化为实际优势，反而增加了训练收敛难度，在后续的工作中都将使用MLP作为训练网络架构。
+\begin{figure}[h!]
+  \centering
+  \includegraphics[width=0.5\linewidth]{imgs/game_snapshot_0.png}
+  \caption{竞技场俯视图。土色矩形区域为资源密集区，
+  虚线圆为智能体视野范围示意。智能体位于中央位置时可观测到核心区域的大部分动态信息。}
+  \label{fig:game_arena_view}
+\end{figure}
+
+\textbf{超参数配置}：确定使用MLP作为训练网络架构后，在最终环境下经过 Optuna 参数搜索得到了一组效果比较好的超参数配置，其中关键超参数由表~\ref{tab:hyperparams} 给出，\autoref{fig:parallel_coordinate_and_importances}展示了超参数搜索结果。
+此后各课程会在此基础上动态调整以取得较好性能——例如战斗课程需要更大的熵系数以鼓励探索。
 \begin{table}[htbp]
   \centering
-  \caption{\zihao{5} 单智能体战斗任务网络架构对比}
-  \label{tab:network_compare}
-  \begin{tabular}{ccccc}
+  \caption{\zihao{5} PPO 训练超参数}
+  \label{tab:hyperparams}
+  \begin{tabular}{cc}
     \toprule
-    指标 & MLP & Seg MLP & GRU-MLP(96) & GRU-MLP(128) \\
+    参数 & 取值 \\
     \midrule
-    总分均值 & \textbf{775.2} & 714.7 & 583.0 & 578.5 \\
-    造成伤害 & \textbf{77.6} & 73.0 & 61.3 & 60.6 \\
-    击杀次数 & \textbf{38.4} & 36.1 & 30.3 & 30.0 \\
-    撞墙次数 & \textbf{3.4} & 7.7 & 23.6 & 15.0 \\
+    学习率 & $7.22\times 10^{-4}$ \\
+    折扣因子 $\gamma$ & 0.99 \\
+    GAE 参数 $\lambda$ & 0.95 \\
+    Rollout 步数 & 256 \\
+    Minibatch 数 & 4 \\
+    更新轮数 & 5 \\
+    PPO 裁剪系数 $\epsilon$ & 0.2 \\
+    熵系数 & 0.01 \\
+    梯度裁剪 & 4.0 \\
+    学习率退火 & True \\
+    奖励归一化 & True \\
+    奖励归一化范围 & [-1.0, 1.0] \\
     \bottomrule
   \end{tabular}
 \end{table}
 
-\textbf{吃球任务}：三种架构在学习速度和最终得分上未呈现显著差异，
-表明在仅需感知奖励球位置的简单任务中，观测编码方式的影响有限。
+\begin{figure}[htbp!]
+  \centering
+  \begin{subfigure}[b]{0.35\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{imgs/parallel_coordinate.png}
+    \caption{Optuna 平行坐标图}
+    \label{fig:parallel_coordinate}
+  \end{subfigure}
+  \hfill
+  \begin{subfigure}[b]{0.35\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{imgs/param_importances.png}
+    \caption{超参数重要性排名}
+    \label{fig:param_importances}
+  \end{subfigure}
+  \caption{Optuna 超参数搜索结果可视化。
+  \subref{fig:parallel_coordinate}展示各 trial 的超参数取值与对应奖励的分布关系，颜色越接近金色表示奖励越高；
+  \subref{fig:param_importances}展示各参数对最终奖励的影响权重。}
+  \label{fig:parallel_coordinate_and_importances}
+\end{figure}
 
-\textbf{战斗任务}：普通 MLP 在总分、伤害、击杀和避障上均表现最优。
-GRU-MLP 的受击次数和死亡次数略优，但总分显著落后（583.0 vs 775.2）。
-考虑到时间约束和训练效率，最终选择 MLP 作为主训练网络架构。
-
-\subsection{观测空间消融：有效掩码}
-
-有效掩码（valid mask）的消融实验表明：
-\begin{itemize}
-  \item 训练前期加入有效掩码得分略低（因输入维度增加），
-  但后期得分持平或略优，说明网络逐渐学会了利用 valid 位区分有效信息。
-  \item 在困难场景（Player3，出生点附近有障碍物）中，
-  有效掩码使撞墙惩罚减少 30\%、高级球收集提升 17\%，
-  对弱势玩家改善尤为显著。
-  \item 为观测数据的真实性和训练稳定性，后续实验均启用有效掩码。
-\end{itemize}
 
 \subsection{课程学习效果}
-
 课程学习的阶段性训练策略在完整环境训练中展现出明显优势。
 相较于直接从完整环境开始训练，课程学习使训练初期的
 得分提升速度加快约 40\%，且最终收敛得分高出约 15\%。
@@ -964,7 +1125,7 @@ GRU-MLP 的受击次数和死亡次数略优，但总分显著落后（583.0 vs 
 \end{itemize}
 
 % ==================== 第5章 ====================
-\section{多智能体迭代自博弈}
+\section{多智能体博弈方法探索}
 
 前述章节聚焦于单智能体在静态环境中的行为学习。
 当多个智能体共享同一环境时，非平稳性成为核心挑战：
@@ -1207,6 +1368,22 @@ $E_A$ 为期望胜率。
 \appendix
 
 \section{附录A 实验补充数据}
+
+\begin{table}[htbp]
+  \centering
+  \caption{\zihao{5} Sarl 战斗任务网络架构对比（单智能体，4 次独立运行均值）}
+  \label{tab:network_sarl_detail}
+  \begin{tabular}{lccccccc}
+    \toprule
+    网络架构 & 总得分 & 攻击次数 & 造成伤害 & 承受伤害 & 击杀数 & 死亡数 & 撞墙次数 \\
+    \midrule
+    MLP                & 775.2 & 69.5 & 77.6 & 26.7 & 38.4 & 2.2 & 3.4  \\
+    Segmented MLP      & 714.6 & 64.1 & 73.0 & 26.2 & 36.1 & 2.2 & 7.7  \\
+    GRU-MLP（隐藏层96） & 582.9 & 64.1 & 61.3 & 22.7 & 30.3 & 1.8 & 23.6 \\
+    GRU-MLP（隐藏层128）& 578.5 & 79.0 & 60.6 & 22.7 & 30.0 & 1.8 & 15.0 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
 
 % ----------------------------------------------------------
 % 致谢
