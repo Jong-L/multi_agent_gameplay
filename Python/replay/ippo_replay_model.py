@@ -42,7 +42,7 @@ from custom_ippo import IPPOAgent
 class ReplayConfig:
     """IPPO 模型回放配置 — 直接修改默认值即可。"""
 
-    model_path: str = "saved_models\\ippo_bootstrap_episode45.pt"
+    model_path: str = "saved_models/ippo_bootstrap_agent.pt"
     """IPPO 模型基础路径 (不含 _agentN 后缀)。
     自动加载 {stem}_agent0.pt ~ {stem}_agent3.pt。
     当 model_paths 不为空时此字段被忽略。"""
@@ -51,6 +51,15 @@ class ReplayConfig:
     """分别指定 agent 模型文件路径列表。
     示例: ["saved_models/agent0.pt", "saved_models/agent1.pt", ...]
     设置后优先使用此字段, model_path 被忽略。"""
+        
+    def __post_init__(self):
+        if self.model_paths is None:
+            self.model_paths = [
+                "saved_models/agent0_extra_pool_step102400_agent0.pt",
+                "saved_models/ippo_bootstrap_agent1.pt",
+                "saved_models/ippo_bootstrap_agent2.pt",
+                "saved_models/ippo_bootstrap_agent3.pt"
+            ]
 
     env_path: Optional[str] = "godot-game\\build-multiagent\\game.exe"
     """Godot 可执行文件路径 (None 连接编辑器)。"""
@@ -58,7 +67,7 @@ class ReplayConfig:
     config_path: str = "godot-game/configs/game_config.tres"
     """game_config.tres 路径, 用于读取观测维度配置。"""
 
-    speedup: int = 2
+    speedup: int = 1
     """物理引擎加速倍数 (1=正常速度)。"""
 
     show_window: bool = True

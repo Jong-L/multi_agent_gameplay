@@ -62,9 +62,26 @@ except ImportError:
 # ╔══════════════════════════════════════════════════════════════╗
 # ║                       默认配置                                ║
 # ╚══════════════════════════════════════════════════════════════╝
-DEFAULT_DB_PATH = str(
-    _PROJECT_ROOT / "logs" / "optuna" / "custom_ppo.db"
-)
+_PROJECT_ROOT = pathlib.Path(__file__).resolve().parent.parent.parent
+
+# 常见数据库搜索路径 (按优先级排序)
+COMMON_DB_PATHS = [
+    # _PROJECT_ROOT / "logs" / "optuna" / "custom_ppo.db",
+    _PROJECT_ROOT / "logs" / "custom_ppo_new.db",
+    _PROJECT_ROOT / "logs" / "optuna.db",
+    _PROJECT_ROOT / "logs" / "optuna" / "study.db",
+]
+
+# 默认使用第一个存在的路径, 否则使用第一个作为提示
+DEFAULT_DB_PATH = None
+for p in COMMON_DB_PATHS:
+    if p.exists():
+        DEFAULT_DB_PATH = str(p)
+        break
+if DEFAULT_DB_PATH is None:
+    # 所有路径都不存在, 使用第一个作为默认值 (会在加载时报错并提示)
+    DEFAULT_DB_PATH = str(COMMON_DB_PATHS[0])
+
 DEFAULT_STUDY_NAME = "custom_ppo_optuna"
 DEFAULT_OUTPUT_DIR = str(
     _PROJECT_ROOT / "logs" / "optuna" / "figures"
@@ -86,11 +103,38 @@ PINK   = '#CC78BC'
 
 def load_study(db_path: str, study_name: str) -> optuna.Study:
     """从 SQLite 数据库加载 Optuna study。"""
+    db_file = pathlib.Path(db_path)
+    
+    # 路径检查与提示
+    if not db_file.exists():
+        print(f"\n[ERROR] 数据库文件不存在: {db_path}")
+        print("\n已搜索以下常见位置:")
+        for i, p in enumerate(COMMON_DB_PATHS, 1):
+            status = "✓ 存在" if p.exists() else "✗ 不存在"
+            print(f"  {i}. {p}  ({status})")
+        print("\n请使用 --db 参数指定正确的数据库路径, 例如:")
+        print(f"  python {pathlib.Path(__file__).name} --db logs/custom_ppo_new.db")
+        print(f"  python {pathlib.Path(__file__).name} --db logs/optuna/custom_ppo_new.db")
+        sys.exit(1)
+    
     storage_url = f"sqlite:///{db_path}"
-    study = optuna.load_study(study_name=study_name, storage=storage_url)
-    print(f"[OK] 已加载 study: {study.study_name}  "
-          f"(trials={len(study.trials)}, direction={study.direction})")
-    return study
+    try:
+        study = optuna.load_study(study_name=study_name, storage=storage_url)
+        print(f"[OK] 已加载 study: {study.study_name}  "
+              f"(trials={len(study.trials)}, direction={study.direction})")
+        return study
+    except Exception as e:
+        print(f"\n[ERROR] 加载 study 失败: {e}")
+        print(f"\n提示: 请确认 study_name 是否正确 (当前: '{study_name}')")
+        print("可用 study 名称列表:")
+        try:
+            storage = optuna.storages.RDBStorage(storage_url)
+            studies = optuna.get_all_study_summaries(storage=storage)
+            for s in studies:
+                print(f"  - {s.study_name} (trials={s.n_trials})")
+        except Exception:
+            pass
+        sys.exit(1)
 
 
 def print_best_trial(study: optuna.Study) -> None:
@@ -345,10 +389,10 @@ def plot_param_importances(study: optuna.Study, output_dir: str,
     fig_h = max(3.5, 0.45 * n + 1.2)
     fig, ax = plt.subplots(figsize=(7, fig_h))
 
-    # 颜色渐变 (重要 → 不重要)
+    # 颜色渐变 (重要=深, 不重要=浅)
     colors = [BLUE] * n
     for i in range(n):
-        ratio = 1.0 - (i / max(n - 1, 1)) * 0.55
+        ratio = (i / max(n - 1, 1)) * 0.55
         colors[i] = _blend_color(BLUE, '#dddddd', ratio)
 
     bars = ax.barh(range(n), vals, color=colors, edgecolor='white',
@@ -1017,7 +1061,9 @@ def main():
     )
     parser.add_argument(
         "--db", type=str, default=DEFAULT_DB_PATH,
-        help=f"Optuna SQLite 数据库路径 (默认: {DEFAULT_DB_PATH})",
+        help="Optuna SQLite 数据库路径\n"
+             f"       默认自动检测 (当前: {DEFAULT_DB_PATH})\n"
+             f"       常见位置: logs/custom_ppo_new.db, logs/optuna/custom_ppo_new.db",
     )
     parser.add_argument(
         "--study-name", type=str, default=DEFAULT_STUDY_NAME,
@@ -1038,6 +1084,10 @@ def main():
              "importances slice parallel edf timeline dashboard all",
     )
     args = parser.parse_args()
+    
+    # 显示实际使用的数据库路径
+    print(f"\n[INFO] 数据库路径: {args.db}")
+    print(f"[INFO] Study 名称: {args.study_name}\n")
 
     study = load_study(args.db, args.study_name)
     print_best_trial(study)
