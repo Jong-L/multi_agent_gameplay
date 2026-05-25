@@ -8,14 +8,9 @@
 
 logs/
 experiment_data/
-videos/
-curriculum_envs/
 
 runs/
 assets/
-godot-game/build*/
-godot-game\optuna-env/
-godot-game\build-multiagent/
 
 # Python cache files
 __pycache__/

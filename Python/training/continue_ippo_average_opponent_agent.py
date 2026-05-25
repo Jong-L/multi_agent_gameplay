@@ -71,7 +71,11 @@ class ContinueAverageOpponentAgentArgs(IppoPoolArgs):
     phase_name: str = "agent0_vs_average_opponents"
     save_model_path: Optional[str] = "saved_models/ippo_average_opponent_agent0_final"
     pool_checkpoint_dir: Optional[str] = "saved_models/ippo_average_opponent_checkpoints"
+<<<<<<< HEAD
     pool_final_timesteps: int = 1_000_0000
+=======
+    pool_final_timesteps: int = 5_000_000
+>>>>>>> a8f2e64396083729257a317ec62386ff5983c09f
     run_name: Optional[str] = "ippo_average_opponent_agent0"
     ppo_model_paths: list[Optional[str]] = None
 
