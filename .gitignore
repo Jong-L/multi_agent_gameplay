@@ -8,7 +8,6 @@
 
 logs/
 experiment_data/
-saved_models/
 videos/
 curriculum_envs/
 
