@@ -363,7 +363,7 @@ class IppoArgs:
     """IPPO 直接训练阶段：不保存中断点的额外训练步数"""
     pool_final_save_agent_ids: tuple = (0,)
     """IPPO 直接训练或对手池最终保存时，需要保存的 agent id"""
-    pool_eval_groups: int = 20
+    pool_eval_groups: int = 2
     """对比评价时随机抽取多少组对手 checkpoint"""
     pool_eval_episodes_per_group: int = 3
     """每组对手评价多少个 episode"""

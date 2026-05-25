@@ -4,6 +4,7 @@
 % 项目: Tiny Swords — Godot 2D 多智能体强化学习
 % ============================================================
 
+
 % ============================================================
 % Step 1: RL 核心思想 / 教材
 % ============================================================
@@ -314,6 +315,20 @@
   year={1999},
   url={https://api.semanticscholar.org/CorpusID:5730166}
 }
+%不同势函数对训练速度的影响，坏的反而影响训练
+@inproceedings{10.5555/2832581.2832737pbrs,
+author = {Gao, Yang and Toni, Francesca},
+title = {Potential based reward shaping for hierarchical reinforcement learning},
+year = {2015},
+isbn = {9781577357384},
+publisher = {AAAI Press},
+abstract = {Hierarchical Reinforcement Learning (HRL) outperforms many 'flat' Reinforcement Learning (RL) algorithms in some application domains. However, HRL may need longer time to obtain the optimal policy because of its large action space. Potential Based Reward Shaping (PBRS) has been widely used to incorporate heuristics into flat RL algorithms so as to reduce their exploration. In this paper, we investigate the integration of PBRS and HRL, and propose a new algorithm: PBRS-MAXQ- 0. We prove that under certain conditions, PBRS-MAXQ- 0 is guaranteed to converge. Empirical results show that PBRS-MAXQ-0 significantly outperforms MAXQ-0 given good heuristics, and can converge even when given misleading heuristics.},
+booktitle = {Proceedings of the 24th International Conference on Artificial Intelligence},
+pages = {3504–3510},
+numpages = {7},
+location = {Buenos Aires, Argentina},
+series = {IJCAI'15}
+}
 
 % ============================================================
 % 补充: GAE (引用键 schulman2015highdimensional)
@@ -360,6 +375,16 @@
   pages     = {2085--2087},
   year      = {2018},
   note      = {arXiv:1706.05296}
+}
+% mappo
+@misc{yu2022surprisingeffectivenessppocooperative,
+      title={The Surprising Effectiveness of PPO in Cooperative, Multi-Agent Games}, 
+      author={Chao Yu and Akash Velu and Eugene Vinitsky and Jiaxuan Gao and Yu Wang and Alexandre Bayen and Yi Wu},
+      year={2022},
+      eprint={2103.01955},
+      archivePrefix={arXiv},
+      primaryClass={cs.LG},
+      url={https://arxiv.org/abs/2103.01955}, 
 }
 
 % alpha go
@@ -737,4 +762,70 @@ author = {司鹏搏 and 吴兵 and 杨睿哲 and 李萌 and 孙艳华}
   journal={Advances in Neural Information Processing Systems 35},
   year={2022},
   url={https://api.semanticscholar.org/CorpusID:254128961}
+}
+
+
+%gdrl
+@article{beeching2021godotrlagents,
+  author={Beeching, Edward and Dibangoye, Jilles and Simonin, Olivier and Wolf, Christian},
+title = {Godot Reinforcement Learning Agents},
+journal = {arXiv preprint arXiv:2112.03636},
+year = {2021},
+}
+
+@article{bellemare2013arcade,
+  title={The Arcade Learning Environment: An Evaluation Platform for General Agents},
+  author={Bellemare, Marc G and Naddaf, Yavar and Veness, Joel and Bowling, Michael},
+  journal={Journal of Artificial Intelligence Research},
+  volume={47},
+  pages={253--279},
+  year={2013}
+}
+
+@misc{1606.01540Gym,
+  Author = {Greg Brockman and Vicki Cheung and Ludwig Pettersson and Jonas Schneider and John Schulman and Jie Tang and Wojciech Zaremba},
+  Title = {OpenAI Gym},
+  Year = {2016},
+  Eprint = {arXiv:1606.01540},
+}
+
+@misc{samvelyan2019starcraftmultiagentchallenge,
+      title={The StarCraft Multi-Agent Challenge}, 
+      author={Mikayel Samvelyan and Tabish Rashid and Christian Schroeder de Witt and Gregory Farquhar and Nantas Nardelli and Tim G. J. Rudner and Chia-Man Hung and Philip H. S. Torr and Jakob Foerster and Shimon Whiteson},
+      year={2019},
+      eprint={1902.04043},
+      archivePrefix={arXiv},
+      primaryClass={cs.LG},
+      url={https://arxiv.org/abs/1902.04043}, 
+}
+
+@misc{mordatch2018emergencegroundedcompositionallanguage,
+      title={Emergence of Grounded Compositional Language in Multi-Agent Populations}, 
+      author={Igor Mordatch and Pieter Abbeel},
+      year={2018},
+      eprint={1703.04908},
+      archivePrefix={arXiv},
+      primaryClass={cs.AI},
+      url={https://arxiv.org/abs/1703.04908}, 
+}
+
+@misc{juliani2020unitygeneralplatformintelligent,
+      title={Unity: A General Platform for Intelligent Agents}, 
+      author={Arthur Juliani and Vincent-Pierre Berges and Ervin Teng and Andrew Cohen and Jonathan Harper and Chris Elion and Chris Goy and Yuan Gao and Hunter Henry and Marwan Mattar and Danny Lange},
+      year={2020},
+      eprint={1809.02627},
+      archivePrefix={arXiv},
+      primaryClass={cs.LG},
+      url={https://arxiv.org/abs/1809.02627}, 
+}
+
+%不同网络架构的对比
+@misc{smirnov2025rlbenchnetrightnetworkright,
+      title={RLBenchNet: The Right Network for the Right Reinforcement Learning Task}, 
+      author={Ivan Smirnov and Shangding Gu},
+      year={2025},
+      eprint={2505.15040},
+      archivePrefix={arXiv},
+      primaryClass={cs.LG},
+      url={https://arxiv.org/abs/2505.15040}, 
 }
