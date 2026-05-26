@@ -1,0 +1,112 @@
+% === Table: Valid Mask Comparison ===
+\begin{table}[htbp]
+  \centering
+  \caption{\zihao{5} 有效位掩码对比：每回合总得分均值（4 智能体，100 万步）}
+  \label{tab:appendix_valid_mask}
+  \begin{tabular}{lcccc|c}
+    \toprule
+    方案 & 智能体0 & 智能体1 & 智能体2 & 智能体3 & 总平均 \\
+    \midrule
+    No Valid Mask & 75.2 & 72.5 & 65.9 & 41.0 & 254.7 \\
+    Use Valid Mask & 77.6 & 73.3 & 68.2 & 60.8 & 279.8 \\
+    \midrule
+    \multicolumn{6}{p{0.85\textwidth}}{\small 注：无有效掩码方案将缺失槽位填0，有效掩码方案为每个槽位增加valid标志位。
+    有效掩码总得分提高 9.9\%，其中智能体3改善最显著（48.3\%），
+    智能体2次之（3.5\%）。} \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+
+% === Table: Wall Strategy Comprehensive ===
+\begin{table}[htbp]
+  \centering
+  \caption{\zihao{5} 撞墙策略综合对比表}
+  \label{tab:appendix_wall_comprehensive}
+  
+  \textbf{(a) 稀疏惩罚力度扫描}
+  \vspace{4pt}
+  
+  \begin{tabular}{lcccc|c}
+    \toprule
+    惩罚值 & 智能体0 & 智能体1 & 智能体2 & 智能体3 & 撞墙次数 \\
+    \midrule
+    0.05 & 73.9 & 65.3 & 66.5 & 49.1 & 161.5 \\
+    0.5  & 58.8 & 60.8 & 52.3 & 37.6 & 114.8 \\
+    5.0  & 20.8 & 22.6 & 22.3 & -21.8 & 16.7 \\
+    \midrule
+    \multicolumn{6}{p{0.85\textwidth}}{%
+      \small 注：惩罚力度 0.5 在吃球得分与撞墙抑制之间取得最佳平衡（撞墙减少 29\%，得分基本持平）。
+      5.0 惩罚显著减少撞墙但导致过度保守。} \\
+    \bottomrule
+  \end{tabular}
+  
+  \vspace{12pt}
+  
+  \textbf{(b) 障碍物塑形方案对比}
+  \vspace{4pt}
+  
+  \begin{tabular}{lcccc|c}
+    \toprule
+    方案 & 智能体0 & 智能体1 & 智能体2 & 智能体3 & 撞墙次数 \\
+    \midrule
+    Sparse Penalty & 58.8 & 60.8 & 52.3 & 37.6 & 114.8 \\
+    Linear Potential & 59.9 & 54.7 & 51.0 & 37.8 & 52.6 \\
+    Inverse Prop Potential & 60.8 & 55.3 & 53.0 & 30.1 & 54.7 \\
+    Distance Penalty & 57.0 & 47.6 & 49.0 & 31.6 & 44.7 \\
+    \midrule
+    \multicolumn{6}{p{0.85\textwidth}}{%
+      \small 注：稀疏惩罚采用 0.5 碰撞惩罚无奖励塑形。线性势函数 $\Phi(s)=\frac{R_{\mathrm{wall}}}{r_{\mathrm{vision}}}d_{\min}-R_{\mathrm{wall}}$，
+      反比例势函数 $\Phi(s)=-\frac{1}{d_{\min}+\epsilon}$，距离惩罚每步给予 $-\frac{1}{d_{\min}+\epsilon}$。
+      距离惩罚撞墙最少但得分也最低；线性势函数综合表现最佳且满足PBRS最优策略不变性。} \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+
+% === Table: Curriculum Learning Stages ===
+\begin{table}[htbp]
+  \centering
+  \caption{\zihao{5} 课程学习阶段配置表}
+  \label{tab:appendix_curriculum}
+  \begin{tabular}{lllrrl}
+    \toprule
+    阶段 & 环境名称 & 新增要素 & 训练步数 & 累计步数 & 输出模型 \\
+    \midrule
+    S1 & s1-no-wall-for-ball        & 仅吃球       & 50万   & 50万   & mlp\_s1\_agent\_\{id\}.pt \\
+    S2 & s2-wall-and-ball          & 障碍物      & 100万  & 150万  & mlp\_s2\_agent\_\{id\}.pt \\
+    S3 & s3-enemy-and-ball         & 敌人        & 200万  & 350万  & mlp\_s3\_agent\_\{id\}.pt \\
+    S4 & s4-enemy-and-wall-and-ball & 障碍物      & 100万  & 450万  & mlp\_s4\_agent\_\{id\}.pt \\
+    Main & godot-game              & 非对称出生  & 50万   & 500万  & ppo\_agent\_\{id\}.pt \\
+    \bottomrule
+  \end{tabular}
+  \vspace{6pt}
+  
+  {\small 注：每个阶段 4 个智能体（agent\_0$\sim$agent\_3）独立训练，使用不同 build 目录和端口偏移，
+  确保完全并行。每阶段加载上一阶段模型，采用 MLP 网络 + Optuna 搜索后的超参数。
+  累计训练步数 500 万步。}
+\end{table}
+
+
+% === Table: S1 Network Architecture Comparison ===
+\begin{table}[htbp]
+  \centering
+  \caption{\zihao{5} 吃球任务（S1）网络架构对比（单智能体，最后 10 回合均值）}
+  \label{tab:appendix_s1_network}
+  \begin{tabular}{lcccc|cc}
+    \toprule
+    网络架构 & 智能体0 & 智能体1 & 智能体2 & 智能体3 & 总得分 & 吃球得分 \\
+    \midrule
+    MLP & 213.6 & 218.0 & 202.0 & 228.7 & 862.4 & 852.1 \\
+    Segmented MLP &  \textbf{251.8} & 222.1 & 233.5 & 233.3 &  \textbf{940.6} & 934.8 \\
+    GRU-MLP (96) & 243.5 & 212.0 & 196.5 & 242.4 & 894.4 & 884.0 \\
+    GRU-MLP (128) & 238.1 & 207.3 & 222.3 & 237.2 & 905.0 & 898.2 \\
+    \midrule
+    \multicolumn{7}{p{0.85\textwidth}}{%
+      \small 注：四种网络架构在 S1 吃球课程环境中各训练 50 万步。
+      MLP 使用两层全连接隐藏层，Segmented MLP 按观测槽位分段编码后拼接全连接层，
+      GRU-MLP 在分段拼接后增加 GRU 时序编码层。
+      吃球任务相对简单，各架构得分接近，未拉开显著差距。} \\
+    \bottomrule
+  \end{tabular}
+\end{table}

@@ -5,12 +5,22 @@
 .workbuddy/
 
 .vscode/
+.pytest_cache/
 
 logs/
-experiment_data/
 
 runs/
 assets/
+article/
+videos/
+data_analyze/
+
+# Godot build directories and optuna environment
+godot-game/build*/
+godot-game/optuna-env/
+
+# Curriculum environments
+curriculum_envs/
 
 # Python cache files
 __pycache__/

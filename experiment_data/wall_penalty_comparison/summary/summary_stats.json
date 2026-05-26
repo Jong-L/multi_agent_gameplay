@@ -1,0 +1,56 @@
+{
+  "0.05": {
+    "penalty_val": 0.05,
+    "n_runs": 5,
+    "n_episodes": 160,
+    "total_score_mean": 262.86525,
+    "total_score_std": 44.51135852158974,
+    "total_score_sem": 19.90608468502784,
+    "wall_count_mean": 161.56333333333333,
+    "wall_count_std": 61.21019740751264,
+    "ball_score_mean": 116.6125,
+    "ball_score_std": 3.9178876642905425,
+    "player_means": {
+      "p0": 75.365375,
+      "p1": 66.62325000000001,
+      "p2": 68.062875,
+      "p3": 53.118703125
+    }
+  },
+  "0.5": {
+    "penalty_val": 0.5,
+    "n_runs": 5,
+    "n_episodes": 160,
+    "total_score_mean": 266.882875,
+    "total_score_std": 47.134607076270136,
+    "total_score_sem": 21.079237103056528,
+    "wall_count_mean": 114.996875,
+    "wall_count_std": 51.05155289248678,
+    "ball_score_mean": 117.55,
+    "ball_score_std": 4.409931972264425,
+    "player_means": {
+      "p0": 69.596375,
+      "p1": 72.58659374999999,
+      "p2": 63.770624999999995,
+      "p3": 61.0259375
+    }
+  },
+  "5.0": {
+    "penalty_val": 5.0,
+    "n_runs": 5,
+    "n_episodes": 160,
+    "total_score_mean": 127.45231250000002,
+    "total_score_std": 28.01604377900891,
+    "total_score_sem": 12.529155670094804,
+    "wall_count_mean": 24.04145833333333,
+    "wall_count_std": 24.075144007552165,
+    "ball_score_mean": 104.15,
+    "ball_score_std": 12.38658548591984,
+    "player_means": {
+      "p0": 35.835828125,
+      "p1": 28.514625000000002,
+      "p2": 31.545187500000004,
+      "p3": 40.257322916666666
+    }
+  }
+}
