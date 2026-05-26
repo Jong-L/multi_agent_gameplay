@@ -12,6 +12,8 @@ Compare average scores across different network architectures
 
 import pandas as pd
 import matplotlib.pyplot as plt
+plt.rcParams['font.sans-serif'] = ['Microsoft YaHei']
+plt.rcParams['axes.unicode_minus'] = False
 import seaborn as sns
 import numpy as np
 from pathlib import Path
@@ -34,17 +36,17 @@ sns.set_context("paper", font_scale=1.3)
 # Colorblind-friendly palette
 NETWORK_COLORS = {
     'MLP':            '#0173B2',   # Blue
-    'Segmented MLP':  '#DE8F05',   # Orange
+    '分段MLP':  '#DE8F05',   # Orange
     'GRU-MLP 96':     '#029E73',   # Green
     'GRU-MLP 128':    '#D55E00',   # Vermillion
 }
 
-NETWORK_DISPLAY_ORDER = ['MLP', 'Segmented MLP', 'GRU-MLP 96', 'GRU-MLP 128']
+NETWORK_DISPLAY_ORDER = ['MLP', '分段MLP', 'GRU-MLP 96', 'GRU-MLP 128']
 
 # File pattern → display name mapping
 NETWORK_PATTERNS = {
     'MLP':            's1_mlp_*.csv',
-    'Segmented MLP':  's1_seg_mlp_*.csv',
+    '分段MLP':  's1_seg_mlp_*.csv',
     'GRU-MLP 96':     's1_96_gru_mlp_*.csv',
     'GRU-MLP 128':    's1_128_gru_mlp_*.csv',
 }
@@ -193,7 +195,7 @@ def plot_per_player_all_scores(network_data, save_path):
     Y-axis: mean ALL score types per episode.
     """
     fig, axes = plt.subplots(2, 2, figsize=(14, 10), dpi=150)
-    fig.suptitle('Per-Player Average Total Score vs Episode\n(All Reward Types)',
+    fig.suptitle('各智能体平均总得分随回合变化\n（所有奖励类型）',
                  fontsize=16, fontweight='bold', y=1.01)
     
     axes = axes.flatten()
@@ -227,9 +229,9 @@ def plot_per_player_all_scores(network_data, save_path):
             ax.fill_between(smoothed_ep, smoothed - band, smoothed + band,
                             alpha=0.25, color=NETWORK_COLORS[net_name], zorder=1)
         
-        ax.set_xlabel('Episode', fontsize=11)
-        ax.set_ylabel('Average Total Score', fontsize=11)
-        ax.set_title(f'Player {player_id}', fontsize=12, fontweight='bold')
+        ax.set_xlabel('回合', fontsize=11)
+        ax.set_ylabel('平均总得分', fontsize=11)
+        ax.set_title(f'智能体 {player_id}', fontsize=12, fontweight='bold')
         ax.legend(loc='upper left', fontsize=8, frameon=True)
         ax.set_xlim(0, None)
     
@@ -276,15 +278,15 @@ def plot_total_all_scores(network_data, save_path):
         ax.fill_between(smoothed_ep, smoothed - band, smoothed + band,
                         alpha=0.25, color=NETWORK_COLORS[net_name], zorder=1)
     
-    ax.set_xlabel('Episode', fontsize=12)
-    ax.set_ylabel('Total Score (All Players Sum)', fontsize=12)
-    ax.set_title('Total Score Comparison by Network Architecture\n(All Reward Types)',
+    ax.set_xlabel('回合', fontsize=12)
+    ax.set_ylabel('总得分（所有智能体之和）', fontsize=12)
+    ax.set_title('总得分对比——网络结构\n（所有奖励类型）',
                  fontsize=14, fontweight='bold')
-    ax.legend(loc='upper left', fontsize=10, frameon=True, title='Network')
+    ax.legend(loc='upper left', fontsize=10, frameon=True, title='网络结构')
     ax.set_xlim(0, None)
     
     # Statistics annotation
-    stats_text = "Mean Total Score:\n" + "\n".join(stats_parts)
+    stats_text = "平均总得分：\n" + "\n".join(stats_parts)
     ax.text(0.98, 0.02, stats_text,
             transform=ax.transAxes,
             verticalalignment='bottom',
@@ -305,7 +307,7 @@ def plot_per_player_ball_scores(network_data, save_path):
     Y-axis: mean BALL score per episode.
     """
     fig, axes = plt.subplots(2, 2, figsize=(14, 10), dpi=150)
-    fig.suptitle('Per-Player Average Ball Collection Score vs Episode',
+    fig.suptitle('各智能体平均采球得分随回合变化',
                  fontsize=16, fontweight='bold', y=1.01)
     
     axes = axes.flatten()
@@ -339,9 +341,9 @@ def plot_per_player_ball_scores(network_data, save_path):
             ax.fill_between(smoothed_ep, smoothed - band, smoothed + band,
                             alpha=0.25, color=NETWORK_COLORS[net_name], zorder=1)
         
-        ax.set_xlabel('Episode', fontsize=11)
-        ax.set_ylabel('Average Ball Score', fontsize=11)
-        ax.set_title(f'Player {player_id}', fontsize=12, fontweight='bold')
+        ax.set_xlabel('回合', fontsize=11)
+        ax.set_ylabel('平均采球得分', fontsize=11)
+        ax.set_title(f'智能体 {player_id}', fontsize=12, fontweight='bold')
         ax.legend(loc='upper left', fontsize=8, frameon=True)
         ax.set_xlim(0, None)
     
@@ -388,15 +390,15 @@ def plot_total_ball_scores(network_data, save_path):
         ax.fill_between(smoothed_ep, smoothed - band, smoothed + band,
                         alpha=0.25, color=NETWORK_COLORS[net_name], zorder=1)
     
-    ax.set_xlabel('Episode', fontsize=12)
-    ax.set_ylabel('Total Ball Score (All Players Sum)', fontsize=12)
-    ax.set_title('Total Ball Collection Score Comparison by Network Architecture',
+    ax.set_xlabel('回合', fontsize=12)
+    ax.set_ylabel('采球总得分（所有智能体之和）', fontsize=12)
+    ax.set_title('采球总得分对比——网络结构',
                  fontsize=14, fontweight='bold')
-    ax.legend(loc='upper left', fontsize=10, frameon=True, title='Network')
+    ax.legend(loc='upper left', fontsize=10, frameon=True, title='网络结构')
     ax.set_xlim(0, None)
     
     # Statistics annotation
-    stats_text = "Mean Ball Score:\n" + "\n".join(stats_parts)
+    stats_text = "平均采球得分：\n" + "\n".join(stats_parts)
     ax.text(0.98, 0.02, stats_text,
             transform=ax.transAxes,
             verticalalignment='bottom',

@@ -21,6 +21,9 @@ import numpy as np
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+# 全局中文字体配置
+plt.rcParams['font.sans-serif'] = ['Microsoft YaHei']
+plt.rcParams['axes.unicode_minus'] = False
 import seaborn as sns
 from pathlib import Path
 import sys
@@ -45,11 +48,11 @@ SUMMARY_DIR = os.path.join(BASE_DIR, "summary")
 SPARSE_TRUNCATE_EPISODE = 80
 
 SCHEMES = {
-    'LINEAR':           {'prefix': 'lrrs_',           'label': 'Linear',           'color': '#0173B2'},
-    'EXPONENTIAL':      {'prefix': 'exprs_',          'label': 'Exponential',      'color': '#DE8F05'},
-    'INVERSE':          {'prefix': 'invprs_',         'label': 'Inverse',          'color': '#029E73'},
-    'DISTANCE_REWARD':  {'prefix': 'distance_rs_',    'label': 'Distance Reward',   'color': '#CC78BC'},
-    'SPARSE':           {'prefix': 'sparse_',         'label': 'Sparse',            'color': '#F14CC1'},
+    'LINEAR':           {'prefix': 'lrrs_',           'label': '线性势函数',        'color': '#0173B2'},
+    'EXPONENTIAL':      {'prefix': 'exprs_',          'label': '指数势函数',        'color': '#DE8F05'},
+    'INVERSE':          {'prefix': 'invprs_',         'label': '反比势函数',        'color': '#029E73'},
+    'DISTANCE_REWARD':  {'prefix': 'distance_rs_',    'label': '距离奖励',          'color': '#CC78BC'},
+    'SPARSE':           {'prefix': 'sparse_',         'label': '稀疏奖励',          'color': '#F14CC1'},
 }
 BALL_SOURCES = ['collect_ball_A', 'collect_ball_B']
 
@@ -298,7 +301,7 @@ def plot_per_player(scheme_data, save_path, smooth_window):
     """
     setup_seaborn_style()
     fig, axes = plt.subplots(2, 2, figsize=(14, 10), dpi=150)
-    fig.suptitle('Per-Player Average Ball Reward by Shaping Scheme',
+    fig.suptitle('各智能体平均采球奖励——势函数方案对比',
                  fontsize=15, fontweight='bold', y=1.02)
     axes = axes.flatten()
 
@@ -340,9 +343,9 @@ def plot_per_player(scheme_data, save_path, smooth_window):
                          linewidth=2, ax=ax,
                          zorder=3)
 
-        ax.set_xlabel('Episode', fontsize=11)
-        ax.set_ylabel('Average Ball Reward', fontsize=11)
-        ax.set_title(f'Player {pid}', fontsize=12, fontweight='bold')
+        ax.set_xlabel('回合', fontsize=11)
+        ax.set_ylabel('平均采球奖励', fontsize=11)
+        ax.set_title(f'智能体 {pid}', fontsize=12, fontweight='bold')
         ax.legend(loc='upper left', fontsize=9, frameon=True, edgecolor='#cccccc')
         ax.set_xlim(0, None)
         ax.set_ylim(bottom=0)
@@ -362,7 +365,7 @@ def plot_total(scheme_data, save_path, smooth_window):
     setup_seaborn_style()
     fig, ax = plt.subplots(1, 1, figsize=(11, 6), dpi=150)
 
-    stats_text = "Mean Reward per Episode:\n"
+    stats_text = "每回合平均奖励：\n"
     for scheme_key, (df, sem_df, players) in scheme_data.items():
         episodes = df['episode_id'].values
         total = df['total_avg'].values
@@ -392,11 +395,11 @@ def plot_total(scheme_data, save_path, smooth_window):
         mean_val = np.mean(total)
         stats_text += f"  {SCHEMES[scheme_key]['label']}: {mean_val:.2f}\n"
 
-    ax.set_xlabel('Episode', fontsize=12)
-    ax.set_ylabel('Total Average Ball Reward (all players)', fontsize=12)
-    ax.set_title('Total Ball Collection Reward by Shaping Scheme',
+    ax.set_xlabel('回合', fontsize=12)
+    ax.set_ylabel('所有智能体平均采球奖励', fontsize=12)
+    ax.set_title('采球奖励总量——势函数方案对比',
                  fontsize=14, fontweight='bold')
-    ax.legend(loc='upper left', fontsize=10, frameon=True, title='Scheme',
+    ax.legend(loc='upper left', fontsize=10, frameon=True, title='方案',
               edgecolor='#cccccc')
     ax.set_xlim(0, None)
     ax.set_ylim(bottom=0)
@@ -497,9 +500,9 @@ def plot_individual_player_comparison(scheme_data, player_id, save_path, smooth_
                      linewidth=2.0, ax=ax,
                      zorder=3)
 
-    ax.set_xlabel('Episode', fontsize=12)
-    ax.set_ylabel(f'Player {player_id} Average Ball Reward', fontsize=12)
-    ax.set_title(f'Player {player_id} Ball Reward by Shaping Scheme',
+    ax.set_xlabel('回合', fontsize=12)
+    ax.set_ylabel(f'智能体 {player_id} 平均采球奖励', fontsize=12)
+    ax.set_title(f'智能体 {player_id} 采球奖励——势函数方案对比',
                  fontsize=14, fontweight='bold')
     ax.legend(loc='upper left', fontsize=10, frameon=True, edgecolor='#cccccc')
     ax.set_xlim(0, None)

@@ -36,10 +36,10 @@ DATA_DIR = Path(__file__).parent
 OUTPUT_DIR = DATA_DIR / "summary"
 OUTPUT_DIR.mkdir(exist_ok=True)
 
-NETWORK_ORDER = ['MLP', 'Segmented MLP', 'GRU-MLP 96', 'GRU-MLP 128']
+NETWORK_ORDER = ['MLP', '分段MLP', 'GRU-MLP 96', 'GRU-MLP 128']
 NETWORK_COLORS = {
     'MLP':            DEFAULT_PALETTE[0],  # #0173B2 blue
-    'Segmented MLP':  DEFAULT_PALETTE[1],  # #DE8F05 orange
+    '分段MLP':        DEFAULT_PALETTE[1],  # #DE8F05 orange
     'GRU-MLP 96':     DEFAULT_PALETTE[2],  # #029E73 green
     'GRU-MLP 128':    DEFAULT_PALETTE[3],  # #CC78BC pink
 }
@@ -55,7 +55,7 @@ def discover_files(prefix):
     """Discover files grouped by network type for a given prefix (s1/s4/sarl)."""
     patterns = {
         'MLP':            f'{prefix}_mlp_*.csv',
-        'Segmented MLP':  f'{prefix}_seg_mlp_*.csv',
+        '分段MLP':        f'{prefix}_seg_mlp_*.csv',
         'GRU-MLP 96':     f'{prefix}_96_gru_mlp_*.csv',
         'GRU-MLP 128':    f'{prefix}_128_gru_mlp_*.csv',
     }
@@ -182,9 +182,9 @@ def plot_s1_player_total(group_stats):
             gs = group_stats[net]; x = gs['episodes']
             xs, ys, yl, yu = prepare_curve(x, gs[f'{col}_mean'], gs[f'{col}_sem'], SMOOTH_WINDOW)
             plot_with_fill(ax, xs, ys, yl, yu, color=NETWORK_COLORS[net], label=net)
-        style_axes(ax, xlabel='Episode', ylabel='Average Total Score',
-                   title=f'Player {pid}', legend_kwargs={'loc': 'upper left', 'fontsize': 8})
-    fig.suptitle('S1: Per-Player Total Score by Network Architecture',
+        style_axes(ax, xlabel='回合', ylabel='平均总得分',
+                   title=f'智能体 {pid}', legend_kwargs={'loc': 'upper left', 'fontsize': 8})
+    fig.suptitle('S1：各智能体总得分——网络结构对比',
                  fontsize=16, fontweight='bold', y=1.01)
     plt.tight_layout()
     save_figure(fig, OUTPUT_DIR / "s1_player_total_score.png")
@@ -193,7 +193,7 @@ def plot_s1_player_total(group_stats):
 def plot_s1_total(group_stats):
     """1 plot: sum of all players total score."""
     fig, ax = plt.subplots(1, 1, figsize=(10, 6), dpi=150)
-    lines = ["Mean Total Score:"]
+    lines = ["平均总得分："]
     for net in PLOT_ORDER:
         if net not in group_stats: continue
         gs = group_stats[net]; x = gs['episodes']
@@ -201,9 +201,9 @@ def plot_s1_total(group_stats):
         plot_with_fill(ax, xs, ys, yl, yu, color=NETWORK_COLORS[net], label=net)
         lines.append(f"  {net}: {gs['total_mean'].mean():.1f}")
     add_stats_box(ax, "\n".join(lines), loc='upper left', fontsize=9)
-    style_axes(ax, xlabel='Episode', ylabel='Total Score (Sum of 4 Players)',
-               title='S1: Total Score by Network Architecture',
-               legend_kwargs={'loc': 'upper right', 'fontsize': 10, 'title': 'Network'})
+    style_axes(ax, xlabel='回合', ylabel='总得分（4智能体之和）',
+               title='S1：总得分——网络结构对比',
+               legend_kwargs={'loc': 'upper right', 'fontsize': 10, 'title': '网络结构'})
     plt.tight_layout()
     save_figure(fig, OUTPUT_DIR / "s1_total_score.png")
 
@@ -219,9 +219,9 @@ def plot_s1_player_ball(group_stats):
             gs = group_stats[net]; x = gs['episodes']
             xs, ys, yl, yu = prepare_curve(x, gs[f'{col}_mean'], gs[f'{col}_sem'], SMOOTH_WINDOW)
             plot_with_fill(ax, xs, ys, yl, yu, color=NETWORK_COLORS[net], label=net)
-        style_axes(ax, xlabel='Episode', ylabel='Average Ball Score',
-                   title=f'Player {pid}', legend_kwargs={'loc': 'upper left', 'fontsize': 8})
-    fig.suptitle('S1: Per-Player Ball Score by Network Architecture',
+        style_axes(ax, xlabel='回合', ylabel='平均采球得分',
+                   title=f'智能体 {pid}', legend_kwargs={'loc': 'upper left', 'fontsize': 8})
+    fig.suptitle('S1：各智能体采球得分——网络结构对比',
                  fontsize=16, fontweight='bold', y=1.01)
     plt.tight_layout()
     save_figure(fig, OUTPUT_DIR / "s1_player_ball_score.png")
@@ -230,7 +230,7 @@ def plot_s1_player_ball(group_stats):
 def plot_s1_ball_total(group_stats):
     """1 plot: sum of all players ball score."""
     fig, ax = plt.subplots(1, 1, figsize=(10, 6), dpi=150)
-    lines = ["Mean Ball Score:"]
+    lines = ["平均采球得分："]
     for net in PLOT_ORDER:
         if net not in group_stats: continue
         gs = group_stats[net]; x = gs['episodes']
@@ -238,9 +238,9 @@ def plot_s1_ball_total(group_stats):
         plot_with_fill(ax, xs, ys, yl, yu, color=NETWORK_COLORS[net], label=net)
         lines.append(f"  {net}: {gs['ball_mean'].mean():.1f}")
     add_stats_box(ax, "\n".join(lines), loc='upper left', fontsize=9)
-    style_axes(ax, xlabel='Episode', ylabel='Total Ball Score (Sum of 4 Players)',
-               title='S1: Ball Collection Score by Network Architecture',
-               legend_kwargs={'loc': 'upper right', 'fontsize': 10, 'title': 'Network'})
+    style_axes(ax, xlabel='回合', ylabel='采球总得分（4智能体之和）',
+               title='S1：采球得分——网络结构对比',
+               legend_kwargs={'loc': 'upper right', 'fontsize': 10, 'title': '网络结构'})
     plt.tight_layout()
     save_figure(fig, OUTPUT_DIR / "s1_total_ball_score.png")
 
@@ -259,9 +259,9 @@ def plot_s4_player_total(group_stats):
             gs = group_stats[net]; x = gs['episodes']
             xs, ys, yl, yu = prepare_curve(x, gs[f'{col}_mean'], gs[f'{col}_sem'], SMOOTH_WINDOW)
             plot_with_fill(ax, xs, ys, yl, yu, color=NETWORK_COLORS[net], label=net)
-        style_axes(ax, xlabel='Episode', ylabel='Average Total Score',
-                   title=f'Player {pid}', legend_kwargs={'loc': 'upper left', 'fontsize': 8})
-    fig.suptitle('S4: Per-Player Total Score by Network Architecture',
+        style_axes(ax, xlabel='回合', ylabel='平均总得分',
+                   title=f'智能体 {pid}', legend_kwargs={'loc': 'upper left', 'fontsize': 8})
+    fig.suptitle('S4：各智能体总得分——网络结构对比',
                  fontsize=16, fontweight='bold', y=1.01)
     plt.tight_layout()
     save_figure(fig, OUTPUT_DIR / "s4_player_total_score.png")
@@ -270,7 +270,7 @@ def plot_s4_player_total(group_stats):
 def plot_s4_total(group_stats):
     """1 plot: sum of all players total score."""
     fig, ax = plt.subplots(1, 1, figsize=(10, 6), dpi=150)
-    lines = ["Mean Total Score:"]
+    lines = ["平均总得分："]
     for net in PLOT_ORDER:
         if net not in group_stats: continue
         gs = group_stats[net]; x = gs['episodes']
@@ -278,9 +278,9 @@ def plot_s4_total(group_stats):
         plot_with_fill(ax, xs, ys, yl, yu, color=NETWORK_COLORS[net], label=net)
         lines.append(f"  {net}: {gs['total_mean'].mean():.1f}")
     add_stats_box(ax, "\n".join(lines), loc='upper left', fontsize=9)
-    style_axes(ax, xlabel='Episode', ylabel='Total Score (Sum of 4 Players)',
-               title='S4: Total Score by Network Architecture',
-               legend_kwargs={'loc': 'upper right', 'fontsize': 10, 'title': 'Network'})
+    style_axes(ax, xlabel='回合', ylabel='总得分（4智能体之和）',
+               title='S4：总得分——网络结构对比',
+               legend_kwargs={'loc': 'upper right', 'fontsize': 10, 'title': '网络结构'})
     plt.tight_layout()
     save_figure(fig, OUTPUT_DIR / "s4_total_score.png")
 
@@ -289,19 +289,19 @@ def plot_s4_total(group_stats):
 # Plotting: Sarl
 # ============================================================
 EVENT_LABELS = {
-    'total_score':          ('Total Score', 'sarl_total_score.png'),
-    'attack':               ('Attack Count', 'sarl_attack_count.png'),
-    'bear_damage':          ('Damage Taken', 'sarl_damage_taken.png'),
-    'cause_damage_to_enemy':('Damage Dealt', 'sarl_damage_dealt.png'),
-    'wall_collision':       ('Wall Collision Count', 'sarl_wall_collision.png'),
-    'kill_enemy':           ('Kill Count', 'sarl_kill_count.png'),
-    'died':                 ('Death Count', 'sarl_death_count.png'),
+    'total_score':          ('总得分', 'sarl_total_score.png'),
+    'attack':               ('攻击次数', 'sarl_attack_count.png'),
+    'bear_damage':          ('承受伤害', 'sarl_damage_taken.png'),
+    'cause_damage_to_enemy':('造成伤害', 'sarl_damage_dealt.png'),
+    'wall_collision':       ('撞墙次数', 'sarl_wall_collision.png'),
+    'kill_enemy':           ('击杀数', 'sarl_kill_count.png'),
+    'died':                 ('死亡数', 'sarl_death_count.png'),
 }
 
 def plot_sarl_metric(group_stats, metric, y_label, fname):
     """1 plot: single-agent metric."""
     fig, ax = plt.subplots(1, 1, figsize=(10, 6), dpi=150)
-    lines = [f"Mean {y_label}:"]
+    lines = [f"平均 {y_label}："]
     for net in PLOT_ORDER:
         if net not in group_stats: continue
         gs = group_stats[net]; x = gs['episodes']
@@ -309,9 +309,9 @@ def plot_sarl_metric(group_stats, metric, y_label, fname):
         plot_with_fill(ax, xs, ys, yl, yu, color=NETWORK_COLORS[net], label=net)
         lines.append(f"  {net}: {gs[f'{metric}_mean'].mean():.1f}")
     add_stats_box(ax, "\n".join(lines), loc='upper left', fontsize=9)
-    style_axes(ax, xlabel='Episode', ylabel=y_label,
-               title=f'Sarl: {y_label} by Network Architecture',
-               legend_kwargs={'loc': 'upper right', 'fontsize': 10, 'title': 'Network'})
+    style_axes(ax, xlabel='回合', ylabel=y_label,
+               title=f'Sarl：{y_label}——网络结构对比',
+               legend_kwargs={'loc': 'upper right', 'fontsize': 10, 'title': '网络结构'})
     plt.tight_layout()
     save_figure(fig, OUTPUT_DIR / fname)
 

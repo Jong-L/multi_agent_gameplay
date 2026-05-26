@@ -23,12 +23,16 @@
 """
 
 import pandas as pd
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
 from pathlib import Path
 import glob
 import sys
+import warnings
+warnings.filterwarnings('ignore', message='Glyph.*missing from current font')
 
 # ==============================================================================
 # Configuration
@@ -42,17 +46,21 @@ SMOOTH_WINDOW = 8
 sns.set_style("whitegrid")
 sns.set_context("paper", font_scale=1.3)
 
+# --- Font setup for CJK characters ---
+plt.rcParams['font.sans-serif'] = ['Microsoft YaHei']
+plt.rcParams['axes.unicode_minus'] = False
+
 NETWORK_COLORS = {
     'MLP':            '#0173B2',
-    'Segmented MLP':  '#DE8F05',
+    '分段MLP':  '#DE8F05',
     'GRU-MLP 96':     '#029E73',
     'GRU-MLP 128':    '#D55E00',
 }
-NETWORK_DISPLAY_ORDER = ['MLP', 'Segmented MLP', 'GRU-MLP 96', 'GRU-MLP 128']
+NETWORK_DISPLAY_ORDER = ['MLP', '分段MLP', 'GRU-MLP 96', 'GRU-MLP 128']
 
 NETWORK_PATTERNS = {
     'MLP':            's1_mlp_*.csv',
-    'Segmented MLP':  's1_seg_mlp_*.csv',
+    '分段MLP':  's1_seg_mlp_*.csv',
     'GRU-MLP 96':     's1_96_gru_mlp_*.csv',
     'GRU-MLP 128':    's1_128_gru_mlp_*.csv',
 }
@@ -61,18 +69,18 @@ PLAYER_IDS = [0, 1, 2, 3]
 # --- 三类得分来源 ---
 SOURCE_GROUPS = {
     'combat_kill': {
-        'label': 'Combat & Kill Score',
+        'label': '战斗与击杀得分',
         'sources': ['bear_damage', 'cause_damage_to_player',
                     'cause_damage_to_enemy', 'kill_enemy', 'kill_player'],
         'filename_prefix': '01',
     },
     'death_penalty': {
-        'label': 'Death & Damage Penalty',
+        'label': '死亡与伤害惩罚',
         'sources': ['died'],
         'filename_prefix': '02',
     },
     'wall_penalty': {
-        'label': 'Wall Collision Penalty',
+        'label': '撞墙惩罚',
         'sources': ['wall_collision'],
         'filename_prefix': '03',
     },
@@ -152,7 +160,7 @@ def plot_per_player(grp_key, grp_cfg, network_data, save_path):
     """2×2 subplots, one per player, 4 network curves."""
     fig, axes = plt.subplots(2, 2, figsize=(14, 10), dpi=150)
     fig.suptitle(
-        f'Per-Player Average {grp_cfg["label"]} vs Episode',
+        f'各智能体平均{grp_cfg["label"]}随回合变化',
         fontsize=16, fontweight='bold', y=1.01
     )
     axes = axes.flatten()
@@ -182,14 +190,15 @@ def plot_per_player(grp_key, grp_cfg, network_data, save_path):
             ax.fill_between(sm_ep, sm - band, sm + band,
                             alpha=0.25, color=NETWORK_COLORS[net_name], zorder=1)
 
-        ax.set_xlabel('Episode', fontsize=11)
+        ax.set_xlabel('回合', fontsize=11)
         ax.set_ylabel(grp_cfg['label'], fontsize=11)
-        ax.set_title(f'Player {player_id}', fontsize=12, fontweight='bold')
+        ax.set_title(f'智能体 {player_id}', fontsize=12, fontweight='bold')
         ax.legend(loc='upper left', fontsize=8, frameon=True)
         ax.set_xlim(0, None)
 
     plt.tight_layout()
     plt.savefig(save_path, dpi=300, bbox_inches='tight', facecolor='white')
+    plt.close(fig)
     print(f"Saved: {save_path}")
     return fig
 
@@ -224,16 +233,16 @@ def plot_total(grp_key, grp_cfg, network_data, save_path):
         ax.fill_between(sm_ep, sm - band, sm + band,
                         alpha=0.25, color=NETWORK_COLORS[net_name], zorder=1)
 
-    ax.set_xlabel('Episode', fontsize=12)
-    ax.set_ylabel(f'Total {grp_cfg["label"]}', fontsize=12)
+    ax.set_xlabel('回合', fontsize=12)
+    ax.set_ylabel(f'总体{grp_cfg["label"]}', fontsize=12)
     ax.set_title(
-        f'Total {grp_cfg["label"]} Comparison by Network Architecture',
+        f'总{grp_cfg["label"]}对比——网络结构',
         fontsize=14, fontweight='bold'
     )
-    ax.legend(loc='upper left', fontsize=10, frameon=True, title='Network')
+    ax.legend(loc='upper left', fontsize=10, frameon=True, title='网络结构')
     ax.set_xlim(0, None)
 
-    stats_text = f"Mean {grp_cfg['label']}:\n" + "\n".join(stats_parts)
+    stats_text = f"平均{grp_cfg['label']}：\n" + "\n".join(stats_parts)
     ax.text(0.98, 0.02, stats_text,
             transform=ax.transAxes,
             verticalalignment='bottom',
@@ -243,6 +252,7 @@ def plot_total(grp_key, grp_cfg, network_data, save_path):
 
     plt.tight_layout()
     plt.savefig(save_path, dpi=300, bbox_inches='tight', facecolor='white')
+    plt.close(fig)
     print(f"Saved: {save_path}")
     return fig
 

@@ -36,30 +36,33 @@ SMOOTH_WINDOW_RATIO = 0.05  # 5% of total episodes
 sns.set_style("whitegrid")
 sns.set_context("paper", font_scale=1.3)
 
+plt.rcParams['font.sans-serif'] = ['Microsoft YaHei', 'SimHei', 'DengXian']
+plt.rcParams['axes.unicode_minus'] = False
+
 NETWORK_COLORS = {
     'MLP':            '#0173B2',   # Blue
-    'Segmented MLP':  '#DE8F05',   # Orange
+    '分段MLP':  '#DE8F05',   # Orange
     'GRU-MLP 96':     '#029E73',   # Green
     'GRU-MLP 128':    '#D55E00',   # Vermillion
 }
 
-NETWORK_DISPLAY_ORDER = ['MLP', 'Segmented MLP', 'GRU-MLP 96', 'GRU-MLP 128']
+NETWORK_DISPLAY_ORDER = ['MLP', '分段MLP', 'GRU-MLP 96', 'GRU-MLP 128']
 
 NETWORK_PATTERNS = {
     'MLP':            'sarl_mlp_*.csv',
-    'Segmented MLP':  'sarl_seg_mlp_*.csv',
+    '分段MLP':  'sarl_seg_mlp_*.csv',
     'GRU-MLP 96':     'sarl_96_gru_mlp_*.csv',
     'GRU-MLP 128':    'sarl_128_gru_mlp_*.csv',
 }
 
 # Event sources to count (each row = one event)
 EVENT_SOURCES = {
-    'attack':               'Attack Count',
-    'bear_damage':          'Damage Taken',
-    'cause_damage_to_enemy':'Damage Dealt',
-    'wall_collision':       'Wall Collision',
-    'kill_enemy':           'Kill Count',
-    'died':                 'Death Count',
+    'attack':               '攻击次数',
+    'bear_damage':          '承受伤害',
+    'cause_damage_to_enemy':'造成伤害',
+    'wall_collision':       '撞墙次数',
+    'kill_enemy':           '击杀数',
+    'died':                 '死亡数',
 }
 
 # ==============================================================================
@@ -187,14 +190,14 @@ def plot_total_score(network_data, smooth_window, save_path):
         ax.fill_between(smoothed_ep, smoothed - band, smoothed + band,
                         alpha=0.25, color=NETWORK_COLORS[net_name], zorder=1)
 
-    ax.set_xlabel('Episode', fontsize=12)
-    ax.set_ylabel('Total Score', fontsize=12)
-    ax.set_title('Total Score Comparison by Network Architecture\n(Single-Agent Environment)',
+    ax.set_xlabel('回合', fontsize=12)
+    ax.set_ylabel('总得分', fontsize=12)
+    ax.set_title('总得分对比——网络结构\n（单智能体环境）',
                  fontsize=14, fontweight='bold')
-    ax.legend(loc='upper left', fontsize=10, frameon=True, title='Network')
+    ax.legend(loc='upper left', fontsize=10, frameon=True, title='网络结构')
     ax.set_xlim(0, None)
 
-    stats_text = "Mean Total Score:\n" + "\n".join(stats_parts)
+    stats_text = "平均总得分：\n" + "\n".join(stats_parts)
     ax.text(0.98, 0.02, stats_text,
             transform=ax.transAxes, verticalalignment='bottom',
             horizontalalignment='right',
@@ -238,14 +241,14 @@ def plot_event_count(network_data, source_key, y_label, title, smooth_window, sa
         ax.fill_between(smoothed_ep, smoothed - band, smoothed + band,
                         alpha=0.25, color=NETWORK_COLORS[net_name], zorder=1)
 
-    ax.set_xlabel('Episode', fontsize=12)
+    ax.set_xlabel('回合', fontsize=12)
     ax.set_ylabel(y_label, fontsize=12)
-    ax.set_title(f'{title} — Single-Agent Environment',
+    ax.set_title(f'{title}——单智能体环境',
                  fontsize=14, fontweight='bold')
-    ax.legend(loc='upper left', fontsize=10, frameon=True, title='Network')
+    ax.legend(loc='upper left', fontsize=10, frameon=True, title='网络结构')
     ax.set_xlim(0, None)
 
-    stats_text = f"Mean {y_label}:\n" + "\n".join(stats_parts)
+    stats_text = f"平均{y_label}：\n" + "\n".join(stats_parts)
     ax.text(0.98, 0.02, stats_text,
             transform=ax.transAxes, verticalalignment='bottom',
             horizontalalignment='right',
@@ -350,12 +353,12 @@ def main():
 
     # 2-6. Event counts
     event_plots = [
-        ('attack',               'Attack Count',          'Agent Attack Count vs Episode',           'sarl_02_attack_count.png'),
-        ('bear_damage',          'Damage Taken',          'Agent Damage Taken vs Episode',            'sarl_03_damage_taken.png'),
-        ('cause_damage_to_enemy','Damage Dealt',          'Agent Damage Dealt vs Episode',            'sarl_03b_damage_dealt.png'),
-        ('wall_collision',       'Wall Collision Count',  'Agent Wall Collision Count vs Episode',    'sarl_04_wall_collision.png'),
-        ('kill_enemy',           'Kill Count',            'Agent Kill Count vs Episode',              'sarl_05_kill_count.png'),
-        ('died',                 'Death Count',           'Agent Death Count vs Episode',             'sarl_06_death_count.png'),
+        ('attack',               '攻击次数',          '智能体攻击次数',           'sarl_02_attack_count.png'),
+        ('bear_damage',          '承受伤害',          '智能体承受伤害',            'sarl_03_damage_taken.png'),
+        ('cause_damage_to_enemy','造成伤害',          '智能体造成伤害',            'sarl_03b_damage_dealt.png'),
+        ('wall_collision',       '撞墙次数',  '智能体撞墙次数',    'sarl_04_wall_collision.png'),
+        ('kill_enemy',           '击杀数',            '智能体击杀数',              'sarl_05_kill_count.png'),
+        ('died',                 '死亡数',           '智能体死亡数',             'sarl_06_death_count.png'),
     ]
 
     for src, y_label, title, filename in event_plots:

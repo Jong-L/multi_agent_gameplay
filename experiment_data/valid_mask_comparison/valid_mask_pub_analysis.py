@@ -34,8 +34,8 @@ OUTPUT_DIR = DATA_DIR / "summary"
 OUTPUT_DIR.mkdir(exist_ok=True)
 
 MASK_NAMES = {
-    'no_valid_mask': 'No Valid Mask',
-    'use_valid_mask': 'Use Valid Mask',
+    'no_valid_mask': '无有效掩码',
+    'use_valid_mask': '使用有效掩码',
 }
 
 MASK_COLORS = {
@@ -125,10 +125,10 @@ def plot_player_total(group_stats):
             gs = group_stats[mask]; x = gs['episodes']
             xs, ys, yl, yu = prepare_curve(x, gs[f'{col}_mean'], gs[f'{col}_sem'], SMOOTH_WINDOW)
             plot_with_fill(ax, xs, ys, yl, yu, color=MASK_COLORS[mask], label=MASK_NAMES[mask])
-        style_axes(ax, xlabel='Episode', ylabel='Average Total Score',
-                   title=f'Player {pid}',
+        style_axes(ax, xlabel='回合', ylabel='平均总得分',
+                   title=f'智能体 {pid}',
                    legend_kwargs={'loc': 'upper left', 'fontsize': 9})
-    fig.suptitle('Player Average Total Score vs Episode (Valid Mask Comparison)',
+    fig.suptitle('各智能体平均总得分随回合变化（有效掩码对比）',
                  fontsize=16, fontweight='bold', y=1.01)
     plt.tight_layout()
     save_figure(fig, OUTPUT_DIR / "valid_mask_comparison_player_total_score.png")
@@ -137,7 +137,7 @@ def plot_player_total(group_stats):
 def plot_total_total(group_stats):
     """1 plot: sum of all players total score."""
     fig, ax = plt.subplots(1, 1, figsize=(10, 6), dpi=150)
-    lines = ["Mean Total Score:"]
+    lines = ["平均总得分："]
     for mask in MASK_ORDER:
         if mask not in group_stats: continue
         gs = group_stats[mask]; x = gs['episodes']
@@ -145,9 +145,9 @@ def plot_total_total(group_stats):
         plot_with_fill(ax, xs, ys, yl, yu, color=MASK_COLORS[mask], label=MASK_NAMES[mask])
         lines.append(f"  {MASK_NAMES[mask]}: {gs['total_mean'].mean():.1f}")
     add_stats_box(ax, "\n".join(lines), loc='upper left', fontsize=9)
-    style_axes(ax, xlabel='Episode', ylabel='Total Score (Sum of 4 Players)',
-               title='Total Score Comparison (Valid Mask)',
-               legend_kwargs={'loc': 'upper right', 'fontsize': 10, 'title': 'Mask Type'})
+    style_axes(ax, xlabel='回合', ylabel='总得分（4智能体之和）',
+               title='总得分对比（有效掩码）',
+               legend_kwargs={'loc': 'upper right', 'fontsize': 10, 'title': '掩码类型'})
     plt.tight_layout()
     save_figure(fig, OUTPUT_DIR / "valid_mask_comparison_total_score.png")
 
@@ -163,11 +163,11 @@ def plot_player_ball(group_stats):
             gs = group_stats[mask]; x = gs['episodes']
             xs, ys, yl, yu = prepare_curve(x, gs[f'{col}_mean'], gs[f'{col}_sem'], SMOOTH_WINDOW)
             plot_with_fill(ax, xs, ys, yl, yu, color=MASK_COLORS[mask], label=MASK_NAMES[mask])
-        style_axes(ax, xlabel='Episode', ylabel='Average Ball Score',
-                   title=f'Player {pid}',
+        style_axes(ax, xlabel='回合', ylabel='平均采球得分',
+                   title=f'智能体 {pid}',
                    legend_kwargs={'loc': 'upper left', 'fontsize': 9})
         ax.set_ylim(bottom=0)
-    fig.suptitle('Player Average Ball Score vs Episode (Valid Mask Comparison)',
+    fig.suptitle('各智能体平均采球得分随回合变化（有效掩码对比）',
                  fontsize=16, fontweight='bold', y=1.01)
     plt.tight_layout()
     save_figure(fig, OUTPUT_DIR / "valid_mask_comparison_player_ball_score.png")
@@ -176,7 +176,7 @@ def plot_player_ball(group_stats):
 def plot_total_ball(group_stats):
     """1 plot: sum of all players ball score."""
     fig, ax = plt.subplots(1, 1, figsize=(10, 6), dpi=150)
-    lines = ["Mean Ball Score:"]
+    lines = ["平均采球得分："]
     for mask in MASK_ORDER:
         if mask not in group_stats: continue
         gs = group_stats[mask]; x = gs['episodes']
@@ -184,9 +184,9 @@ def plot_total_ball(group_stats):
         plot_with_fill(ax, xs, ys, yl, yu, color=MASK_COLORS[mask], label=MASK_NAMES[mask])
         lines.append(f"  {MASK_NAMES[mask]}: {gs['ball_mean'].mean():.1f}")
     add_stats_box(ax, "\n".join(lines), loc='upper left', fontsize=9)
-    style_axes(ax, xlabel='Episode', ylabel='Total Ball Score (Sum of 4 Players)',
-               title='Ball Collection Score Comparison (Valid Mask)',
-               legend_kwargs={'loc': 'upper right', 'fontsize': 10, 'title': 'Mask Type'})
+    style_axes(ax, xlabel='回合', ylabel='采球总得分（4智能体之和）',
+               title='采球得分对比（有效掩码）',
+               legend_kwargs={'loc': 'upper right', 'fontsize': 10, 'title': '掩码类型'})
     ax.set_ylim(bottom=0)
     plt.tight_layout()
     save_figure(fig, OUTPUT_DIR / "valid_mask_comparison_total_ball_score.png")

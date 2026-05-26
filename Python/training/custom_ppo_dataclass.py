@@ -232,7 +232,7 @@ class IppoArgs:
     """Godot 游戏配置文件路径（.tres）"""
     n_parallel: int = 16
     """并行 Godot 进程数"""
-    seed: int = 1
+    seed: int = 0
     """随机种子"""
     show_window: bool = False
     """是否显示 Godot 窗口"""

@@ -34,20 +34,24 @@ SMOOTH_WINDOW_RATIO = 0.05  # 5% of total episodes
 sns.set_style("whitegrid")
 sns.set_context("paper", font_scale=1.3)
 
+# Chinese font config (must be after seaborn style, else seaborn overrides it)
+plt.rcParams['font.sans-serif'] = ['SimHei', 'Microsoft YaHei']
+plt.rcParams['axes.unicode_minus'] = False
+
 # Colorblind-friendly palette
 NETWORK_COLORS = {
     'MLP':            '#0173B2',   # Blue
-    'Segmented MLP':  '#DE8F05',   # Orange
+    '分段MLP':  '#DE8F05',   # Orange
     'GRU-MLP 96':     '#029E73',   # Green
     'GRU-MLP 128':    '#D55E00',   # Vermillion
 }
 
-NETWORK_DISPLAY_ORDER = ['MLP', 'Segmented MLP', 'GRU-MLP 96', 'GRU-MLP 128']
+NETWORK_DISPLAY_ORDER = ['MLP', '分段MLP', 'GRU-MLP 96', 'GRU-MLP 128']
 
 # File pattern → display name mapping (s4 only)
 NETWORK_PATTERNS = {
     'MLP':            's4_mlp_*.csv',
-    'Segmented MLP':  's4_seg_mlp_*.csv',
+    '分段MLP':  's4_seg_mlp_*.csv',
     'GRU-MLP 96':     's4_96_gru_mlp_*.csv',
     'GRU-MLP 128':    's4_128_gru_mlp_*.csv',
 }
@@ -181,7 +185,7 @@ def plot_per_player_all_scores(network_data, smooth_window, save_path):
     Y-axis: mean ALL score types per episode.
     """
     fig, axes = plt.subplots(2, 2, figsize=(14, 10), dpi=300)
-    fig.suptitle('Per-Player Average Total Score vs Episode\n(All Reward Types)',
+    fig.suptitle('各智能体平均总得分随回合变化\n（所有奖励类型）',
                  fontsize=16, fontweight='bold', y=1.01)
     
     axes = axes.flatten()
@@ -215,9 +219,9 @@ def plot_per_player_all_scores(network_data, smooth_window, save_path):
             ax.fill_between(smoothed_ep, smoothed - band, smoothed + band,
                             alpha=0.25, color=NETWORK_COLORS[net_name], zorder=1)
         
-        ax.set_xlabel('Episode', fontsize=11)
-        ax.set_ylabel('Average Total Score', fontsize=11)
-        ax.set_title(f'Player {player_id}', fontsize=12, fontweight='bold')
+        ax.set_xlabel('回合', fontsize=11)
+        ax.set_ylabel('平均总得分', fontsize=11)
+        ax.set_title(f'智能体 {player_id}', fontsize=12, fontweight='bold')
         ax.legend(loc='upper left', fontsize=8, frameon=True)
         ax.set_xlim(0, None)
     
@@ -265,21 +269,21 @@ def plot_total_all_scores(network_data, smooth_window, save_path):
         ax.fill_between(smoothed_ep, smoothed - band, smoothed + band,
                         alpha=0.25, color=NETWORK_COLORS[net_name], zorder=1)
     
-    ax.set_xlabel('Episode', fontsize=12)
-    ax.set_ylabel('Total Score (All Players Sum)', fontsize=12)
-    ax.set_title('Total Score Comparison by Network Architecture\n(All Reward Types) — S4 Environment',
+    ax.set_xlabel('回合', fontsize=12)
+    ax.set_ylabel('总得分（所有智能体之和）', fontsize=12)
+    ax.set_title('总得分对比——网络结构\n（所有奖励类型）——S4环境',
                  fontsize=14, fontweight='bold')
-    ax.legend(loc='upper left', fontsize=10, frameon=True, title='Network')
+    ax.legend(loc='upper left', fontsize=10, frameon=True, title='网络结构')
     ax.set_xlim(0, None)
     
     # Statistics annotation
-    stats_text = "Mean Total Score:\n" + "\n".join(stats_parts)
+    stats_text = "平均总得分：\n" + "\n".join(stats_parts)
     ax.text(0.98, 0.02, stats_text,
             transform=ax.transAxes,
             verticalalignment='bottom',
             horizontalalignment='right',
             bbox=dict(boxstyle='round', facecolor='white', alpha=0.9, edgecolor='gray'),
-            fontsize=9, family='monospace')
+            fontsize=9)
     
     plt.tight_layout()
     plt.savefig(save_path, dpi=300, bbox_inches='tight', facecolor='white')
