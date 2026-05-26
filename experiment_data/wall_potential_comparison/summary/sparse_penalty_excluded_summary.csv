@@ -1,0 +1,2 @@
+scheme,max_episodes,mean_total_original_score,mean_total_excluded_score,mean_total_wall_count,score_difference,player_0_original,player_0_excluded,player_0_walls,player_1_original,player_1_excluded,player_1_walls,player_2_original,player_2_excluded,player_2_walls,player_3_original,player_3_excluded,player_3_walls
+稀疏惩罚(0.5) - 排除距离惩罚,160,209.471,209.471,114.82374999999999,0.0,58.79575,58.79575,21.60125,60.771187499999996,60.771187499999996,23.4375,52.296875,52.296875,22.947499999999998,37.6071875,37.6071875,46.8375

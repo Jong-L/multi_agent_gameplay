@@ -31,8 +31,8 @@ MASK_COLORS = {
 }
 
 MASK_NAMES = {
-    'no_valid_mask': 'No Valid Mask',
-    'use_valid_mask': 'Use Valid Mask'
+    'no_valid_mask': '未启用有效掩码',
+    'use_valid_mask': '启用有效掩码'
 }
 
 # Ball collection sources
@@ -200,7 +200,7 @@ def plot_player_total_score_comparison(stats, save_path=None, smooth_window=5):
     
     # Create figure with 2x2 subplots
     fig, axes = plt.subplots(2, 2, figsize=(14, 10), dpi=150)
-    fig.suptitle('Player Average Total Score vs Episode and Valid Mask', 
+    fig.suptitle('各智能体平均总得分随回合变化（有效掩码对比）',
                  fontsize=16, fontweight='bold', y=1.02)
     
     axes = axes.flatten()
@@ -232,9 +232,9 @@ def plot_player_total_score_comparison(stats, save_path=None, smooth_window=5):
                         linewidth=2,
                         ax=ax)
         
-        ax.set_xlabel('Episode', fontsize=11)
-        ax.set_ylabel('Average Total Score', fontsize=11)
-        ax.set_title(f'Player {player_id}', fontsize=12, fontweight='bold')
+        ax.set_xlabel('回合', fontsize=11)
+        ax.set_ylabel('平均总得分', fontsize=11)
+        ax.set_title(f'智能体 {player_id}', fontsize=12, fontweight='bold')
         ax.legend(loc='upper left', fontsize=9, frameon=True)
         ax.set_xlim(0, None)
     
@@ -277,14 +277,14 @@ def plot_total_total_score_comparison(stats, save_path=None, smooth_window=5):
                     linewidth=2.5,
                     ax=ax)
     
-    ax.set_xlabel('Episode', fontsize=12)
-    ax.set_ylabel('Total Average Score', fontsize=12)
-    ax.set_title('Total Average Score vs Episode and Valid Mask', fontsize=14, fontweight='bold')
-    ax.legend(loc='upper left', fontsize=10, frameon=True, title='Valid Mask')
+    ax.set_xlabel('回合', fontsize=12)
+    ax.set_ylabel('总平均得分', fontsize=12)
+    ax.set_title('总得分对比——有效掩码', fontsize=14, fontweight='bold')
+    ax.legend(loc='upper left', fontsize=10, frameon=True, title='有效掩码')
     ax.set_xlim(0, None)
     
     # Add statistics annotation
-    stats_text = "Mean Total Score:\n"
+    stats_text = "平均总得分：\n"
     for mask_type in ['no_valid_mask', 'use_valid_mask']:
         if mask_type in stats:
             avg_score = stats[mask_type]['df']['total_total_score'].mean()
@@ -318,7 +318,7 @@ def plot_player_ball_score_comparison(stats, save_path=None, smooth_window=5):
     
     # Create figure with 2x2 subplots
     fig, axes = plt.subplots(2, 2, figsize=(14, 10), dpi=150)
-    fig.suptitle('Player Average Ball Collection Score vs Episode and Valid Mask', 
+    fig.suptitle('各智能体平均采球得分随回合变化（有效掩码对比）',
                  fontsize=16, fontweight='bold', y=1.02)
     
     axes = axes.flatten()
@@ -350,9 +350,9 @@ def plot_player_ball_score_comparison(stats, save_path=None, smooth_window=5):
                         linewidth=2,
                         ax=ax)
         
-        ax.set_xlabel('Episode', fontsize=11)
-        ax.set_ylabel('Average Ball Score', fontsize=11)
-        ax.set_title(f'Player {player_id}', fontsize=12, fontweight='bold')
+        ax.set_xlabel('回合', fontsize=11)
+        ax.set_ylabel('平均采球得分', fontsize=11)
+        ax.set_title(f'智能体 {player_id}', fontsize=12, fontweight='bold')
         ax.legend(loc='upper left', fontsize=9, frameon=True)
         ax.set_xlim(0, None)
         ax.set_ylim(bottom=0)
@@ -396,15 +396,15 @@ def plot_total_ball_score_comparison(stats, save_path=None, smooth_window=5):
                     linewidth=2.5,
                     ax=ax)
     
-    ax.set_xlabel('Episode', fontsize=12)
-    ax.set_ylabel('Total Average Ball Score', fontsize=12)
-    ax.set_title('Total Ball Collection Score vs Episode and Valid Mask', fontsize=14, fontweight='bold')
-    ax.legend(loc='upper left', fontsize=10, frameon=True, title='Valid Mask')
+    ax.set_xlabel('回合', fontsize=12)
+    ax.set_ylabel('总平均采球得分', fontsize=12)
+    ax.set_title('采球总得分对比——有效掩码', fontsize=14, fontweight='bold')
+    ax.legend(loc='upper left', fontsize=10, frameon=True, title='有效掩码')
     ax.set_xlim(0, None)
     ax.set_ylim(bottom=0)
     
     # Add statistics annotation
-    stats_text = "Mean Ball Collection Score:\n"
+    stats_text = "平均采球得分：\n"
     for mask_type in ['no_valid_mask', 'use_valid_mask']:
         if mask_type in stats:
             avg_score = stats[mask_type]['df']['total_ball_score'].mean()
@@ -485,8 +485,8 @@ def print_summary(stats):
         
         print(f"\n{MASK_NAMES[mask_type]}:")
         print(f"  Episodes: {data['max_episodes']}")
-        print(f"  Mean Total Score: {df['total_total_score'].mean():.2f}")
-        print(f"  Mean Ball Collection Score: {df['total_ball_score'].mean():.2f}")
+        print(f"  平均总得分： {df['total_total_score'].mean():.2f}")
+        print(f"  平均采球得分： {df['total_ball_score'].mean():.2f}")
         
         print("  Per-player stats:")
         for player_id in players:
@@ -496,7 +496,7 @@ def print_summary(stats):
 
 
 def main():
-    base_dir = r"D:\schoolTour\softwares\multi-agent-gameplay\logs\valid_mask_comparison"
+    base_dir = str(Path(__file__).parent)
     summary_dir = Path(base_dir) / "summary"
     summary_dir.mkdir(exist_ok=True)
     

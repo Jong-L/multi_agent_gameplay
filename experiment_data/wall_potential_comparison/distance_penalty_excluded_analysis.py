@@ -362,9 +362,9 @@ def print_summary(stats):
 
 
 def main():
-    base_dir = r"D:\schoolTour\softwares\multi-agent-gameplay\logs\wall_potential_comparison"
+    base_dir = str(Path(__file__).parent)
     summary_dir = Path(base_dir) / "summary"
-    summary_dir.mkdir(exist_ok=True)
+    summary_dir.mkdir(parents=True, exist_ok=True)
     
     print("="*70)
     print(f"{SCHEME_NAME} Analysis")

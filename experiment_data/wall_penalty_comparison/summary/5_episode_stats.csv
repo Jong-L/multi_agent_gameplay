@@ -1,4 +1,4 @@
-episode,p0_score,p0_walls,p1_score,p1_walls,p2_score,p2_walls,p3_score,p3_walls,total_score,total_walls
+episode_id,player_0_score,player_0_wall_count,player_1_score,player_1_wall_count,player_2_score,player_2_wall_count,player_3_score,player_3_wall_count,total_score,total_wall_count
 1,-42.690000000000005,11.6,-59.67999999999999,17.0,-61.69000000000002,17.0,-97.67000000000002,21.6,-261.73,67.2
 2,21.389999999999997,1.8,16.3,2.4,-8.650000000000002,10.2,-41.6,12.0,-12.560000000000006,26.4
 3,23.389999999999997,3.4,21.4,1.2,4.469999999999999,8.8,-38.53000000000001,10.4,10.729999999999983,23.8

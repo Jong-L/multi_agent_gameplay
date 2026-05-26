@@ -22,6 +22,11 @@ import sys
 sns.set_style("whitegrid")
 sns.set_context("paper", font_scale=1.3)
 
+# Set Chinese font support
+plt.rcParams['font.sans-serif'] = ['Microsoft YaHei', 'SimHei', 'Noto Sans SC']
+plt.rcParams['font.family'] = 'sans-serif'
+plt.rcParams['axes.unicode_minus'] = False
+
 # Color palette for penalty values (colorblind-friendly)
 PENALTY_COLORS = {
     '00p5': '#0173B2',    # Blue - 0.05
@@ -30,9 +35,9 @@ PENALTY_COLORS = {
 }
 
 PENALTY_NAMES = {
-    '00p5': 'Penalty=0.05',
-    '0p5': 'Penalty=0.5',
-    '5': 'Penalty=5.0'
+    '00p5': '惩罚值=0.05',
+    '0p5': '惩罚值=0.5',
+    '5': '惩罚值=5.0'
 }
 
 PENALTY_VALUES = {
@@ -202,7 +207,7 @@ def plot_player_score_comparison(stats, save_path=None, smooth_window=5):
     
     # Create figure with 2x2 subplots
     fig, axes = plt.subplots(2, 2, figsize=(14, 10), dpi=150)
-    fig.suptitle('Player Average Total Score vs Episode and Wall Penalty', 
+    fig.suptitle('各智能体平均总分 vs 回合与墙壁惩罚', 
                  fontsize=16, fontweight='bold', y=1.02)
     
     axes = axes.flatten()
@@ -234,9 +239,9 @@ def plot_player_score_comparison(stats, save_path=None, smooth_window=5):
                         linewidth=2,
                         ax=ax)
         
-        ax.set_xlabel('Episode', fontsize=11)
-        ax.set_ylabel('Average Total Score', fontsize=11)
-        ax.set_title(f'Player {player_id}', fontsize=12, fontweight='bold')
+        ax.set_xlabel('回合', fontsize=11)
+        ax.set_ylabel('平均总分', fontsize=11)
+        ax.set_title(f'智能体 {player_id}', fontsize=12, fontweight='bold')
         ax.legend(loc='upper left', fontsize=9, frameon=True)
         ax.set_xlim(0, None)
     
@@ -279,14 +284,14 @@ def plot_total_score_comparison(stats, save_path=None, smooth_window=5):
                     linewidth=2.5,
                     ax=ax)
     
-    ax.set_xlabel('Episode', fontsize=12)
-    ax.set_ylabel('Total Average Score', fontsize=12)
-    ax.set_title('Total Average Score vs Episode and Wall Penalty', fontsize=14, fontweight='bold')
-    ax.legend(loc='upper left', fontsize=10, frameon=True, title='Wall Penalty')
+    ax.set_xlabel('回合', fontsize=12)
+    ax.set_ylabel('总平均分', fontsize=12)
+    ax.set_title('总平均分 vs 回合与墙壁惩罚', fontsize=14, fontweight='bold')
+    ax.legend(loc='upper left', fontsize=10, frameon=True, title='墙壁惩罚')
     ax.set_xlim(0, None)
     
     # Add statistics annotation (positioned to avoid legend overlap)
-    stats_text = "Mean Total Score:\n"
+    stats_text = "平均总分：\n"
     for penalty_type in ['00p5', '0p5', '5']:
         if penalty_type in stats:
             avg_score = stats[penalty_type]['df']['total_score'].mean()
@@ -321,7 +326,7 @@ def plot_player_wall_count_comparison(stats, save_path=None, smooth_window=5):
     
     # Create figure with 2x2 subplots
     fig, axes = plt.subplots(2, 2, figsize=(14, 10), dpi=150)
-    fig.suptitle('Player Average Wall Collision Count vs Episode and Wall Penalty', 
+    fig.suptitle('各智能体平均撞墙次数 vs 回合与墙壁惩罚', 
                  fontsize=16, fontweight='bold', y=1.02)
     
     axes = axes.flatten()
@@ -353,9 +358,9 @@ def plot_player_wall_count_comparison(stats, save_path=None, smooth_window=5):
                         linewidth=2,
                         ax=ax)
         
-        ax.set_xlabel('Episode', fontsize=11)
-        ax.set_ylabel('Average Wall Collision Count', fontsize=11)
-        ax.set_title(f'Player {player_id}', fontsize=12, fontweight='bold')
+        ax.set_xlabel('回合', fontsize=11)
+        ax.set_ylabel('平均撞墙次数', fontsize=11)
+        ax.set_title(f'智能体 {player_id}', fontsize=12, fontweight='bold')
         ax.legend(loc='upper right', fontsize=9, frameon=True)
         ax.set_xlim(0, None)
         ax.set_ylim(bottom=0)
@@ -399,15 +404,15 @@ def plot_total_wall_count_comparison(stats, save_path=None, smooth_window=5):
                     linewidth=2.5,
                     ax=ax)
     
-    ax.set_xlabel('Episode', fontsize=12)
-    ax.set_ylabel('Total Average Wall Collision Count', fontsize=12)
-    ax.set_title('Total Average Wall Collision Count vs Episode and Penalty', fontsize=14, fontweight='bold')
-    ax.legend(loc='upper right', fontsize=10, frameon=True, title='Wall Penalty')
+    ax.set_xlabel('回合', fontsize=12)
+    ax.set_ylabel('总平均撞墙次数', fontsize=12)
+    ax.set_title('总平均撞墙次数 vs 回合与惩罚', fontsize=14, fontweight='bold')
+    ax.legend(loc='upper right', fontsize=10, frameon=True, title='墙壁惩罚')
     ax.set_xlim(0, None)
     ax.set_ylim(bottom=0)
     
     # Add statistics annotation (positioned to avoid legend overlap)
-    stats_text = "Mean Wall Collisions:\n"
+    stats_text = "平均撞墙次数：\n"
     for penalty_type in ['00p5', '0p5', '5']:
         if penalty_type in stats:
             avg_count = stats[penalty_type]['df']['total_wall_count'].mean()
@@ -499,7 +504,7 @@ def print_summary(stats):
 
 
 def main():
-    base_dir = r"D:\schoolTour\softwares\multi-agent-gameplay\logs\wall_potential_comparison"
+    base_dir = r"D:\schoolTour\softwares\multi-agent-gameplay\experiment_data\wall_penalty_comparison"
     summary_dir = Path(base_dir) / "summary"
     summary_dir.mkdir(exist_ok=True)
     

@@ -15,9 +15,11 @@ Reallocated global_strs (elt_size=200001) to 20 items from 10.
 Reallocated glb_str_end (elt_size=4) to 20 items from 10.
 Reallocated singl_function (elt_size=4) to 100 items from 50.
 Database file #1: references.bib
+Warning--I didn't find a database entry for "Deng_2022ppad"
+Warning--I didn't find a database entry for "daskalakis2021independentpolicygradientmethods"
 You've used 47 entries,
             5374 wiz_defined-function locations,
-            1352 strings with 19882 characters,
+            1355 strings with 19954 characters,
 and the built_in function-call counts, 505755 in all, are:
 = -- 9820
 > -- 59539
@@ -56,3 +58,4 @@ warning$ -- 0
 while$ -- 1287
 width$ -- 0
 write$ -- 703
+(There were 2 warnings)

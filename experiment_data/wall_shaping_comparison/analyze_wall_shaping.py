@@ -33,30 +33,30 @@ warnings.filterwarnings('ignore')
 # ============================================================
 # 配置
 # ============================================================
-BASE_DIR = Path(r"D:\schoolTour\softwares\multi-agent-gameplay\logs\wall_shaping_comparison")
+BASE_DIR = Path(__file__).parent
 SUMMARY_DIR = BASE_DIR / "summary"
 SUMMARY_DIR.mkdir(parents=True, exist_ok=True)
 
 # 所有实验方案
 SCHEMES = {
     'wall_min': {
-        'label': 'Wall Min (Nearest)',
+        'label': '墙距最小值(最近)',
         'prefix': 'wall_min_',
     },
     'wall_average': {
-        'label': 'Wall Average',
+        'label': '墙距平均值',
         'prefix': 'wall_average_',
     },
     'wall_weighted_average': {
-        'label': 'Wall Weighted Avg',
+        'label': '墙距加权平均值',
         'prefix': 'wall_wieghted_average_',  # 注意拼写typo
     },
     'wall_distance_penalty': {
-        'label': 'Distance Penalty',
+        'label': '距离惩罚',
         'prefix': 'wall_distance_penalty_',
     },
     'wall_sparse': {
-        'label': 'Sparse Penalty',
+        'label': '稀疏惩罚',
         'prefix': 'wall_sparse_',
     },
 }
@@ -364,7 +364,8 @@ def setup_style():
     sns.set_context("paper", font_scale=1.2)
     plt.rcParams.update({
         'font.family': 'sans-serif',
-        'font.sans-serif': ['DejaVu Sans', 'Arial', 'Helvetica'],
+        'font.sans-serif': ['Microsoft YaHei', 'SimHei', 'DejaVu Sans', 'Arial'],
+        'axes.unicode_minus': False,
         'axes.titlesize': 13,
         'axes.labelsize': 11,
         'legend.fontsize': 8.5,
@@ -412,9 +413,9 @@ def plot_player_metric(scheme_averages, scheme_order, schemes_dict,
                         linewidth=2.0,
                         ax=ax)
         
-        ax.set_xlabel('Episode', fontsize=11)
+        ax.set_xlabel('回合', fontsize=11)
         ax.set_ylabel(ylabel, fontsize=11)
-        ax.set_title(f'Player {player_id}', fontsize=12, fontweight='bold')
+        ax.set_title(f'智能体 {player_id}', fontsize=12, fontweight='bold')
         ax.legend(loc=legend_loc, fontsize=8, frameon=True, framealpha=0.9)
         ax.set_xlim(0, global_max)
         if ylim_bottom is not None:
@@ -429,7 +430,7 @@ def plot_player_metric(scheme_averages, scheme_order, schemes_dict,
 def plot_total_metric(scheme_averages, scheme_order, schemes_dict,
                       global_max, save_path, metric='all_ball',
                       ylabel='', title='', legend_loc='upper left',
-                      ylim_bottom=None, stats_prefix='Mean:'):
+                      ylim_bottom=None, stats_prefix='平均值：'):
     """
     通用: 所有玩家的聚合指标 vs 回合数
     1图，每条曲线对应一个scheme
@@ -457,11 +458,11 @@ def plot_total_metric(scheme_averages, scheme_order, schemes_dict,
                     linewidth=2.5,
                     ax=ax)
     
-    ax.set_xlabel('Episode', fontsize=12)
+    ax.set_xlabel('回合', fontsize=12)
     ax.set_ylabel(ylabel, fontsize=12)
     ax.set_title(title, fontsize=14, fontweight='bold')
     ax.legend(loc=legend_loc, fontsize=9.5, frameon=True, framealpha=0.9,
-             title='Wall Shaping Scheme')
+             title='势函数方案')
     ax.set_xlim(0, global_max)
     if ylim_bottom is not None:
         ax.set_ylim(bottom=ylim_bottom)
@@ -523,8 +524,8 @@ def main():
     plot_player_metric(
         scheme_averages_all, all_order, all_schemes_dict, common_ep_all,
         SUMMARY_DIR / "player_ball_score_comparison.png",
-        metric='ball', ylabel='Avg Ball Score',
-        title='Average Ball Collection Score by Player\n(All Wall Shaping Schemes)',
+        metric='ball', ylabel='平均吃球得分',
+        title='各智能体平均吃球得分\n(所有势函数方案)',
         legend_loc='upper left', ylim_bottom=0
     )
     
@@ -532,17 +533,17 @@ def main():
     plot_total_metric(
         scheme_averages_all, all_order, all_schemes_dict, common_ep_all,
         SUMMARY_DIR / "total_ball_score_comparison.png",
-        metric='all_ball', ylabel='Average Ball Collection Score (All Players)',
-        title='Total Ball Collection Score: All Wall Shaping Schemes',
-        legend_loc='upper left', ylim_bottom=0, stats_prefix='Mean Ball Score:'
+        metric='all_ball', ylabel='所有智能体平均吃球得分',
+        title='总吃球得分：所有势函数方案',
+        legend_loc='upper left', ylim_bottom=0, stats_prefix='平均吃球得分：'
     )
     
     # A3: 各玩家碰墙次数
     plot_player_metric(
         scheme_averages_all, all_order, all_schemes_dict, common_ep_all,
         SUMMARY_DIR / "player_wall_count_comparison.png",
-        metric='wall', ylabel='Avg Wall Collisions',
-        title='Average Wall Collision Count by Player\n(All Wall Shaping Schemes)',
+        metric='wall', ylabel='平均撞墙次数',
+        title='各智能体平均撞墙次数\n(所有势函数方案)',
         legend_loc='upper right', ylim_bottom=0
     )
     
@@ -550,9 +551,9 @@ def main():
     plot_total_metric(
         scheme_averages_all, all_order, all_schemes_dict, common_ep_all,
         SUMMARY_DIR / "total_wall_count_comparison.png",
-        metric='all_wall', ylabel='Average Wall Collision Count (All Players)',
-        title='Total Wall Collision Count: All Wall Shaping Schemes',
-        legend_loc='upper right', ylim_bottom=0, stats_prefix='Mean Wall Collisions:'
+        metric='all_wall', ylabel='所有智能体平均撞墙次数',
+        title='总撞墙次数：所有势函数方案',
+        legend_loc='upper right', ylim_bottom=0, stats_prefix='平均撞墙次数：'
     )
     
     # =============================================
@@ -580,8 +581,8 @@ def main():
     plot_player_metric(
         scheme_averages_new, new_order, new_schemes_dict, common_ep_new,
         SUMMARY_DIR / "new_schemes_player_ball.png",
-        metric='ball', ylabel='Avg Ball Score',
-        title='Distance Penalty vs Sparse Penalty\n(Ball Collection Score by Player)',
+        metric='ball', ylabel='平均吃球得分',
+        title='距离惩罚 vs 稀疏惩罚\n(各智能体吃球得分)',
         legend_loc='upper left', ylim_bottom=0
     )
     
@@ -589,17 +590,17 @@ def main():
     plot_total_metric(
         scheme_averages_new, new_order, new_schemes_dict, common_ep_new,
         SUMMARY_DIR / "new_schemes_total_ball.png",
-        metric='all_ball', ylabel='Average Ball Collection Score (All Players)',
-        title='Distance Penalty vs Sparse Penalty\n(Total Ball Collection Score)',
-        legend_loc='upper left', ylim_bottom=0, stats_prefix='Mean Ball Score:'
+        metric='all_ball', ylabel='所有智能体平均吃球得分',
+        title='距离惩罚 vs 稀疏惩罚\n(总吃球得分)',
+        legend_loc='upper left', ylim_bottom=0, stats_prefix='平均吃球得分：'
     )
     
     # B3: 新增方案 - 各玩家碰墙次数
     plot_player_metric(
         scheme_averages_new, new_order, new_schemes_dict, common_ep_new,
         SUMMARY_DIR / "new_schemes_player_wall.png",
-        metric='wall', ylabel='Avg Wall Collisions',
-        title='Distance Penalty vs Sparse Penalty\n(Wall Collision Count by Player)',
+        metric='wall', ylabel='平均撞墙次数',
+        title='距离惩罚 vs 稀疏惩罚\n(各智能体撞墙次数)',
         legend_loc='upper right', ylim_bottom=0
     )
     
@@ -607,9 +608,9 @@ def main():
     plot_total_metric(
         scheme_averages_new, new_order, new_schemes_dict, common_ep_new,
         SUMMARY_DIR / "new_schemes_total_wall.png",
-        metric='all_wall', ylabel='Average Wall Collision Count (All Players)',
-        title='Distance Penalty vs Sparse Penalty\n(Total Wall Collision Count)',
-        legend_loc='upper right', ylim_bottom=0, stats_prefix='Mean Wall Collisions:'
+        metric='all_wall', ylabel='所有智能体平均撞墙次数',
+        title='距离惩罚 vs 稀疏惩罚\n(总撞墙次数)',
+        legend_loc='upper right', ylim_bottom=0, stats_prefix='平均撞墙次数：'
     )
     
     # =============================================

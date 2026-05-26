@@ -6,6 +6,8 @@ Shows which specific behaviors improved with valid mask
 
 import pandas as pd
 import matplotlib.pyplot as plt
+plt.rcParams['font.sans-serif'] = ['Microsoft YaHei']
+plt.rcParams['axes.unicode_minus'] = False
 import seaborn as sns
 import numpy as np
 from pathlib import Path
@@ -22,8 +24,8 @@ MASK_COLORS = {
 }
 
 MASK_NAMES = {
-    'no_valid_mask': 'No Valid Mask',
-    'use_valid_mask': 'Use Valid Mask'
+    'no_valid_mask': '无有效掩码',
+    'use_valid_mask': '使用有效掩码'
 }
 
 # Reward sources to analyze
@@ -132,12 +134,12 @@ def plot_source_comparison(no_mask_df, use_mask_df, save_path=None):
     # Create comparison dataframe
     comparison_df = pd.DataFrame({
         'Source': sources,
-        'No Valid Mask': no_mask_means,
-        'Use Valid Mask': use_mask_means
+        '无有效掩码': no_mask_means,
+        '使用有效掩码': use_mask_means
     })
     
     # Calculate differences
-    comparison_df['Difference'] = comparison_df['Use Valid Mask'] - comparison_df['No Valid Mask']
+    comparison_df['差值'] = comparison_df['使用有效掩码'] - comparison_df['无有效掩码']
     comparison_df['Improvement'] = comparison_df['Difference'].apply(lambda x: '↑' if x > 0 else '↓' if x < 0 else '-')
     
     # Create figure with 2 subplots
@@ -148,14 +150,14 @@ def plot_source_comparison(no_mask_df, use_mask_df, save_path=None):
     x = np.arange(len(sources))
     width = 0.35
     
-    bars1 = ax1.bar(x - width/2, no_mask_means, width, label='No Valid Mask', 
+    bars1 = ax1.bar(x - width/2, no_mask_means, width, label='无有效掩码', 
                     color=MASK_COLORS['no_valid_mask'], alpha=0.8)
-    bars2 = ax1.bar(x + width/2, use_mask_means, width, label='Use Valid Mask', 
+    bars2 = ax1.bar(x + width/2, use_mask_means, width, label='使用有效掩码', 
                     color=MASK_COLORS['use_valid_mask'], alpha=0.8)
     
-    ax1.set_xlabel('Reward Source', fontsize=11)
-    ax1.set_ylabel('Average Value per Episode', fontsize=11)
-    ax1.set_title('Player 3: Reward Source Comparison', fontsize=13, fontweight='bold')
+    ax1.set_xlabel('奖励来源', fontsize=11)
+    ax1.set_ylabel('每回合平均值', fontsize=11)
+    ax1.set_title('智能体3：奖励来源对比', fontsize=13, fontweight='bold')
     ax1.set_xticks(x)
     ax1.set_xticklabels([s.replace('_', '\n') for s in sources], rotation=45, ha='right', fontsize=9)
     ax1.legend(loc='upper right')
@@ -167,9 +169,9 @@ def plot_source_comparison(no_mask_df, use_mask_df, save_path=None):
     colors = ['#27AE60' if d > 0 else '#E74C3C' for d in comparison_df['Difference']]
     bars = ax2.bar(x, comparison_df['Difference'], color=colors, alpha=0.8)
     
-    ax2.set_xlabel('Reward Source', fontsize=11)
-    ax2.set_ylabel('Difference (Use - No Valid Mask)', fontsize=11)
-    ax2.set_title('Player 3: Improvement with Valid Mask', fontsize=13, fontweight='bold')
+    ax2.set_xlabel('奖励来源', fontsize=11)
+    ax2.set_ylabel('差值（使用-无有效掩码）', fontsize=11)
+    ax2.set_title('智能体3：有效掩码带来的提升', fontsize=13, fontweight='bold')
     ax2.set_xticks(x)
     ax2.set_xticklabels([s.replace('_', '\n') for s in sources], rotation=45, ha='right', fontsize=9)
     ax2.axhline(y=0, color='black', linestyle='-', linewidth=0.5)
@@ -220,18 +222,18 @@ def plot_source_timeline(no_mask_df, use_mask_df, save_path=None):
             use_mask_smooth = use_mask_values
             episodes = no_mask_df['episode_id'].values
         
-        sns.lineplot(x=episodes, y=no_mask_smooth, label='No Valid Mask', 
+        sns.lineplot(x=episodes, y=no_mask_smooth, label='无有效掩码', 
                     color=MASK_COLORS['no_valid_mask'], linewidth=2, ax=ax)
-        sns.lineplot(x=episodes, y=use_mask_smooth, label='Use Valid Mask', 
+        sns.lineplot(x=episodes, y=use_mask_smooth, label='使用有效掩码', 
                     color=MASK_COLORS['use_valid_mask'], linewidth=2, ax=ax)
         
-        ax.set_xlabel('Episode', fontsize=10)
+        ax.set_xlabel('回合', fontsize=10)
         ax.set_ylabel('Average Value', fontsize=10)
         ax.set_title(source.replace('_', ' ').title(), fontsize=11, fontweight='bold')
         ax.legend(loc='best', fontsize=8)
         ax.set_xlim(0, None)
     
-    plt.suptitle('Player 3: Key Reward Sources Timeline', fontsize=14, fontweight='bold', y=1.02)
+    plt.suptitle('智能体3：关键奖励来源时间线', fontsize=14, fontweight='bold', y=1.02)
     plt.tight_layout()
     
     if save_path:
@@ -307,9 +309,9 @@ def print_detailed_breakdown(no_mask_df, use_mask_df):
 
 
 def main():
-    base_dir = r"D:\schoolTour\softwares\multi-agent-gameplay\logs\valid_mask_comparison"
+    base_dir = str(Path(__file__).parent)
     summary_dir = Path(base_dir) / "summary"
-    summary_dir.mkdir(exist_ok=True)
+    summary_dir.mkdir(parents=True, exist_ok=True)
     
     print("="*80)
     print("Player 3 Reward Source Breakdown Analysis")

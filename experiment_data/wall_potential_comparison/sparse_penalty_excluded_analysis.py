@@ -24,7 +24,7 @@ sns.set_style("whitegrid")
 sns.set_context("paper", font_scale=1.3)
 
 # Color palette
-SCHEME_NAME = 'Sparse Penalty (0.5) - Excluded'
+SCHEME_NAME = '稀疏惩罚(0.5) - 排除距离惩罚'
 SCHEME_COLOR = '#0173B2'  # Blue
 
 
@@ -161,7 +161,7 @@ def plot_player_comparison(stats, save_path=None, smooth_window=10):
     players = stats['players']
     
     fig, axes = plt.subplots(2, 2, figsize=(14, 10), dpi=150)
-    fig.suptitle(f'Player Average Score vs Episode ({SCHEME_NAME})', 
+    fig.suptitle(f'各智能体平均得分随回合变化（{SCHEME_NAME}）', 
                  fontsize=16, fontweight='bold', y=1.02)
     
     axes = axes.flatten()
@@ -182,7 +182,7 @@ def plot_player_comparison(stats, save_path=None, smooth_window=10):
             smoothed_ep = episodes
         
         sns.lineplot(x=smoothed_ep, y=smoothed,
-                    label='With Distance Penalty',
+                    label='包含距离惩罚',
                     color='#DE8F05',  # Orange
                     linewidth=2,
                     ax=ax)
@@ -197,14 +197,14 @@ def plot_player_comparison(stats, save_path=None, smooth_window=10):
             smoothed_ep = episodes
         
         sns.lineplot(x=smoothed_ep, y=smoothed,
-                    label='Excluded Distance Penalty',
+                    label='排除距离惩罚',
                     color=SCHEME_COLOR,
                     linewidth=2,
                     ax=ax)
         
-        ax.set_xlabel('Episode', fontsize=11)
-        ax.set_ylabel('Average Score', fontsize=11)
-        ax.set_title(f'Player {player_id}', fontsize=12, fontweight='bold')
+        ax.set_xlabel('回合', fontsize=11)
+        ax.set_ylabel('平均得分', fontsize=11)
+        ax.set_title(f'智能体 {player_id}', fontsize=12, fontweight='bold')
         ax.legend(loc='upper left', fontsize=9, frameon=True)
         ax.set_xlim(0, None)
     
@@ -257,8 +257,8 @@ def plot_total_comparison(stats, save_path=None, smooth_window=10):
                 linewidth=2.5,
                 ax=ax)
     
-    ax.set_xlabel('Episode', fontsize=12)
-    ax.set_ylabel('Total Average Score', fontsize=12)
+    ax.set_xlabel('回合', fontsize=12)
+    ax.set_ylabel('总平均得分', fontsize=12)
     ax.set_title(f'Total Average Score vs Episode ({SCHEME_NAME})', fontsize=14, fontweight='bold')
     ax.legend(loc='upper left', fontsize=10, frameon=True)
     ax.set_xlim(0, None)
@@ -332,21 +332,21 @@ def print_summary(stats):
     players = stats['players']
     
     print(f"\nEpisodes: {stats['max_episodes']}")
-    print(f"Mean Total Score (With Distance Penalty): {df['total_original_score'].mean():.2f}")
-    print(f"Mean Total Score (Excluded Distance Penalty): {df['total_excluded_score'].mean():.2f}")
-    print(f"Score Difference: {df['total_original_score'].mean() - df['total_excluded_score'].mean():.2f}")
-    print(f"Mean Total Wall Collisions: {df['total_wall_count'].mean():.2f}")
+    print(f"包含距离惩罚平均总分： {df['total_original_score'].mean():.2f}")
+    print(f"排除距离惩罚平均总分： {df['total_excluded_score'].mean():.2f}")
+    print(f"得分差异： {df['total_original_score'].mean() - df['total_excluded_score'].mean():.2f}")
+    print(f"平均撞墙次数： {df['total_wall_count'].mean():.2f}")
     
-    print("\nPer-player stats:")
+    print("\n各智能体统计：")
     for player_id in players:
         orig = df[f'player_{player_id}_original_score'].mean()
         excl = df[f'player_{player_id}_excluded_score'].mean()
         walls = df[f'player_{player_id}_wall_count'].mean()
-        print(f"  Player {player_id}: Original={orig:.2f}, Excluded={excl:.2f}, Walls={walls:.2f}")
+        print(f"  智能体 {player_id}: 原始={orig:.2f}, 排除={excl:.2f}, 撞墙={walls:.2f}")
 
 
 def main():
-    base_dir = r"D:\schoolTour\softwares\multi-agent-gameplay\logs\wall_potential_comparison"
+    base_dir = str(Path(__file__).parent)
     summary_dir = Path(base_dir) / "summary"
     summary_dir.mkdir(exist_ok=True)
     

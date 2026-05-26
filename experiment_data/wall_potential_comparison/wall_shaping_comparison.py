@@ -36,10 +36,10 @@ TYPE_COLORS = {
 }
 
 TYPE_NAMES = {
-    'no_shaping': 'Sparse Penalty (0.5)',
-    'linear': 'Linear Potential',
-    'inverse': 'Inverse Prop Potential',
-    'distance': 'Distance Penalty'
+    'no_shaping': '稀疏惩罚(0.5)',
+    'linear': '线性势函数',
+    'inverse': '反比势函数',
+    'distance': '距离惩罚'
 }
 
 
@@ -209,7 +209,7 @@ def plot_player_score_comparison(stats, save_path=None, smooth_window=10):
     
     # Create figure with 2x2 subplots
     fig, axes = plt.subplots(2, 2, figsize=(14, 10), dpi=150)
-    fig.suptitle('Player Average Total Score vs Episode (Wall Shaping Comparison)', 
+    fig.suptitle('各智能体平均总得分随回合变化（势函数对比）', 
                  fontsize=16, fontweight='bold', y=1.02)
     
     axes = axes.flatten()
@@ -241,9 +241,9 @@ def plot_player_score_comparison(stats, save_path=None, smooth_window=10):
                         linewidth=2,
                         ax=ax)
         
-        ax.set_xlabel('Episode', fontsize=11)
-        ax.set_ylabel('Average Total Score', fontsize=11)
-        ax.set_title(f'Player {player_id}', fontsize=12, fontweight='bold')
+        ax.set_xlabel('回合', fontsize=11)
+        ax.set_ylabel('平均总得分', fontsize=11)
+        ax.set_title(f'智能体 {player_id}', fontsize=12, fontweight='bold')
         ax.legend(loc='upper left', fontsize=8, frameon=True)
         ax.set_xlim(0, None)
     
@@ -286,10 +286,10 @@ def plot_total_score_comparison(stats, save_path=None, smooth_window=10):
                     linewidth=2.5,
                     ax=ax)
     
-    ax.set_xlabel('Episode', fontsize=12)
+    ax.set_xlabel('回合', fontsize=12)
     ax.set_ylabel('Total Average Score', fontsize=12)
-    ax.set_title('Total Average Score vs Episode (Wall Shaping Comparison)', fontsize=14, fontweight='bold')
-    ax.legend(loc='upper left', fontsize=10, frameon=True, title='Wall Shaping Method')
+    ax.set_title('总平均得分随回合变化（势函数对比）', fontsize=14, fontweight='bold')
+    ax.legend(loc='upper left', fontsize=10, frameon=True, title='势函数方法')
     ax.set_xlim(0, None)
     
     # Add statistics annotation (positioned to avoid legend overlap)
@@ -328,7 +328,7 @@ def plot_player_wall_count_comparison(stats, save_path=None, smooth_window=10):
     
     # Create figure with 2x2 subplots
     fig, axes = plt.subplots(2, 2, figsize=(14, 10), dpi=150)
-    fig.suptitle('Player Average Wall Collision Count vs Episode (Wall Shaping Comparison)', 
+    fig.suptitle('各智能体平均撞墙次数随回合变化（势函数对比）', 
                  fontsize=16, fontweight='bold', y=1.02)
     
     axes = axes.flatten()
@@ -360,9 +360,9 @@ def plot_player_wall_count_comparison(stats, save_path=None, smooth_window=10):
                         linewidth=2,
                         ax=ax)
         
-        ax.set_xlabel('Episode', fontsize=11)
-        ax.set_ylabel('Average Wall Collision Count', fontsize=11)
-        ax.set_title(f'Player {player_id}', fontsize=12, fontweight='bold')
+        ax.set_xlabel('回合', fontsize=11)
+        ax.set_ylabel('平均撞墙次数', fontsize=11)
+        ax.set_title(f'智能体 {player_id}', fontsize=12, fontweight='bold')
         ax.legend(loc='upper right', fontsize=8, frameon=True)
         ax.set_xlim(0, None)
         ax.set_ylim(bottom=0)
@@ -406,10 +406,10 @@ def plot_total_wall_count_comparison(stats, save_path=None, smooth_window=10):
                     linewidth=2.5,
                     ax=ax)
     
-    ax.set_xlabel('Episode', fontsize=12)
-    ax.set_ylabel('Total Average Wall Collision Count', fontsize=12)
-    ax.set_title('Total Average Wall Collision Count vs Episode (Wall Shaping Comparison)', fontsize=14, fontweight='bold')
-    ax.legend(loc='upper right', fontsize=10, frameon=True, title='Wall Shaping Method')
+    ax.set_xlabel('回合', fontsize=12)
+    ax.set_ylabel('总平均撞墙次数', fontsize=12)
+    ax.set_title('总平均撞墙次数随回合变化（势函数对比）', fontsize=14, fontweight='bold')
+    ax.legend(loc='upper right', fontsize=10, frameon=True, title='势函数方法')
     ax.set_xlim(0, None)
     ax.set_ylim(bottom=0)
     
@@ -482,7 +482,7 @@ def save_summary_csv(stats, output_dir):
 def print_summary(stats):
     """Print summary statistics"""
     print("\n" + "="*70)
-    print("SUMMARY STATISTICS - Wall Shaping Comparison")
+    print("汇总统计 - 势函数对比")
     print("="*70)
     
     for type_name in ['no_shaping', 'linear', 'inverse', 'distance']:
@@ -498,7 +498,7 @@ def print_summary(stats):
         print(f"  Mean Total Score: {df['total_score'].mean():.2f}")
         print(f"  Mean Total Wall Collisions: {df['total_wall_count'].mean():.2f}")
         
-        print("  Per-player stats:")
+        print("  各智能体统计：")
         for player_id in players:
             score_col = f'player_{player_id}_score'
             wall_col = f'player_{player_id}_wall_count'
@@ -506,22 +506,22 @@ def print_summary(stats):
 
 
 def main():
-    base_dir = r"D:\schoolTour\softwares\multi-agent-gameplay\logs\wall_potential_comparison"
+    base_dir = str(Path(__file__).parent)
     summary_dir = Path(base_dir) / "summary"
     summary_dir.mkdir(exist_ok=True)
     
     print("="*70)
-    print("Wall Shaping Comparison Analysis (Seaborn Style)")
+    print("势函数对比分析（Seaborn风格）")
     print("="*70)
     
     # Step 1: Load data file paths
-    print("\n[1/6] Loading data file paths...")
+    print("\n[1/6] 加载数据文件路径...")
     data_files = load_data_files(base_dir)
     for tn, files in data_files.items():
         print(f"  {TYPE_NAMES[tn]}: {len(files)} files")
     
     # Step 2: Aggregate data
-    print("\n[2/6] Aggregating data...")
+    print("\n[2/6] 聚合数据...")
     aggregated = aggregate_data_by_type(data_files)
     
     if aggregated is None:
@@ -529,46 +529,46 @@ def main():
         return
     
     # Step 3: Compute episode statistics
-    print("\n[3/6] Computing episode statistics...")
+    print("\n[3/6] 计算回合统计...")
     stats = compute_episode_stats(aggregated)
     
     # Step 4: Save summary CSV
-    print("\n[4/6] Saving summary CSV files...")
+    print("\n[4/6] 保存汇总CSV文件...")
     summary_df = save_summary_csv(stats, base_dir)
     
     # Step 5: Generate plots
-    print("\n[5/6] Generating plots with Seaborn...")
+    print("\n[5/6] 使用Seaborn生成图表...")
     
     # Plot 1: Player score comparison
-    print("  Creating player score comparison...")
+    print("  创建智能体得分对比图...")
     fig1 = plot_player_score_comparison(stats, 
                                         save_path=summary_dir / "wall_shaping_player_score_comparison.png",
                                         smooth_window=10)
     
     # Plot 2: Total score comparison
-    print("  Creating total score comparison...")
+    print("  创建总分对比图...")
     fig2 = plot_total_score_comparison(stats, 
                                        save_path=summary_dir / "wall_shaping_total_score_comparison.png",
                                        smooth_window=10)
     
     # Plot 3: Player wall count comparison
-    print("  Creating player wall count comparison...")
+    print("  创建智能体撞墙次数对比图...")
     fig3 = plot_player_wall_count_comparison(stats, 
                                              save_path=summary_dir / "wall_shaping_player_wall_count_comparison.png",
                                              smooth_window=10)
     
     # Plot 4: Total wall count comparison
-    print("  Creating total wall count comparison...")
+    print("  创建总撞墙次数对比图...")
     fig4 = plot_total_wall_count_comparison(stats, 
                                             save_path=summary_dir / "wall_shaping_total_wall_count_comparison.png",
                                             smooth_window=10)
     
     # Step 6: Print summary
-    print("\n[6/6] Printing summary...")
+    print("\n[6/6] 打印汇总...")
     print_summary(stats)
     
     print("\n" + "="*70)
-    print("Analysis complete!")
+    print("分析完成！")
     print("="*70)
     print(f"\nGenerated files in {summary_dir}:")
     print("  - wall_shaping_player_score_comparison.png")
@@ -577,7 +577,7 @@ def main():
     print("  - wall_shaping_total_wall_count_comparison.png")
     print("  - *_episode_stats.csv (per-type episode data)")
     print("  - wall_shaping_summary.csv")
-    print("\nAll plots saved at 300 DPI for publication quality")
+    print("\n所有图表已保存为300 DPI出版级质量")
 
 
 if __name__ == "__main__":

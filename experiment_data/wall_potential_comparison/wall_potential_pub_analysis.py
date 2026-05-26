@@ -37,10 +37,10 @@ OUTPUT_DIR = DATA_DIR / "summary"
 OUTPUT_DIR.mkdir(exist_ok=True)
 
 TYPE_NAMES = {
-    'no_shaping': 'Sparse Penalty (0.5)',
-    'linear':     'Linear Potential',
-    'inverse':    'Inverse Prop Potential',
-    'distance':   'Distance Penalty',
+    'no_shaping': '稀疏惩罚(0.5)',
+    'linear':     '线性势函数',
+    'inverse':    '反比势函数',
+    'distance':   '距离惩罚',
 }
 
 TYPE_COLORS = {
@@ -175,11 +175,11 @@ def plot_player_scores(group_stats):
             plot_with_fill(ax, xs, ys, yl, yu,
                           color=TYPE_COLORS[type_name],
                           label=TYPE_NAMES[type_name])
-        style_axes(ax, xlabel='Episode', ylabel='Average Total Score',
-                   title=f'Player {pid}',
+        style_axes(ax, xlabel='回合', ylabel='平均总得分',
+                   title=f'智能体 {pid}',
                    legend_kwargs={'loc': 'upper left', 'fontsize': 8})
 
-    fig.suptitle('Player Average Total Score vs Episode (Wall Shaping Comparison)',
+    fig.suptitle('各智能体平均总得分 vs 回合（墙壁势函数对比）', 
                  fontsize=16, fontweight='bold', y=1.02)
     plt.tight_layout()
     save_figure(fig, OUTPUT_DIR / "wall_potential_comparison_player_score.png")
