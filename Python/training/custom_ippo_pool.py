@@ -1287,7 +1287,10 @@ def main() -> None:
         run_ippo_bootstrap_direct(args)
     elif args.run_mode == "pool_cycle":
         run_pool_cycle(args)
+<<<<<<< HEAD
     # 评估方法已经抽离到 pool_evaluate.py
+=======
+>>>>>>> 397661c67e2ddd0684da121c21254fcb707366c6
     elif args.run_mode == "evaluate":
         run_evaluation(args)
     elif args.run_mode == "full":

@@ -1,0 +1,6 @@
+[gd_resource type="FontVariation" format=3 uid="uid://cvo1kf4k8676w"]
+
+[ext_resource type="FontFile" uid="uid://dbu37r3755k7x" path="res://assets/VCR_OSD_MONO_1.001.ttf" id="1_yejfp"]
+
+[resource]
+base_font = ExtResource("1_yejfp")

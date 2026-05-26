@@ -5,6 +5,7 @@
 .workbuddy/
 
 .vscode/
+<<<<<<< HEAD
 .pytest_cache/
 
 logs/
@@ -21,6 +22,14 @@ godot-game/optuna-env/
 
 # Curriculum environments
 curriculum_envs/
+=======
+
+logs/
+experiment_data/
+
+runs/
+assets/
+>>>>>>> 397661c67e2ddd0684da121c21254fcb707366c6
 
 # Python cache files
 __pycache__/
