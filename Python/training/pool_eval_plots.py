@@ -1,8 +1,8 @@
 """
 Pool Evaluation Visualization
 ==============================
-Read the stats JSON produced by pool_evaluate.py and generate
-publication-quality comparison plots.
+从 pool_evaluate.py 生成的 stats JSON 读取数据，生成论文级对比图表。
+所有标签、标题、图例均使用中文。
 
 Usage:
   python Python/training/pool_eval_plots.py
@@ -15,6 +15,7 @@ import json
 import pathlib
 import sys
 
+import matplotlib
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mticker
@@ -29,18 +30,40 @@ from publication_plot_utils import (
     DEFAULT_PALETTE,
 )
 
-# ── defaults ──────────────────────────────────────────────────────────
+# ── 中文字体配置 ──────────────────────────────────────────────────────
+def _configure_fonts() -> None:
+    """确保 matplotlib 使用中文字体。"""
+    matplotlib.rcParams.update({
+        "font.sans-serif": ["Microsoft YaHei", "SimHei", "WenQuanYi Micro Hei", "DejaVu Sans"],
+        "font.family": "sans-serif",
+        "axes.unicode_minus": False,
+    })
+    # 清除字体缓存，避免旧缓存导致中文不显示
+    try:
+        matplotlib.font_manager._load_fontmanager(try_read_cache=False)
+    except Exception:
+        pass
+
+_configure_fonts()
+
+# ── 模型中英文映射 ────────────────────────────────────────────────────
+_MODEL_LABELS_MAP = {
+    "Direct":   "IPPO",
+    "Pool":     "对手池博弈",
+    "Average":  "虚拟博弈",
+}
+
+# ── 命令行参数 ────────────────────────────────────────────────────────
 _DEFAULT_STATS = "logs/ippo_pool_eval_stats.json"
 _DEFAULT_OUTPUT = "article/imgs/"
-_MODEL_LABELS_MAP = {"Direct": "IPPO", "Pool": "PFSP", "Average": "Fictitious Play"}
 
 
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--stats", default=_DEFAULT_STATS, help="stats JSON path")
-    parser.add_argument("--output-dir", default=_DEFAULT_OUTPUT, help="output directory for figures")
-    parser.add_argument("--prefix", default="eval_compare", help="output filename prefix")
-    parser.add_argument("--no-show", action="store_true", help="do not show figures")
+    parser.add_argument("--stats", default=_DEFAULT_STATS, help="stats JSON 路径")
+    parser.add_argument("--output-dir", default=_DEFAULT_OUTPUT, help="图片输出目录")
+    parser.add_argument("--prefix", default="eval_compare", help="输出文件名前缀")
+    parser.add_argument("--no-show", action="store_true", help="不弹出图片窗口")
     return parser.parse_args()
 
 
@@ -54,11 +77,10 @@ def _label(name: str) -> str:
 
 
 # ═══════════════════════════════════════════════════════════════════════
-#  Figure 1: Win Rate Comparison (bar chart with bootstrap CI)
+#  图1：胜率对比（柱状图 + Bootstrap 95% CI）
 # ═══════════════════════════════════════════════════════════════════════
 
 def plot_win_rate_comparison(stats: dict, output_dir: str, prefix: str) -> None:
-    """Bar chart comparing win rates across models with 95% bootstrap CI."""
     setup_style()
     models = stats["models"]
     labels = [_label(m["model_label"]) for m in models]
@@ -75,25 +97,23 @@ def plot_win_rate_comparison(stats: dict, output_dir: str, prefix: str) -> None:
                   capsize=6, color=colors, edgecolor="white", linewidth=0.8,
                   error_kw={"linewidth": 1.2, "ecolor": "#444444"}, width=0.55)
 
-    # 数值标注
     for bar, wr in zip(bars, win_rates):
         ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + 0.8,
                 f"{wr:.1f}%", ha="center", va="bottom", fontsize=11, fontweight="bold")
 
     ax.set_xticks(x)
     ax.set_xticklabels(labels, fontsize=12)
-    ax.set_ylabel("Win Rate (%)", fontsize=13)
-    ax.set_title("Agent 0 Win Rate Comparison\n(95% Bootstrap CI, n=20 groups)", fontsize=13, fontweight="bold")
+    ax.set_ylabel("胜率 (%)", fontsize=13)
+    ax.set_title("智能体 0 胜率对比\n（95% Bootstrap 置信区间，20 组对手）", fontsize=13, fontweight="bold")
     ax.set_ylim(0, max(ci_upper) * 1.2)
     ax.yaxis.set_major_formatter(mticker.FormatStrFormatter("%.0f%%"))
     ax.grid(axis="y", alpha=0.3, linestyle="--")
 
-    # 添加随机基线 (4 agent, chance = 25%)
+    # 随机基线 (4 智能体 = 25%)
     ax.axhline(y=25, color="#D55E00", linestyle="--", linewidth=1.0, alpha=0.7)
-    ax.text(len(labels) - 0.5, 25 + 1, "Chance (25%)", fontsize=9,
+    ax.text(len(labels) - 0.5, 25 + 1, "随机基线 (25%)", fontsize=9,
             color="#D55E00", ha="right", va="bottom", alpha=0.8)
 
-    # 显著性标注
     pairwise = stats.get("pairwise_comparisons", [])
     _add_significance_brackets(ax, pairwise, win_rates, "win_rate")
 
@@ -103,11 +123,10 @@ def plot_win_rate_comparison(stats: dict, output_dir: str, prefix: str) -> None:
 
 
 # ═══════════════════════════════════════════════════════════════════════
-#  Figure 2: Mean Reward Comparison (bar chart with bootstrap CI)
+#  图2：平均奖励对比（柱状图 + Bootstrap 95% CI）
 # ═══════════════════════════════════════════════════════════════════════
 
 def plot_reward_comparison(stats: dict, output_dir: str, prefix: str) -> None:
-    """Bar chart comparing mean rewards across models with 95% bootstrap CI."""
     setup_style()
     models = stats["models"]
     labels = [_label(m["model_label"]) for m in models]
@@ -130,8 +149,8 @@ def plot_reward_comparison(stats: dict, output_dir: str, prefix: str) -> None:
 
     ax.set_xticks(x)
     ax.set_xticklabels(labels, fontsize=12)
-    ax.set_ylabel("Mean Episode Reward", fontsize=13)
-    ax.set_title("Agent 0 Mean Reward Comparison\n(95% Bootstrap CI, n=20 groups)", fontsize=13, fontweight="bold")
+    ax.set_ylabel("平均回合奖励", fontsize=13)
+    ax.set_title("智能体 0 平均奖励对比\n（95% Bootstrap 置信区间，20 组对手）", fontsize=13, fontweight="bold")
     ax.grid(axis="y", alpha=0.3, linestyle="--")
 
     pairwise = stats.get("pairwise_comparisons", [])
@@ -143,18 +162,16 @@ def plot_reward_comparison(stats: dict, output_dir: str, prefix: str) -> None:
 
 
 # ═══════════════════════════════════════════════════════════════════════
-#  Figure 3: Per-Group Win Rate (grouped bar)
+#  图3：逐组对手胜率分解（分组柱状图）
 # ═══════════════════════════════════════════════════════════════════════
 
 def plot_per_group_winrate(stats: dict, output_dir: str, prefix: str) -> None:
-    """Grouped bar chart showing per-group win rate for each model."""
     setup_style(font_scale=1.1)
     models = stats["models"]
     labels = [_label(m["model_label"]) for m in models]
     n_groups = models[0]["n_groups"]
     n_models = len(models)
 
-    # Extract per-group win rates
     data = np.zeros((n_models, n_groups))
     for i, m in enumerate(models):
         for g in range(n_groups):
@@ -170,9 +187,9 @@ def plot_per_group_winrate(stats: dict, output_dir: str, prefix: str) -> None:
         ax.bar(x + offset, data[i], width, label=labels[i],
                color=colors[i], edgecolor="white", linewidth=0.5)
 
-    ax.set_xlabel("Opponent Group Index", fontsize=12)
-    ax.set_ylabel("Win Rate (%)", fontsize=12)
-    ax.set_title("Per-Group Win Rate Breakdown", fontsize=13, fontweight="bold")
+    ax.set_xlabel("对手组编号", fontsize=12)
+    ax.set_ylabel("胜率 (%)", fontsize=12)
+    ax.set_title("各对手组胜率分解", fontsize=13, fontweight="bold")
     ax.set_xticks(x)
     ax.set_xticklabels([str(g) for g in range(n_groups)], fontsize=8)
     ax.axhline(y=25, color="#D55E00", linestyle="--", linewidth=1.0, alpha=0.7)
@@ -185,15 +202,14 @@ def plot_per_group_winrate(stats: dict, output_dir: str, prefix: str) -> None:
 
 
 # ═══════════════════════════════════════════════════════════════════════
-#  Figure 4: Pairwise Effect Size (Cohen's d)
+#  图4：配对效应量（Cohen's d 水平条形图）
 # ═══════════════════════════════════════════════════════════════════════
 
 def plot_effect_sizes(stats: dict, output_dir: str, prefix: str) -> None:
-    """Horizontal bar chart showing Cohen's d for each pairwise comparison."""
     setup_style()
     pairwise = stats.get("pairwise_comparisons", [])
     if not pairwise:
-        print("[Plot] No pairwise comparisons to plot.")
+        print("[Plot] 无配对比较数据，跳过效应量图。")
         return
 
     labels = [f"{p['models'][0]}\nvs\n{p['models'][1]}" for p in pairwise]
@@ -205,12 +221,12 @@ def plot_effect_sizes(stats: dict, output_dir: str, prefix: str) -> None:
     height = 0.35
     colors = DEFAULT_PALETTE[:2]
 
-    bars1 = ax.barh(y - height / 2, d_values, height, label="Cohen's d (reward)",
-                    color=colors[0], edgecolor="white")
-    bars2 = ax.barh(y + height / 2, d_wr_values, height, label="Cohen's d (win rate)",
-                    color=colors[1], edgecolor="white")
+    ax.barh(y - height / 2, d_values, height, label="Cohen's d（奖励）",
+            color=colors[0], edgecolor="white")
+    ax.barh(y + height / 2, d_wr_values, height, label="Cohen's d（胜率）",
+            color=colors[1], edgecolor="white")
 
-    # Add significance markers
+    # 显著性标记
     for i, p in enumerate(pairwise):
         sig = "**" if p["significant_01"] else ("*" if p["significant_05"] else "")
         if sig:
@@ -222,14 +238,16 @@ def plot_effect_sizes(stats: dict, output_dir: str, prefix: str) -> None:
     ax.set_yticklabels([_label(p["models"][0]) + " vs\n" + _label(p["models"][1]) for p in pairwise],
                        fontsize=10)
     ax.set_xlabel("Cohen's d", fontsize=12)
-    ax.set_title("Pairwise Effect Sizes", fontsize=13, fontweight="bold")
+    ax.set_title("配对效应量", fontsize=13, fontweight="bold")
     ax.legend(fontsize=10, edgecolor="#cccccc")
+
+    # 效应量参考线
     ax.axvline(x=0.2, color="gray", linestyle=":", alpha=0.5, linewidth=1.0)
     ax.axvline(x=0.5, color="gray", linestyle="--", alpha=0.5, linewidth=1.0)
     ax.axvline(x=0.8, color="gray", linestyle="--", alpha=0.5, linewidth=1.0)
-    ax.text(0.2, len(labels) - 0.2, "small", fontsize=8, color="gray", va="bottom")
-    ax.text(0.5, len(labels) - 0.2, "medium", fontsize=8, color="gray", va="bottom")
-    ax.text(0.8, len(labels) - 0.2, "large", fontsize=8, color="gray", va="bottom")
+    ax.text(0.2, len(labels) - 0.2, "小", fontsize=8, color="gray", va="bottom")
+    ax.text(0.5, len(labels) - 0.2, "中", fontsize=8, color="gray", va="bottom")
+    ax.text(0.8, len(labels) - 0.2, "大", fontsize=8, color="gray", va="bottom")
     ax.grid(axis="x", alpha=0.3, linestyle="--")
 
     fig.tight_layout()
@@ -238,7 +256,7 @@ def plot_effect_sizes(stats: dict, output_dir: str, prefix: str) -> None:
 
 
 # ═══════════════════════════════════════════════════════════════════════
-#  Helpers
+#  辅助函数：显著性括号
 # ═══════════════════════════════════════════════════════════════════════
 
 def _add_significance_brackets(
@@ -247,19 +265,16 @@ def _add_significance_brackets(
     values: np.ndarray,
     metric: str,
 ) -> None:
-    """Add significance brackets between pairs of bars."""
     if len(pairwise) == 0:
         return
 
-    # Map model label -> bar index
-    label_to_idx = {}
+    label_to_idx: dict[str, int] = {}
     for pw in pairwise:
         for lbl in pw["models"]:
             if lbl not in label_to_idx:
                 label_to_idx[lbl] = len(label_to_idx)
 
     y_max = np.max(values)
-    height_factor = 0.08
     level = 0
 
     for pw in pairwise:
@@ -285,19 +300,19 @@ def _add_significance_brackets(
 
 
 # ═══════════════════════════════════════════════════════════════════════
-#  Main
+#  主入口
 # ═══════════════════════════════════════════════════════════════════════
 
 def main() -> None:
     args = _parse_args()
     stats_path = pathlib.Path(args.stats)
     if not stats_path.exists():
-        print(f"[Error] Stats file not found: {stats_path}")
-        print(f"  Run pool_evaluate.py first to generate it.")
+        print(f"[Error] 未找到评估统计文件: {stats_path}")
+        print(f"  请先运行 pool_evaluate.py 生成该文件。")
         sys.exit(1)
 
     stats = load_stats(str(stats_path))
-    print(f"Loaded stats from {stats_path}: {len(stats['models'])} models")
+    print(f"已加载: {stats_path} ({len(stats['models'])} 个模型)")
 
     output_dir = args.output_dir
     pathlib.Path(output_dir).mkdir(parents=True, exist_ok=True)
@@ -308,7 +323,7 @@ def main() -> None:
     plot_per_group_winrate(stats, output_dir, prefix)
     plot_effect_sizes(stats, output_dir, prefix)
 
-    print(f"\nAll plots saved to {output_dir}/")
+    print(f"\n全部图片已保存至 {output_dir}/")
 
     if not args.no_show:
         plt.show()

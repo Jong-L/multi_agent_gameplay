@@ -30,10 +30,15 @@
 \contentsline {subsection}{\numberline {5.1}对手池初始化}{24}{subsection.5.1}%
 \contentsline {subsection}{\numberline {5.2}待评估智能体的训练}{25}{subsection.5.2}%
 \contentsline {subsection}{\numberline {5.3}实验结果与讨论}{25}{subsection.5.3}%
-\contentsline {section}{\numberline {6}总结与展望}{26}{section.6}%
-\contentsline {subsection}{\numberline {6.1}工作总结}{26}{subsection.6.1}%
-\contentsline {subsection}{\numberline {6.2}未来展望}{27}{subsection.6.2}%
-\contentsline {section}{结论}{27}{subsection.6.2}%
-\contentsline {section}{\numberline {A}附录A 实验补充数据}{32}{appendix.A}%
-\contentsline {section}{致谢}{35}{table.caption.27}%
+\contentsline {subsubsection}{\numberline {5.3.1}评估设置}{25}{subsubsection.5.3.1}%
+\contentsline {subsubsection}{\numberline {5.3.2}总体表现对比}{26}{subsubsection.5.3.2}%
+\contentsline {subsubsection}{\numberline {5.3.3}统计显著性检验}{27}{subsubsection.5.3.3}%
+\contentsline {subsubsection}{\numberline {5.3.4}策略稳定性分析}{28}{subsubsection.5.3.4}%
+\contentsline {subsubsection}{\numberline {5.3.5}实验结论}{29}{subsubsection.5.3.5}%
+\contentsline {section}{\numberline {6}总结与展望}{30}{section.6}%
+\contentsline {subsection}{\numberline {6.1}工作总结}{30}{subsection.6.1}%
+\contentsline {subsection}{\numberline {6.2}未来展望}{30}{subsection.6.2}%
+\contentsline {section}{结论}{31}{subsection.6.2}%
+\contentsline {section}{\numberline {A}附录A 实验补充数据}{36}{appendix.A}%
+\contentsline {section}{致谢}{39}{table.caption.32}%
 \contentsfinish 

@@ -83,7 +83,7 @@ class PoolEvaluateArgs(IppoPoolArgs):
     """是否严格要求对手数量"""
     pool_eval_groups: int = 20
     """评估组数"""
-    pool_eval_episodes_per_group: int = 3
+    pool_eval_episodes_per_group: int = 5
     """每组评估 episode 数"""
     run_name: Optional[str] = "pool_evaluate"
     """运行名称"""
@@ -164,7 +164,9 @@ def _parse_args() -> PoolEvaluateArgs:
 
     args.main_agent_id = int(parsed.main_agent_id)
     args.eval_model_paths = _parse_model_paths(parsed.model_paths)
-    args.eval_model_labels = _parse_labels(parsed.model_labels)
+    parsed_labels = _parse_labels(parsed.model_labels)
+    if parsed_labels is not None:
+        args.eval_model_labels = parsed_labels
     args.opponent_checkpoint_dir = parsed.opponent_checkpoint_dir
     args.opponent_keep_per_agent = int(parsed.opponent_keep_per_agent)
     args.strict_opponent_count = not bool(parsed.allow_fewer_opponents)
