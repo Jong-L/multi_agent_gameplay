@@ -21,6 +21,9 @@ import numpy as np
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+# 全局中文字体配置
+plt.rcParams['font.sans-serif'] = ['Microsoft YaHei']
+plt.rcParams['axes.unicode_minus'] = False
 import seaborn as sns
 from pathlib import Path
 import sys
@@ -204,32 +207,10 @@ def compute_scheme_average(file_list, scheme_name):
 # ============================================================
 # Plotting
 # ============================================================
-def _set_chinese_font():
-    """
-    动态检测并设置中文字体。
-    在 sns.set_* 之后调用，防止被 seaborn 覆盖。
-    """
-    import matplotlib.font_manager as fm
-    candidates = [
-        'Microsoft YaHei', 'SimHei', 'Noto Sans SC', 'PingFang SC',
-        'KaiTi', 'FangSong', 'STKaiti', 'SimSun', 'YouYuan',
-        'HYZhongHei', 'Noto Serif SC', 'Microsoft JhengHei'
-    ]
-    available = set(f.name for f in fm.fontManager.ttflist)
-    for c in candidates:
-        if c in available:
-            plt.rcParams['font.sans-serif'] = [c, 'DejaVu Sans']
-            plt.rcParams['axes.unicode_minus'] = False
-            return
-    # 均未找到时使用默认 sans-serif
-    plt.rcParams['axes.unicode_minus'] = False
-
-
 def setup_seaborn_style():
     """统一 seaborn 绘图风格（与 data_analyze 保持一致）"""
     sns.set_style("whitegrid")
     sns.set_context("paper", font_scale=1.3)
-    _set_chinese_font()
 
 
 def smooth_curve(y, window):
@@ -547,20 +528,6 @@ def main():
     print("=" * 60)
     print("  Ball Reward Shaping Scheme Comparison Analysis")
     print("=" * 60)
-    
-    # 必须在最前面设置中文字体，早于任何 seaborn/matplotlib 调用
-    # 标准配置：font.family='sans-serif' + font.sans-serif 列表
-    plt.rcParams['font.family'] = 'sans-serif'
-    plt.rcParams['font.sans-serif'] = ['Microsoft YaHei', 'SimHei', 'Arial Unicode MS']
-    plt.rcParams['axes.unicode_minus'] = False
-    
-    # 设置 seaborn 风格（必须在字体配置之后）
-    setup_seaborn_style()
-    
-    # seaborn 可能覆盖了字体，再次强制设置
-    plt.rcParams['font.family'] = 'sans-serif'
-    plt.rcParams['font.sans-serif'] = ['Microsoft YaHei', 'SimHei', 'Arial Unicode MS']
-    plt.rcParams['axes.unicode_minus'] = False
 
     # Ensure summary directory exists
     os.makedirs(SUMMARY_DIR, exist_ok=True)

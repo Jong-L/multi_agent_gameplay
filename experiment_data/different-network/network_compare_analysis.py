@@ -12,8 +12,6 @@ Compare average scores across different network architectures
 
 import pandas as pd
 import matplotlib.pyplot as plt
-plt.rcParams['font.sans-serif'] = ['Microsoft YaHei']
-plt.rcParams['axes.unicode_minus'] = False
 import seaborn as sns
 import numpy as np
 from pathlib import Path
@@ -32,6 +30,9 @@ SMOOTH_WINDOW = 5  # moving average window
 # Seaborn publication style (consistent with data_analyze/)
 sns.set_style("whitegrid")
 sns.set_context("paper", font_scale=1.3)
+
+# 中文字体配置——必须在 sns.set_* 之后，否则被覆盖
+_set_chinese_font()
 
 # Colorblind-friendly palette
 NETWORK_COLORS = {

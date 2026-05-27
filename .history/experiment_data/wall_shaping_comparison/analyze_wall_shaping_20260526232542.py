@@ -29,9 +29,6 @@ from collections import defaultdict
 import sys
 import warnings
 warnings.filterwarnings('ignore')
-# 全局中文字体配置
-plt.rcParams['font.sans-serif'] = ['Microsoft YaHei']
-plt.rcParams['axes.unicode_minus'] = False
 
 # ============================================================
 # 配置

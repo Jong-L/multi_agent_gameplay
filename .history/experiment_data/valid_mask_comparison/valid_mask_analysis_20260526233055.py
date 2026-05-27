@@ -16,15 +16,13 @@ Valid mask indicates whether the observation space uses a validity mask for miss
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
+import numpy as np
 from pathlib import Path
 import sys
 
 # Set seaborn style for publication
 sns.set_style("whitegrid")
 sns.set_context("paper", font_scale=1.3)
-
-# 中文字体配置——必须在 sns.set_* 之后，否则被覆盖
-_set_chinese_font()
 
 # Color palette (colorblind-friendly)
 MASK_COLORS = {

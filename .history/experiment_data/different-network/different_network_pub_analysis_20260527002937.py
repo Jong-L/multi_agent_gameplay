@@ -22,27 +22,9 @@ from pathlib import Path
 import glob
 import sys
 import matplotlib.pyplot as plt
-
-
-def _set_chinese_font():
-    """
-    动态检测并设置中文字体。
-    在 sns.set_* / setup_style() 之后调用，防止被覆盖。
-    """
-    import matplotlib
-    import matplotlib.font_manager as fm
-    candidates = [
-        'Microsoft YaHei', 'SimHei', 'Noto Sans SC', 'PingFang SC',
-        'KaiTi', 'FangSong', 'STKaiti', 'SimSun', 'YouYuan',
-    ]
-    available = set(f.name for f in fm.fontManager.ttflist)
-    for c in candidates:
-        if c in available:
-            matplotlib.rcParams['font.sans-serif'] = [c, 'DejaVu Sans']
-            matplotlib.rcParams['axes.unicode_minus'] = False
-            return
-    matplotlib.rcParams['axes.unicode_minus'] = False
-
+# 全局中文字体配置
+plt.rcParams['font.sans-serif'] = ['Microsoft YaHei']
+plt.rcParams['axes.unicode_minus'] = False
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "data_analyze"))
 from publication_plot_utils import (

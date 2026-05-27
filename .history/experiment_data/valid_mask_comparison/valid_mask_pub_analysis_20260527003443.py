@@ -205,10 +205,6 @@ def main():
     print("Valid Mask Comparison — Publication-Style Analysis")
     print("=" * 70)
     setup_style()
-    
-    # 重新设置中文字体（在setup_style之后）
-    plt.rcParams['font.sans-serif'] = ['Microsoft YaHei', 'SimHei', 'Arial Unicode MS']
-    plt.rcParams['axes.unicode_minus'] = False
 
     # 1. Discover
     print("\n[1/3] Discovering files...")

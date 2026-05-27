@@ -19,17 +19,15 @@ import numpy as np
 from pathlib import Path
 import sys
 import matplotlib.pyplot as plt
-import matplotlib
+# 中文字体配置
+plt.rcParams['font.sans-serif'] = ['Microsoft YaHei']
+plt.rcParams['axes.unicode_minus'] = False
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "data_analyze"))
 from publication_plot_utils import (
     setup_style, prepare_curve, plot_with_fill,
     style_axes, save_figure, add_stats_box, DEFAULT_PALETTE
 )
-
-# 中文字体配置 - 在setup_style之后重新设置
-plt.rcParams['font.sans-serif'] = ['Microsoft YaHei', 'SimHei', 'Arial Unicode MS']
-plt.rcParams['axes.unicode_minus'] = False
 
 # ============================================================
 # Configuration
@@ -205,10 +203,6 @@ def main():
     print("Valid Mask Comparison — Publication-Style Analysis")
     print("=" * 70)
     setup_style()
-    
-    # 重新设置中文字体（在setup_style之后）
-    plt.rcParams['font.sans-serif'] = ['Microsoft YaHei', 'SimHei', 'Arial Unicode MS']
-    plt.rcParams['axes.unicode_minus'] = False
 
     # 1. Discover
     print("\n[1/3] Discovering files...")

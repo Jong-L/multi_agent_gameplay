@@ -21,9 +21,6 @@ import numpy as np
 from pathlib import Path
 import sys
 import matplotlib.pyplot as plt
-# 全局中文字体配置
-plt.rcParams['font.sans-serif'] = ['Microsoft YaHei']
-plt.rcParams['axes.unicode_minus'] = False
 
 # Add data_analyze to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "data_analyze"))

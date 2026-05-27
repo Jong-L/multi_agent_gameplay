@@ -18,22 +18,22 @@
 \contentsline {section}{\numberline {3}博弈环境设计与实现}{11}{section.3}%
 \contentsline {subsection}{\numberline {3.1}游戏总体设计}{11}{subsection.3.1}%
 \contentsline {subsection}{\numberline {3.2}观测空间设计}{11}{subsection.3.2}%
-\contentsline {subsection}{\numberline {3.3}奖励函数设计}{12}{subsection.3.3}%
-\contentsline {subsection}{\numberline {3.4}课程学习环境}{13}{subsection.3.4}%
-\contentsline {section}{\numberline {4}单智能体基础训练与消融实验}{14}{section.4}%
-\contentsline {subsection}{\numberline {4.1}训练框架}{14}{subsection.4.1}%
-\contentsline {subsection}{\numberline {4.2}观测空间消融：有效掩码}{14}{subsection.4.2}%
+\contentsline {subsection}{\numberline {3.3}奖励函数设计}{13}{subsection.3.3}%
+\contentsline {subsection}{\numberline {3.4}课程学习环境}{14}{subsection.3.4}%
+\contentsline {section}{\numberline {4}单智能体基础训练与对比实验}{15}{section.4}%
+\contentsline {subsection}{\numberline {4.1}训练框架}{15}{subsection.4.1}%
+\contentsline {subsection}{\numberline {4.2}观测空间消融：有效掩码}{16}{subsection.4.2}%
 \contentsline {subsection}{\numberline {4.3}奖励球塑形方案对比}{16}{subsection.4.3}%
 \contentsline {subsection}{\numberline {4.4}障碍物避障策略}{17}{subsection.4.4}%
-\contentsline {subsection}{\numberline {4.5}网络架构对比}{19}{subsection.4.5}%
-\contentsline {section}{\numberline {5}多智能体博弈方法探索}{21}{section.5}%
-\contentsline {subsection}{\numberline {5.1}对手池初始化}{22}{subsection.5.1}%
-\contentsline {subsection}{\numberline {5.2}待评估智能体的训练}{23}{subsection.5.2}%
-\contentsline {subsection}{\numberline {5.3}实验结果与讨论}{24}{subsection.5.3}%
-\contentsline {section}{\numberline {6}总结与展望}{25}{section.6}%
-\contentsline {subsection}{\numberline {6.1}工作总结}{25}{subsection.6.1}%
-\contentsline {subsection}{\numberline {6.2}未来展望}{25}{subsection.6.2}%
-\contentsline {section}{结论}{25}{subsection.6.2}%
-\contentsline {section}{\numberline {A}附录A 实验补充数据}{31}{appendix.A}%
-\contentsline {section}{致谢}{34}{table.caption.25}%
+\contentsline {subsection}{\numberline {4.5}网络架构对比}{21}{subsection.4.5}%
+\contentsline {section}{\numberline {5}多智能体博弈方法探索}{22}{section.5}%
+\contentsline {subsection}{\numberline {5.1}对手池初始化}{24}{subsection.5.1}%
+\contentsline {subsection}{\numberline {5.2}待评估智能体的训练}{25}{subsection.5.2}%
+\contentsline {subsection}{\numberline {5.3}实验结果与讨论}{25}{subsection.5.3}%
+\contentsline {section}{\numberline {6}总结与展望}{26}{section.6}%
+\contentsline {subsection}{\numberline {6.1}工作总结}{26}{subsection.6.1}%
+\contentsline {subsection}{\numberline {6.2}未来展望}{27}{subsection.6.2}%
+\contentsline {section}{结论}{27}{subsection.6.2}%
+\contentsline {section}{\numberline {A}附录A 实验补充数据}{32}{appendix.A}%
+\contentsline {section}{致谢}{35}{table.caption.27}%
 \contentsfinish 

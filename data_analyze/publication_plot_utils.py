@@ -79,6 +79,20 @@ def setup_style(context='paper', font_scale=1.3, style='whitegrid'):
         'font.family': 'sans-serif',
         'mathtext.fontset': 'stix',
     })
+    
+    # 尝试设置中文字体（Windows系统）
+    import platform
+    if platform.system() == 'Windows':
+        # Windows常用中文字体列表
+        chinese_fonts = ['Microsoft YaHei', 'SimHei', 'KaiTi', 'FangSong']
+        for font in chinese_fonts:
+            try:
+                plt.rcParams['font.sans-serif'].insert(0, font)
+                break
+            except:
+                continue
+    
+    plt.rcParams['axes.unicode_minus'] = False
 
 
 def save_figure(fig, path, dpi=300, **kwargs):
@@ -235,8 +249,16 @@ def plot_with_fill(ax, x, y, y_lower, y_upper, color, label,
 
 
 def add_stats_box(ax, text, loc='lower right',
-                  fontsize=9, family='monospace'):
+                  fontsize=9, family=None):
     """在图上添加半透明统计信息框。"""
+    # 如果没有指定字体，使用支持中文的字体
+    if family is None:
+        import platform
+        if platform.system() == 'Windows':
+            family = 'Microsoft YaHei'  # Windows 使用微软雅黑
+        else:
+            family = 'sans-serif'  # 其他系统使用无衬线字体
+    
     loc_map = {
         'lower right': (0.98, 0.02, 'bottom', 'right'),
         'upper right': (0.98, 0.98, 'top', 'right'),
