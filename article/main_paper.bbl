@@ -1,4 +1,4 @@
-\begin{thebibliography}{48}
+\begin{thebibliography}{50}
 \providecommand{\natexlab}[1]{#1}
 \providecommand{\url}[1]{#1}
 \expandafter\ifx\csname urlstyle\endcsname\relax\else
@@ -55,6 +55,13 @@ YU C, VELU A, VINITSKY E, et~al.
 \newblock 2022.
 \newblock arXiv: \eprint{https://arxiv.org/abs/2103.01955}{2103.01955}.
 \newblock \url{https://arxiv.org/abs/2103.01955}.
+
+\bibitem[de~Witt et~al.(2020)de~Witt, Gupta, Makoviichuk, Makoviychuk, Torr, Sun, and Whiteson]{dewitt2020independentlearningneedstarcraft}
+DE~WITT C~S, GUPTA T, MAKOVIICHUK D, et~al.
+\newblock Is independent learning all you need in the starcraft multi-agent challenge?\allowbreak[A/OL].
+\newblock 2020.
+\newblock arXiv: \eprint{https://arxiv.org/abs/2011.09533}{2011.09533}.
+\newblock \url{https://arxiv.org/abs/2011.09533}.
 
 \bibitem[Watkins et~al.(1992)Watkins and Dayan]{watkins1992qlearning}
 WATKINS C~J~C~H, DAYAN P.
@@ -269,6 +276,13 @@ XIE T, ZHAO S, WU C~H, et~al.
 王琦，杨毅远，江季.
 \newblock EASYRL：强化学习教程\allowbreak[M].
 \newblock 人民邮电出版社, 2022: 1-2.
+
+\bibitem[Cho et~al.(2014)Cho, van Merrienboer, Gulcehre, Bahdanau, Bougares, Schwenk, and Bengio]{cho2014learning}
+CHO K, VAN MERRIENBOER B, GULCEHRE C, et~al.
+\newblock Learning phrase representations using {RNN} encoder--decoder for statistical machine translation\allowbreak[C/OL]//\allowbreak
+Proceedings of the 2014 Conference on Empirical Methods in Natural Language Processing (EMNLP).
+\newblock 2014: 1724-1734.
+\newblock DOI: \doi{10.3115/v1/D14-1179}.
 
 \bibitem[Sutton et~al.(1999)Sutton, McAllester, Singh, and Mansour]{sutton1999policyandvalue}
 SUTTON R~S, MCALLESTER D, SINGH S, et~al.
