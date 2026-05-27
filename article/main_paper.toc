@@ -15,8 +15,8 @@
 \contentsline {subsection}{\numberline {2.2}多智能体强化学习}{9}{subsection.2.2}%
 \contentsline {subsection}{\numberline {2.3}奖励塑形理论}{10}{subsection.2.3}%
 \contentsline {subsection}{\numberline {2.4}Godot 引擎与 RL 集成框架}{10}{subsection.2.4}%
-\contentsline {section}{\numberline {3}博弈环境设计与实现}{11}{section.3}%
-\contentsline {subsection}{\numberline {3.1}游戏总体设计}{11}{subsection.3.1}%
+\contentsline {section}{\numberline {3}博弈环境设计与实现}{10}{section.3}%
+\contentsline {subsection}{\numberline {3.1}游戏总体设计}{10}{subsection.3.1}%
 \contentsline {subsection}{\numberline {3.2}观测空间设计}{11}{subsection.3.2}%
 \contentsline {subsection}{\numberline {3.3}奖励函数设计}{13}{subsection.3.3}%
 \contentsline {subsection}{\numberline {3.4}课程学习环境}{14}{subsection.3.4}%

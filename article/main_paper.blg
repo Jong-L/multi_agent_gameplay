@@ -15,47 +15,44 @@ Reallocated global_strs (elt_size=200001) to 20 items from 10.
 Reallocated glb_str_end (elt_size=4) to 20 items from 10.
 Reallocated singl_function (elt_size=4) to 100 items from 50.
 Database file #1: references.bib
-Warning--I didn't find a database entry for "Deng_2022ppad"
-Warning--I didn't find a database entry for "daskalakis2021independentpolicygradientmethods"
-You've used 47 entries,
+You've used 49 entries,
             5374 wiz_defined-function locations,
-            1355 strings with 19954 characters,
-and the built_in function-call counts, 505755 in all, are:
-= -- 9820
-> -- 59539
-< -- 74017
-+ -- 20608
-- -- 4518
-* -- 2772
-:= -- 70023
-add.period$ -- 185
-call.type$ -- 47
-change.case$ -- 365
-chr.to.int$ -- 18385
-cite$ -- 47
-duplicate$ -- 1239
-empty$ -- 3828
-format.name$ -- 1758
-if$ -- 131120
+            1365 strings with 20407 characters,
+and the built_in function-call counts, 526526 in all, are:
+= -- 10220
+> -- 61977
+< -- 77062
++ -- 21444
+- -- 4676
+* -- 2890
+:= -- 72887
+add.period$ -- 194
+call.type$ -- 49
+change.case$ -- 383
+chr.to.int$ -- 19131
+cite$ -- 49
+duplicate$ -- 1291
+empty$ -- 4003
+format.name$ -- 1829
+if$ -- 136525
 int.to.chr$ -- 1
-int.to.str$ -- 48
+int.to.str$ -- 50
 missing$ -- 0
-newline$ -- 305
-num.names$ -- 142
-pop$ -- 26376
+newline$ -- 318
+num.names$ -- 148
+pop$ -- 27525
 preamble$ -- 1
-purify$ -- 47
+purify$ -- 49
 quote$ -- 0
-skip$ -- 52573
+skip$ -- 54708
 stack$ -- 0
-substring$ -- 24196
-swap$ -- 55
-text.length$ -- 1237
+substring$ -- 25164
+swap$ -- 57
+text.length$ -- 1288
 text.prefix$ -- 0
 top$ -- 0
-type$ -- 513
+type$ -- 535
 warning$ -- 0
-while$ -- 1287
+while$ -- 1338
 width$ -- 0
-write$ -- 703
-(There were 2 warnings)
+write$ -- 734

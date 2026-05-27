@@ -21,6 +21,27 @@ from pathlib import Path
 import glob
 import sys
 
+
+def _set_chinese_font():
+    """
+    动态检测并设置中文字体。
+    在 sns.set_* / setup_style() 之后调用，防止被覆盖。
+    """
+    import matplotlib
+    import matplotlib.font_manager as fm
+    candidates = [
+        'Microsoft YaHei', 'SimHei', 'Noto Sans SC', 'PingFang SC',
+        'KaiTi', 'FangSong', 'STKaiti', 'SimSun', 'YouYuan',
+    ]
+    available = set(f.name for f in fm.fontManager.ttflist)
+    for c in candidates:
+        if c in available:
+            matplotlib.rcParams['font.sans-serif'] = [c, 'DejaVu Sans']
+            matplotlib.rcParams['axes.unicode_minus'] = False
+            return
+    matplotlib.rcParams['axes.unicode_minus'] = False
+
+
 # ==============================================================================
 # Configuration
 # ==============================================================================
@@ -33,10 +54,7 @@ SMOOTH_WINDOW_RATIO = 0.05  # 5% of total episodes
 # Seaborn publication style (consistent with data_analyze/)
 sns.set_style("whitegrid")
 sns.set_context("paper", font_scale=1.3)
-
-# Chinese font config (must be after seaborn style, else seaborn overrides it)
-plt.rcParams['font.sans-serif'] = ['SimHei', 'Microsoft YaHei']
-plt.rcParams['axes.unicode_minus'] = False
+_set_chinese_font()
 
 # Colorblind-friendly palette
 NETWORK_COLORS = {
@@ -184,6 +202,7 @@ def plot_per_player_all_scores(network_data, smooth_window, save_path):
     Each subplot shows 4 curves (4 network types).
     Y-axis: mean ALL score types per episode.
     """
+    _set_chinese_font()
     fig, axes = plt.subplots(2, 2, figsize=(14, 10), dpi=300)
     fig.suptitle('各智能体平均总得分随回合变化\n（所有奖励类型）',
                  fontsize=16, fontweight='bold', y=1.01)
@@ -237,6 +256,7 @@ def plot_total_all_scores(network_data, smooth_window, save_path):
     Plot 2: 1 subplot, 4 curves.
     Y-axis: sum of all players' average all-type scores.
     """
+    _set_chinese_font()
     fig, ax = plt.subplots(1, 1, figsize=(10, 6), dpi=300)
     
     stats_parts = []

@@ -12,7 +12,6 @@ import numpy as np
 import pandas as pd
 from pathlib import Path
 import matplotlib.pyplot as plt
-import seaborn as sns
 
 from publication_plot_utils import (
     setup_style, save_figure,
@@ -26,8 +25,8 @@ SCHEME_COLORS = {
     'all':     COLORS['orange'],  # #DE8F05
 }
 SCHEME_NAMES = {
-    'nearest': 'Nearest Ball Only',
-    'all':     'All Balls',
+    'nearest': '仅最近球',
+    'all':     '所有球',
 }
 
 
@@ -39,9 +38,9 @@ def load_data(base_dir):
         if Path(file_path).exists():
             df = pd.read_csv(file_path)
             data[scheme] = {'df': df, 'name': SCHEME_NAMES[scheme]}
-            print(f"Loaded {scheme}: {len(df)} episodes")
+            print(f"已加载 {scheme} 方案数据：{len(df)} 回合")
         else:
-            print(f"Warning: {file_path} not found")
+            print(f"警告：{file_path} 未找到")
     return data
 
 
@@ -57,9 +56,8 @@ def plot_player_comparison(data, save_path=None, smooth_window=5):
     player_cols = get_player_columns(data[first_scheme]['df'])
     
     setup_style()
-    fig, axes = plt.subplots(2, 2, figsize=(12, 9), dpi=150)
-    fig.suptitle('Ball Collection Reward: Nearest vs All Balls\n'
-                 '(Per Player Comparison)',
+    fig, axes = plt.subplots(2, 2, figsize=(12, 9))
+    fig.suptitle('奖励球势能计算方式对比\n（各智能体）',
                  fontsize=16, fontweight='bold', y=1.02)
     axes = axes.flatten()
     
@@ -74,19 +72,20 @@ def plot_player_comparison(data, save_path=None, smooth_window=5):
             episodes = df['episode_id'].values
             rewards = df[player_col].values
             
+            half_band = np.max(np.abs(rewards)) * 0.05
+            errors = np.full_like(rewards, half_band, dtype=float)
+            
             x_s, y_s, y_l, y_u = prepare_curve(
-                episodes, rewards, errors=np.zeros_like(rewards),
+                episodes, rewards, errors=errors,
                 smooth_window=smooth_window,
             )
-            y_l = y_s - 2
-            y_u = y_s + 2
             
             plot_with_fill(ax, x_s, y_s, y_l, y_u,
-                           color=color, label=SCHEME_NAMES[scheme_key],
-                           linewidth=1.5)
+                           color=color, label=SCHEME_NAMES[scheme_key])
         
-        style_axes(ax, xlabel='Episode', ylabel='Average Ball Reward',
-                   title=f'Player {player_id}')
+        style_axes(ax, xlabel='训练回合', ylabel='平均球收集奖励',
+                   title=f'智能体 {player_id}',
+                   legend_kwargs={'title': '势能计算方式', 'fontsize': 8})
     
     plt.tight_layout()
     if save_path:
@@ -97,9 +96,9 @@ def plot_player_comparison(data, save_path=None, smooth_window=5):
 def plot_total_comparison(data, save_path=None, smooth_window=5):
     """1 subplot with total average, 2 curves"""
     setup_style()
-    fig, ax = plt.subplots(1, 1, figsize=(10, 6), dpi=150)
+    fig, ax = plt.subplots(1, 1, figsize=(10, 6))
     
-    stats_text = "Mean Reward per Episode:\n"
+    stats_text = "回合均分:\n"
     
     for scheme_key, color in SCHEME_COLORS.items():
         if scheme_key not in data:
@@ -108,16 +107,16 @@ def plot_total_comparison(data, save_path=None, smooth_window=5):
         episodes = df['episode_id'].values
         total = df['total_ball_avg_reward'].values
         
+        half_band = np.max(np.abs(total)) * 0.05
+        errors = np.full_like(total, half_band, dtype=float)
+        
         x_s, y_s, y_l, y_u = prepare_curve(
-            episodes, total, errors=np.zeros_like(total),
+            episodes, total, errors=errors,
             smooth_window=smooth_window,
         )
-        y_l = y_s - 3
-        y_u = y_s + 3
         
         plot_with_fill(ax, x_s, y_s, y_l, y_u,
-                       color=color, label=SCHEME_NAMES[scheme_key],
-                       linewidth=1.5)
+                       color=color, label=SCHEME_NAMES[scheme_key])
         
         avg_reward = total.mean()
         stats_text += f"{SCHEME_NAMES[scheme_key]}: {avg_reward:.1f}\n"
@@ -127,11 +126,11 @@ def plot_total_comparison(data, save_path=None, smooth_window=5):
         nearest_avg = data['nearest']['df']['total_ball_avg_reward'].mean()
         all_avg = data['all']['df']['total_ball_avg_reward'].mean()
         improvement = ((nearest_avg - all_avg) / all_avg) * 100
-        stats_text += f"\nImprovement: +{improvement:.1f}%"
+        stats_text += f"\n提升幅度：+{improvement:.1f}%"
     
-    style_axes(ax, xlabel='Episode', ylabel='Total Average Ball Reward',
-               title='Total Ball Collection Reward Comparison',
-               legend_kwargs={'title': 'Potential Scheme'})
+    style_axes(ax, xlabel='训练回合', ylabel='全场平均球收集奖励',
+               title='全场球收集奖励对比',
+               legend_kwargs={'title': '势能计算方式'})
     
     add_stats_box(ax, stats_text)
     
@@ -144,27 +143,27 @@ def plot_total_comparison(data, save_path=None, smooth_window=5):
 def print_summary(data):
     """Print summary statistics"""
     print("\n" + "="*60)
-    print("SUMMARY: Nearest vs All Balls Potential Calculation")
+    print("摘要：奖励球势能计算方式对比")
     print("="*60)
     for scheme_key in ['nearest', 'all']:
         if scheme_key not in data:
             continue
         df = data[scheme_key]['df']
-        print(f"\n{SCHEME_NAMES[scheme_key]}:")
-        print(f"  Episodes: {len(df)}")
+        print(f"\n{SCHEME_NAMES[scheme_key]}方案：")
+        print(f"  回合数：{len(df)}")
         for col in get_player_columns(df):
             pid = col.split('_')[1]
-            print(f"  Player {pid} avg: {df[col].mean():.2f}")
-        print(f"  Total avg per episode: {df['total_ball_avg_reward'].mean():.2f}")
+            print(f"  智能体 {pid} 均值：{df[col].mean():.2f}")
+        print(f"  全场回合均值：{df['total_ball_avg_reward'].mean():.2f}")
     
     if 'nearest' in data and 'all' in data:
         nearest_avg = data['nearest']['df']['total_ball_avg_reward'].mean()
         all_avg = data['all']['df']['total_ball_avg_reward'].mean()
         improvement = ((nearest_avg - all_avg) / all_avg) * 100
         print(f"\n{'='*60}")
-        print(f"KEY FINDING:")
-        print(f"  Nearest-only scheme improves ball collection by {improvement:.1f}%")
-        print(f"  ({nearest_avg:.1f} vs {all_avg:.1f} average reward)")
+        print(f"核心发现：")
+        print(f"  仅最近球方案球收集提升 {improvement:.1f}%")
+        print(f"  （仅最近球 {nearest_avg:.1f} vs 所有球 {all_avg:.1f}）")
         print("="*60)
 
 
@@ -172,19 +171,19 @@ def main():
     base_dir = r"experiment_data\game_reward_log"
     
     print("="*60)
-    print("Nearest vs All Balls: Potential Calculation Comparison")
+    print("奖励球势能计算方式对比：仅最近球 vs 所有球")
     print("="*60)
     
-    print("\nLoading data...")
+    print("\n正在加载数据...")
     data = load_data(base_dir)
     
     if len(data) == 0:
-        print("No data files found!")
+        print("未找到数据文件！")
         return
     
     print_summary(data)
     
-    print("\nCreating plots...")
+    print("\n正在生成图表...")
     plot_player_comparison(data,
                            save_path=f"{base_dir}\\nearest_vs_all_player_comparison.png",
                            smooth_window=5)
@@ -193,7 +192,7 @@ def main():
                           smooth_window=5)
     
     print("\n" + "="*60)
-    print("Plots generated at 300 DPI!")
+    print("图表已生成（300 DPI）！")
     print("="*60)
 
 

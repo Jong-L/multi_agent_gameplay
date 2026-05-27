@@ -24,6 +24,27 @@ from pathlib import Path
 import glob
 import sys
 
+
+def _set_chinese_font():
+    """
+    动态检测并设置中文字体。
+    在 sns.set_* / setup_style() 之后调用，防止被覆盖。
+    """
+    import matplotlib
+    import matplotlib.font_manager as fm
+    candidates = [
+        'Microsoft YaHei', 'SimHei', 'Noto Sans SC', 'PingFang SC',
+        'KaiTi', 'FangSong', 'STKaiti', 'SimSun', 'YouYuan',
+    ]
+    available = set(f.name for f in fm.fontManager.ttflist)
+    for c in candidates:
+        if c in available:
+            matplotlib.rcParams['font.sans-serif'] = [c, 'DejaVu Sans']
+            matplotlib.rcParams['axes.unicode_minus'] = False
+            return
+    matplotlib.rcParams['axes.unicode_minus'] = False
+
+
 # ==============================================================================
 # Configuration
 # ==============================================================================
@@ -35,9 +56,7 @@ SMOOTH_WINDOW_RATIO = 0.05  # 5% of total episodes
 
 sns.set_style("whitegrid")
 sns.set_context("paper", font_scale=1.3)
-
-plt.rcParams['font.sans-serif'] = ['Microsoft YaHei', 'SimHei', 'DengXian']
-plt.rcParams['axes.unicode_minus'] = False
+_set_chinese_font()
 
 NETWORK_COLORS = {
     'MLP':            '#0173B2',   # Blue
@@ -161,6 +180,7 @@ def load_and_aggregate_network(network_name, file_paths, max_episodes=None):
 
 def plot_total_score(network_data, smooth_window, save_path):
     """Plot 1: Total score vs episode, 4 curves."""
+    _set_chinese_font()
     fig, ax = plt.subplots(1, 1, figsize=(10, 6), dpi=300)
 
     stats_parts = []
@@ -212,6 +232,7 @@ def plot_total_score(network_data, smooth_window, save_path):
 
 def plot_event_count(network_data, source_key, y_label, title, smooth_window, save_path):
     """Generic event count plot: 1 subplot, 4 curves."""
+    _set_chinese_font()
     fig, ax = plt.subplots(1, 1, figsize=(10, 6), dpi=300)
 
     stats_parts = []

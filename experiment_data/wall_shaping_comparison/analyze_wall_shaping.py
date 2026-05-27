@@ -28,10 +28,27 @@ from pathlib import Path
 from collections import defaultdict
 import sys
 import warnings
-warnings.filterwarnings('ignore')
-# 全局中文字体配置
-plt.rcParams['font.sans-serif'] = ['Microsoft YaHei']
-plt.rcParams['axes.unicode_minus'] = False
+
+
+def _set_chinese_font():
+    """
+    动态检测并设置中文字体。
+    在 sns.set_* / setup_style() 之后调用，防止被覆盖。
+    """
+    import matplotlib
+    import matplotlib.font_manager as fm
+    candidates = [
+        'Microsoft YaHei', 'SimHei', 'Noto Sans SC', 'PingFang SC',
+        'KaiTi', 'FangSong', 'STKaiti', 'SimSun', 'YouYuan',
+    ]
+    available = set(f.name for f in fm.fontManager.ttflist)
+    for c in candidates:
+        if c in available:
+            matplotlib.rcParams['font.sans-serif'] = [c, 'DejaVu Sans']
+            matplotlib.rcParams['axes.unicode_minus'] = False
+            return
+    matplotlib.rcParams['axes.unicode_minus'] = False
+
 
 # ============================================================
 # 配置
@@ -366,9 +383,6 @@ def setup_style():
     sns.set_style("whitegrid")
     sns.set_context("paper", font_scale=1.2)
     plt.rcParams.update({
-        'font.family': 'sans-serif',
-        'font.sans-serif': ['Microsoft YaHei', 'SimHei', 'DejaVu Sans', 'Arial'],
-        'axes.unicode_minus': False,
         'axes.titlesize': 13,
         'axes.labelsize': 11,
         'legend.fontsize': 8.5,
@@ -377,6 +391,7 @@ def setup_style():
         'savefig.bbox': 'tight',
         'savefig.facecolor': 'white',
     })
+    _set_chinese_font()
 
 
 def plot_player_metric(scheme_averages, scheme_order, schemes_dict,
@@ -386,6 +401,7 @@ def plot_player_metric(scheme_averages, scheme_order, schemes_dict,
     通用: 每个玩家的某指标 vs 回合数
     2x2子图，每条曲线对应一个scheme
     """
+    _set_chinese_font()
     fig, axes = plt.subplots(2, 2, figsize=(13, 9))
     fig.suptitle(title, fontsize=15, fontweight='bold', y=1.01)
     
@@ -438,6 +454,7 @@ def plot_total_metric(scheme_averages, scheme_order, schemes_dict,
     通用: 所有玩家的聚合指标 vs 回合数
     1图，每条曲线对应一个scheme
     """
+    _set_chinese_font()
     fig, ax = plt.subplots(1, 1, figsize=(11, 6))
     
     for scheme_key in scheme_order:

@@ -141,7 +141,7 @@ def print_best_trial(study: optuna.Study) -> None:
     """打印最佳 trial 的参数汇总。"""
     trial = study.best_trial
     print("\n" + "=" * 60)
-    print(f"  最佳 Trial #{trial.number}  |  value = {trial.value:.6f}")
+    print(f"  最佳试验 #{trial.number}  |  目标值 = {trial.value:.6f}")
     print("=" * 60)
     for key, val in trial.params.items():
         print(f"  {key:30s} = {val}")
@@ -265,28 +265,28 @@ def plot_optimization_history(study: optuna.Study, output_dir: str,
 
     # ── 散点 (原始数据) ──
     ax.scatter(numbers, values, s=35, c=BLUE, alpha=0.45,
-               edgecolors='none', zorder=2, label='Trial results')
+               edgecolors='none', zorder=2, label='每次试验结果')
 
     # ── 平滑趋势线 ──
     if len(trials) >= 5:
         xs, ys = _smooth_trend(numbers, values)
         ax.plot(xs, ys, color=BLUE, linewidth=2.2, zorder=4,
-                label='Smoothed trend')
+                label='平滑趋势')
 
     # ── 最优标注 ──
     ax.scatter([numbers[best_idx]], [best_val], s=140,
                c=RED, marker='*', edgecolors='#666666',
                linewidth=0.6, zorder=5,
-               label=f'Best (trial #{trials[best_idx].number}, '
+               label=f'最优值 (试验 #{trials[best_idx].number}, '
                      f'{best_val:.4f})')
     ax.axhline(y=best_val, color=RED, linestyle='--', linewidth=1.0,
                alpha=0.5, zorder=1)
 
     # ── 样式 ──
-    ax.set_xlabel('Trial Number', fontsize=13)
-    direction_label = 'Minimize' if is_min else 'Maximize'
-    ax.set_ylabel(f'Objective Value ({direction_label})', fontsize=13)
-    ax.set_title('Optimization History', fontsize=15, fontweight='bold')
+    ax.set_xlabel('试验编号', fontsize=13)
+    direction_label = '最小化' if is_min else '最大化'
+    ax.set_ylabel(f'目标函数值（{direction_label}）', fontsize=13)
+    ax.set_title('优化历史', fontsize=15, fontweight='bold')
     ax.legend(loc='upper right', fontsize=9, frameon=True,
               edgecolor='#cccccc')
     ax.set_xlim(left=-0.5)
@@ -325,7 +325,7 @@ def plot_best_so_far(study: optuna.Study, output_dir: str,
 
     # ── 阶梯线 ──
     ax.step(numbers, best_sofar, where='post', color=GREEN,
-            linewidth=2.2, zorder=3, label='Best so far')
+            linewidth=2.2, zorder=3, label='历史最优')
 
     # ── 填充区域 ──
     y_min = min(values)
@@ -349,10 +349,10 @@ def plot_best_so_far(study: optuna.Study, output_dir: str,
                linewidth=0.8, alpha=0.6, zorder=0)
 
     # ── 样式 ──
-    ax.set_xlabel('Trial Number', fontsize=13)
-    direction_label = 'Minimize' if is_min else 'Maximize'
-    ax.set_ylabel(f'Best Objective ({direction_label})', fontsize=13)
-    ax.set_title('Best-So-Far Convergence', fontsize=15, fontweight='bold')
+    ax.set_xlabel('试验编号', fontsize=13)
+    direction_label = '最小化' if is_min else '最大化'
+    ax.set_ylabel(f'历史最优目标值（{direction_label}）', fontsize=13)
+    ax.set_title('历史最优收敛曲线', fontsize=15, fontweight='bold')
     ax.legend(loc='upper right', fontsize=9, frameon=True,
               edgecolor='#cccccc')
     ax.set_xlim(left=-0.5)
@@ -406,8 +406,8 @@ def plot_param_importances(study: optuna.Study, output_dir: str,
     ax.set_yticks(range(n))
     ax.set_yticklabels(names, fontsize=10)
     ax.invert_yaxis()
-    ax.set_xlabel('Importance', fontsize=13)
-    ax.set_title('Hyperparameter Importance', fontsize=15, fontweight='bold')
+    ax.set_xlabel('重要性', fontsize=13)
+    ax.set_title('超参数重要性', fontsize=15, fontweight='bold')
     ax.set_xlim(right=max(vals) * 1.18)
     ax.grid(axis='x', alpha=0.3, linewidth=0.5)
     fig.tight_layout()
@@ -442,7 +442,7 @@ def plot_param_slice(study: optuna.Study, output_dir: str,
         return None
 
     is_min = _is_minimize(study)
-    direction_label = '↓ (minimize)' if is_min else '↑ (maximize)'
+    direction_label = '↓ （越小越好）' if is_min else '↑ （越大越好）'
 
     # 收集所有 (param_value, objective_value) 对
     param_data = {}
@@ -518,7 +518,7 @@ def plot_param_slice(study: optuna.Study, output_dir: str,
                        linewidth=1.0, alpha=0.5, zorder=1)
 
         ax.set_xlabel(name, fontsize=10)
-        ax.set_ylabel(f'Objective {direction_label}', fontsize=9)
+        ax.set_ylabel(f'目标函数值 {direction_label}', fontsize=9)
         ax.grid(alpha=0.25, linewidth=0.4)
 
     # 隐藏空子图
@@ -526,7 +526,7 @@ def plot_param_slice(study: optuna.Study, output_dir: str,
         row, col = idx // n_cols, idx % n_cols
         axes[row, col].set_visible(False)
 
-    fig.suptitle('Parameter Slice: Hyperparameter vs Objective',
+    fig.suptitle('参数切片：超参数与目标值关系',
                  fontsize=16, fontweight='bold', y=1.01)
     fig.tight_layout()
 
@@ -690,7 +690,7 @@ def plot_parallel_coordinate(study: optuna.Study, output_dir: str,
 
     # ── 底部标注 trial 数量 ──
     ax.text(0.01, -0.12,
-            f'Showing top {n_shown} / {len(trials)} trials',
+            f'显示前 {n_shown} / {len(trials)} 次试验',
             transform=ax.transAxes, fontsize=8, color=GRAY,
             style='italic')
 
@@ -717,12 +717,12 @@ def plot_parallel_coordinate(study: optuna.Study, output_dir: str,
     # ── Colorbar ──
     sm = ScalarMappable(norm=norm, cmap=cmap)
     cbar = fig.colorbar(sm, ax=ax, fraction=0.018, pad=0.06)
-    direction_label = '↓ lower=better' if is_min else '↑ higher=better'
-    cbar.set_label(f'Objective  {direction_label}', fontsize=10)
+    direction_label = '↓ 越小越好' if is_min else '↑ 越大越好'
+    cbar.set_label(f'目标函数值  {direction_label}', fontsize=10)
     cbar.ax.tick_params(labelsize=8)
 
     # ── 标题 ──
-    ax.set_title('Parallel Coordinate: Hyperparameter Interaction',
+    ax.set_title('平行坐标：超参数交互关系',
                  fontsize=15, fontweight='bold', pad=20)
 
     fig.tight_layout()
@@ -782,9 +782,9 @@ def plot_edf(study: optuna.Study, output_dir: str,
                       alpha=0.92, edgecolor='#cccccc'))
 
     # ── 样式 ──
-    ax.set_xlabel('Objective Value', fontsize=13)
-    ax.set_ylabel('Cumulative Probability', fontsize=13)
-    ax.set_title('Empirical Distribution Function (EDF)',
+    ax.set_xlabel('目标函数值', fontsize=13)
+    ax.set_ylabel('累积概率', fontsize=13)
+    ax.set_title('经验分布函数 (EDF)',
                  fontsize=15, fontweight='bold')
     ax.set_ylim(0, 1.02)
     fig.tight_layout()
@@ -859,7 +859,7 @@ def plot_timeline(study: optuna.Study, output_dir: str,
             best_idx = min(valid_vals, key=lambda x: x[1])[0]
         else:
             best_idx = max(valid_vals, key=lambda x: x[1])[0]
-        ax.annotate(f'Best: {values[best_idx]:.4f}',
+        ax.annotate(f'最优: {values[best_idx]:.4f}',
                     xy=(starts[best_idx] + durations[best_idx],
                         best_idx),
                     xytext=(6, 0), textcoords='offset points',
@@ -880,8 +880,8 @@ def plot_timeline(study: optuna.Study, output_dir: str,
     ax.set_yticks(range(len(timeline_data)))
     ax.set_yticklabels([f'Trial #{n}' for n in numbers], fontsize=8)
     ax.invert_yaxis()
-    ax.set_xlabel('Elapsed Time (minutes)', fontsize=13)
-    ax.set_title('Trial Timeline', fontsize=15, fontweight='bold')
+    ax.set_xlabel('已用时间（分钟）', fontsize=13)
+    ax.set_title('试验时间线', fontsize=15, fontweight='bold')
     ax.grid(axis='x', alpha=0.25, linewidth=0.4)
     fig.tight_layout()
 
@@ -929,9 +929,9 @@ def plot_dashboard(study: optuna.Study, output_dir: str,
                 linewidth=0.5, zorder=5)
     ax1.axhline(y=best_val, color=RED, linestyle='--',
                 linewidth=0.8, alpha=0.45, zorder=1)
-    ax1.set_xlabel('Trial Number', fontsize=11)
-    ax1.set_ylabel('Objective Value', fontsize=11)
-    ax1.set_title('(a) Optimization History', fontsize=13,
+    ax1.set_xlabel('试验编号', fontsize=11)
+    ax1.set_ylabel('目标函数值', fontsize=11)
+    ax1.set_title('(a) 优化历史', fontsize=13,
                   fontweight='bold', loc='left')
     ax1.grid(alpha=0.25, linewidth=0.4)
 
@@ -946,9 +946,9 @@ def plot_dashboard(study: optuna.Study, output_dir: str,
     ax2.scatter([numbers[-1]], [best_sofar[-1]], s=90,
                 c=GREEN, edgecolors='#555555',
                 linewidth=0.5, zorder=5)
-    ax2.set_xlabel('Trial Number', fontsize=11)
-    ax2.set_ylabel('Best Objective', fontsize=11)
-    ax2.set_title('(b) Best-So-Far Convergence', fontsize=13,
+    ax2.set_xlabel('试验编号', fontsize=11)
+    ax2.set_ylabel('历史最优目标值', fontsize=11)
+    ax2.set_title('(b) 历史最优收敛', fontsize=13,
                   fontweight='bold', loc='left')
     ax2.grid(alpha=0.25, linewidth=0.4)
 
@@ -970,11 +970,11 @@ def plot_dashboard(study: optuna.Study, output_dir: str,
             ax3.set_yticklabels(pnames, fontsize=9)
             ax3.invert_yaxis()
     except Exception:
-        ax3.text(0.5, 0.5, 'Importance not available',
+        ax3.text(0.5, 0.5, '参数重要性数据不可用',
                  transform=ax3.transAxes, ha='center', va='center',
                  fontsize=11, color=GRAY)
-    ax3.set_xlabel('Importance', fontsize=11)
-    ax3.set_title('(c) Parameter Importance', fontsize=13,
+    ax3.set_xlabel('重要性', fontsize=11)
+    ax3.set_title('(c) 参数重要性', fontsize=13,
                   fontweight='bold', loc='left')
     ax3.grid(axis='x', alpha=0.25, linewidth=0.4)
 
@@ -985,14 +985,14 @@ def plot_dashboard(study: optuna.Study, output_dir: str,
              where='post', color=BLUE, linewidth=2.0)
     med = np.median(sorted_vals)
     ax4.axvline(x=med, color=GRAY, linestyle='--', linewidth=0.8, alpha=0.6)
-    ax4.set_xlabel('Objective Value', fontsize=11)
-    ax4.set_ylabel('Cumulative Probability', fontsize=11)
+    ax4.set_xlabel('目标函数值', fontsize=11)
+    ax4.set_ylabel('累积概率', fontsize=11)
     ax4.set_title(f'(d) EDF (N={n})', fontsize=13,
                   fontweight='bold', loc='left')
     ax4.set_ylim(0, 1.02)
     ax4.grid(alpha=0.25, linewidth=0.4)
 
-    fig.suptitle('Hyperparameter Search: Comprehensive Overview',
+    fig.suptitle('超参数搜索：综合概览',
                  fontsize=16, fontweight='bold', y=1.01)
 
     _save(fig, output_dir, 'dashboard', fmt)
