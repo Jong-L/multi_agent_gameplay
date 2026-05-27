@@ -1,4 +1,4 @@
-\begin{thebibliography}{49}
+\begin{thebibliography}{48}
 \providecommand{\natexlab}[1]{#1}
 \providecommand{\url}[1]{#1}
 \expandafter\ifx\csname urlstyle\endcsname\relax\else
@@ -55,13 +55,6 @@ YU C, VELU A, VINITSKY E, et~al.
 \newblock 2022.
 \newblock arXiv: \eprint{https://arxiv.org/abs/2103.01955}{2103.01955}.
 \newblock \url{https://arxiv.org/abs/2103.01955}.
-
-\bibitem[de~Witt et~al.(2020)de~Witt, Gupta, Makoviichuk, Makoviychuk, Torr, Sun, and Whiteson]{dewitt2020independentlearningneedstarcraft}
-DE~WITT C~S, GUPTA T, MAKOVIICHUK D, et~al.
-\newblock Is independent learning all you need in the starcraft multi-agent challenge?\allowbreak[A/OL].
-\newblock 2020.
-\newblock arXiv: \eprint{https://arxiv.org/abs/2011.09533}{2011.09533}.
-\newblock \url{https://arxiv.org/abs/2011.09533}.
 
 \bibitem[Watkins et~al.(1992)Watkins and Dayan]{watkins1992qlearning}
 WATKINS C~J~C~H, DAYAN P.

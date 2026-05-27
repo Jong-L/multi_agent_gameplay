@@ -94,7 +94,7 @@
         \begin{tabular}{rl}
             学生姓名： & \uline{蒋伦吉} \hspace{2em} 班级：\uline{计算2202} \\
             所在院系： & \uline{控计学院} \hspace{2em} 所在专业：\uline{计算机科学与技术} \\
-            设计（论文）题目： & \uline{基于机器学习的无人机博弈对抗研究} \\
+            设计（论文）题目： & \uline{基于机器学习的机器博弈对抗研究} \\
             指导教师： & \uline{刘春阳} \\
         \end{tabular}
         }
@@ -132,7 +132,7 @@
 % 图 2.1  强化学习基本框架示意图
 \begin{figure}[h!]
   \centering
-  \includegraphics[width=0.75\linewidth]{imgs/rl_diagram.png}
+  \includegraphics[width=0.75\linewidth]{imgs/rl_diagram.drawio.pdf}
   \caption{强化学习基本框架}
   \label{fig:rl_diagram}
 \end{figure}
@@ -227,9 +227,9 @@ Q值函数是给定状态$s$、动作$a$所对应的一个值，通常用$Q(s,a)
 % ============================================
 \section{设计（论文）的主要研究内容及预期目标}
 
-\cite{dewitt2020independentlearningneedstarcraft}的成果表明，即使不使用任何联合通信，参数共享，信息共享等手段，每个智能体拥有独立的观测和策略网络，多智能体系统也可以表现出和联合学习相近甚至更好的性能。出于简单起见，本课题采用这种IPPO方法，观察智能体行为。
+Christian等人\cite{dewitt2020independentlearningneedstarcraft}的成果表明，即使不使用任何联合通信，参数共享，信息共享等手段，每个智能体拥有独立的观测和策略网络，多智能体系统也可以表现出和联合学习相近甚至更好的性能。出于简单起见，本课题采用这种IPPO方法，观察智能体行为。
 
-\cite{Ng1999PolicyIU}给出了针对稀疏奖励问题的奖励塑形方法，该方法不会改变策略最优性，但可以加速策略收敛。本课题将引入奖励塑形方法，对比奖励函数，使得智能体在训练过程中能够更快地收敛到最优策略。
+吴恩达\cite{Ng1999PolicyIU}给出了针对稀疏奖励问题的奖励塑形方法，该方法不会改变策略最优性，但可以加速策略收敛。本课题将引入奖励塑形方法，对比奖励函数，使得智能体在训练过程中能够更快地收敛到最优策略。
 
 本课题预期设计并开发个人游戏《Tiny Swords》作为多智能体博弈环境，并在此基础上研究奖励与观测工程，通过实验对比，分析不同奖励函数和观测工程对智能体性能的影响，同时在IPPO条件下，观察分析智能体行为是否具有博弈和协作行为。
 

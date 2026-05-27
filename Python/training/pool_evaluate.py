@@ -1,26 +1,14 @@
 """
 Evaluate one or more agent_0 checkpoints against recent opponent-pool policies.
 
-Default behavior mirrors the final evaluation stage of the opponent-pool
-experiment:
-  - evaluated agent: agent_0
-  - evaluated checkpoints:
-      saved_models/pool_step102400_agent0.pt
-      saved_models/ippo_direct_agent0.pt
-  - opponent pool: recent checkpoints for agent_1, agent_2, and agent_3 from
-      saved_models/ippo_pool_checkpoints
-  - sampled opponent groups are reused for every evaluated model.
-
-Model paths can be edited in PoolEvaluateArgs.eval_model_paths or passed from
-the command line:
-  python Python/training/pool_evaluate.py --model-paths a.pt b.pt
-  python Python/training/pool_evaluate.py --model-paths "('a.pt', 'b.pt')"
+Since different agents have distinct reward functions (class-specific scoring),
+agent_0's own reward is the only valid comparison metric.
+All statistics (bootstrap CI, paired t-test, Cohen's d) are computed on
+agent_0's per-group mean rewards.
 
 Output:
-  - CSV with per-episode rows (model_label, group_id, episode, agent_id,
-    reward, rank, is_winner)
-  - JSON with per-model statistics, pairwise comparisons, and per-group
-    breakdown (bootstrap CIs, paired t-tests, Cohen's d)
+  - CSV with per-episode rows (model_label, group_id, episode, agent_id, reward)
+  - JSON with per-model statistics, pairwise comparisons, per-group breakdown
   - Terminal summary table
 """
 from __future__ import annotations
@@ -32,7 +20,6 @@ import csv
 import json
 import pathlib
 import random
-from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Any, Optional
 
@@ -49,6 +36,7 @@ from custom_ippo_pool import (
     _build_eval_agent,
     _configure_runtime_args,
     _evaluate_policy_groups,
+    _select_action,
     _with_train_flags,
 )
 from continue_ippo_pool_agent import (
@@ -72,9 +60,10 @@ class PoolEvaluateArgs(IppoPoolArgs):
         "saved_models/ippo_direct_agent0.pt",
         "saved_models/pool_step102400_agent0.pt",
         "saved_models/ippo_average_opponent_agent0_final_agent0.pt",
+        "__random__",
     )
-    """待评估的模型路径"""
-    eval_model_labels: Optional[tuple[str, ...]] = ("Direct", "Pool", "Average")
+    """待评估的模型路径. '__random__' 表示随机动作基线."""
+    eval_model_labels: Optional[tuple[str, ...]] = ("Direct", "Pool", "Average", "Random")
     opponent_checkpoint_dir: str = "saved_models/ippo_pool_checkpoints"
     """对手池检查点目录"""
     opponent_keep_per_agent: int = 20
@@ -145,11 +134,7 @@ def _parse_args() -> PoolEvaluateArgs:
     parser.add_argument("--opponent-keep-per-agent", type=int, default=args.opponent_keep_per_agent)
     parser.add_argument("--allow-fewer-opponents", action="store_true")
     parser.add_argument("--eval-groups", type=int, default=args.pool_eval_groups)
-    parser.add_argument(
-        "--episodes-per-group",
-        type=int,
-        default=args.pool_eval_episodes_per_group,
-    )
+    parser.add_argument("--episodes-per-group", type=int, default=args.pool_eval_episodes_per_group)
     parser.add_argument("--output-path", default=args.pool_eval_output_path)
     parser.add_argument("--stats-json-path", default=args.stats_json_path)
     parser.add_argument("--bootstrap-samples", type=int, default=args.bootstrap_samples)
@@ -288,10 +273,6 @@ def _sample_opponent_groups(
     ]
 
 
-# ═══════════════════════════════════════════════════════════════════════
-#  Policy group construction
-# ═══════════════════════════════════════════════════════════════════════
-
 def _build_policy_groups(
     model_path: str,
     main_agent_id: int,
@@ -305,21 +286,11 @@ def _build_policy_groups(
     for group in opponent_groups:
         group_agents: list[Optional[IPPOAgent]] = [None for _ in _agent_ids(args)]
         group_agents[main_agent_id] = _build_eval_agent(
-            model_path,
-            main_agent_id,
-            args,
-            n_actions,
-            seg,
-            device,
+            model_path, main_agent_id, args, n_actions, seg, device,
         )
         for entry in group:
             group_agents[entry.agent_id] = _build_eval_agent(
-                entry.checkpoint_path,
-                entry.agent_id,
-                args,
-                n_actions,
-                seg,
-                device,
+                entry.checkpoint_path, entry.agent_id, args, n_actions, seg, device,
             )
         missing = [idx for idx, agent in enumerate(group_agents) if agent is None]
         if missing:
@@ -329,39 +300,102 @@ def _build_policy_groups(
 
 
 # ═══════════════════════════════════════════════════════════════════════
-#  Row enrichment: rank & winner
+#  Random baseline evaluation (agent_0 takes random actions)
 # ═══════════════════════════════════════════════════════════════════════
 
-def _enrich_rows_with_ranks(
-    rows: list[dict[str, Any]],
-    agent_configs: Any,
-    main_agent_id: int,
+def _evaluate_random_baseline(
+    model_label: str,
+    opponent_groups: list[list[PoolEntry]],
+    eval_args: PoolEvaluateArgs,
+    envs: Any,
+    n_actions: int,
+    seg: Any,
+    device: torch.device,
 ) -> list[dict[str, Any]]:
-    """For each (model_label, group_id, episode), rank agents by reward.
+    """Run evaluation with agent_0 taking uniformly random actions.
 
-    Rank 0 = highest reward (winner).  Adds 'rank' and 'is_winner' fields.
-    Ties receive the average rank (scipy.stats.rankdata default).
+    Opponent policies (agent_1/2/3) are loaded from opponent_groups as usual.
+    This provides a pure random baseline — any trained model should beat it.
     """
-    agent_ids = [cfg.agent_id for cfg in agent_configs]
+    n_groups = len(opponent_groups)
+    n_agents = len(eval_args.agent_configs)
 
-    # Group rows by (model_label, group_id, episode)
-    groups: dict[tuple, list[dict[str, Any]]] = {}
-    for row in rows:
-        key = (row["model_label"], row["group_id"], row["episode"])
-        groups.setdefault(key, []).append(row)
+    # Build policies for opponents only
+    policies: list[list[Any]] = []
+    for group in opponent_groups:
+        group_agents: list[Any] = [None for _ in _agent_ids(eval_args)]
+        for entry in group:
+            group_agents[entry.agent_id] = _build_eval_agent(
+                entry.checkpoint_path, entry.agent_id, eval_args, n_actions, seg, device,
+            )
+        policies.append(group_agents)
 
-    for key, group_rows in groups.items():
-        # Collect rewards in fixed agent-id order
-        group_rows.sort(key=lambda r: int(r["agent_id"]))
-        rewards = np.array([r["reward"] for r in group_rows])
+    # Init RNN states for opponents
+    rnn_states: list[list[Optional[Any]]] = []
+    for group in policies:
+        rnn_states.append([
+            group[agent_idx].get_initial_state(1, device)
+            if group[agent_idx] is not None and group[agent_idx].is_recurrent else None
+            for agent_idx in range(n_agents)
+        ])
 
-        # Rank: higher reward = better (method='average' for tie-breaking)
-        # scipy rankdata gives 1-indexed, descending → negate rewards
-        ranks = scipy_stats.rankdata(-rewards, method="average") - 1  # 0-indexed
+    obs_raw, _ = envs.reset(seed=eval_args.seed)
+    next_obs = np.asarray(obs_raw, dtype=np.float32)
+    episode_rewards = np.zeros((n_groups, n_agents), dtype=np.float64)
+    episode_counts = np.zeros(n_groups, dtype=np.int64)
+    rows: list[dict[str, Any]] = []
 
-        for i, row in enumerate(group_rows):
-            row["rank"] = float(ranks[i])
-            row["is_winner"] = 1 if ranks[i] == 0 else 0
+    main_id = int(eval_args.main_agent_id)
+    while np.any(episode_counts < eval_args.pool_eval_episodes_per_group):
+        obs_t = torch.tensor(next_obs, dtype=torch.float32, device=device)
+        obs_by_env = obs_t.view(n_groups, n_agents, -1)
+        actions_by_env = np.zeros((n_groups, n_agents), dtype=np.int64)
+
+        for group_idx in range(n_groups):
+            for agent_idx in range(n_agents):
+                if agent_idx == main_id:
+                    # Random baseline: uniform random
+                    actions_by_env[group_idx, agent_idx] = np.random.randint(0, n_actions)
+                elif policies[group_idx][agent_idx] is not None:
+                    action, next_state = _select_action(
+                        policies[group_idx][agent_idx],
+                        obs_by_env[group_idx, agent_idx].unsqueeze(0),
+                        rnn_states[group_idx][agent_idx],
+                        eval_args.eval_deterministic,
+                    )
+                    actions_by_env[group_idx, agent_idx] = action
+                    rnn_states[group_idx][agent_idx] = next_state
+                else:
+                    actions_by_env[group_idx, agent_idx] = np.random.randint(0, n_actions)
+
+        next_obs, rewards, terms, truncs, _ = envs.step(actions_by_env.reshape(-1))
+        next_obs = np.asarray(next_obs, dtype=np.float32)
+        rewards_by_env = np.asarray(rewards, dtype=np.float32).reshape(n_groups, n_agents)
+        dones_by_env = np.logical_or(terms, truncs).reshape(n_groups, n_agents)
+        episode_rewards += rewards_by_env
+
+        for group_idx in range(n_groups):
+            if episode_counts[group_idx] >= eval_args.pool_eval_episodes_per_group:
+                continue
+            if np.any(dones_by_env[group_idx]):
+                episode = int(episode_counts[group_idx])
+                for agent_idx in range(n_agents):
+                    rows.append({
+                        "model_label": model_label,
+                        "group_id": group_idx,
+                        "episode": episode,
+                        "agent_id": eval_args.agent_configs[agent_idx].agent_id,
+                        "reward": float(episode_rewards[group_idx, agent_idx]),
+                    })
+                episode_counts[group_idx] += 1
+                episode_rewards[group_idx, :] = 0.0
+                rnn_states[group_idx] = [
+                    policies[group_idx][agent_idx].get_initial_state(1, device)
+                    if policies[group_idx][agent_idx] is not None
+                       and policies[group_idx][agent_idx].is_recurrent
+                    else None
+                    for agent_idx in range(n_agents)
+                ]
 
     return rows
 
@@ -377,10 +411,6 @@ def _bootstrap_ci(
     ci: int = 95,
     rng: Optional[np.random.Generator] = None,
 ) -> dict[str, float]:
-    """Compute bootstrap confidence interval for a statistic.
-
-    Returns dict with keys: 'value', 'lower', 'upper'.
-    """
     data = np.asarray(data)
     if rng is None:
         rng = np.random.default_rng()
@@ -397,47 +427,28 @@ def _bootstrap_ci(
 
 
 # ═══════════════════════════════════════════════════════════════════════
-#  Per-group aggregation
+#  Per-group reward aggregation
 # ═══════════════════════════════════════════════════════════════════════
 
-def _per_group_aggregates(
+def _per_group_rewards(
     rows: list[dict[str, Any]],
     model_label: str,
     main_agent_id: int,
-) -> dict[str, np.ndarray]:
-    """Compute per-group statistics for one model on agent_0.
-
-    Returns dict with:
-      - win_rate: (n_groups,) per-group win rate
-      - mean_rank: (n_groups,) per-group mean rank
-      - mean_reward: (n_groups,) per-group mean reward
-    """
-    # Extract rows for this model and main agent
+) -> np.ndarray:
+    """Return per-group mean rewards (shape: n_groups,) for one model on agent_0."""
     main_rows = [
         r for r in rows
         if r["model_label"] == model_label and int(r["agent_id"]) == main_agent_id
     ]
     group_ids = sorted({int(r["group_id"]) for r in main_rows})
-
-    win_rates = []
-    mean_ranks = []
-    mean_rewards = []
-
-    for gid in group_ids:
-        group_rows = [r for r in main_rows if int(r["group_id"]) == gid]
-        win_rates.append(np.mean([r["is_winner"] for r in group_rows]))
-        mean_ranks.append(np.mean([r["rank"] for r in group_rows]))
-        mean_rewards.append(np.mean([r["reward"] for r in group_rows]))
-
-    return {
-        "win_rate": np.array(win_rates),
-        "mean_rank": np.array(mean_ranks),
-        "mean_reward": np.array(mean_rewards),
-    }
+    return np.array([
+        np.mean([r["reward"] for r in main_rows if int(r["group_id"]) == gid])
+        for gid in group_ids
+    ])
 
 
 # ═══════════════════════════════════════════════════════════════════════
-#  Per-model statistics
+#  Per-model statistics (reward only)
 # ═══════════════════════════════════════════════════════════════════════
 
 def _compute_model_stats(
@@ -446,52 +457,35 @@ def _compute_model_stats(
     main_agent_id: int,
     n_bootstrap: int = 10000,
 ) -> list[dict[str, Any]]:
-    """Compute per-model statistics with bootstrap confidence intervals.
-
-    Returns list of dicts, one per model, each containing:
-      win_rate, mean_rank, mean_reward — each with value/lower/upper keys.
-    Also includes episode-level raw aggregates.
-    """
     rng = np.random.default_rng()
     results = []
 
     for label in model_labels:
-        aggs = _per_group_aggregates(rows, label, main_agent_id)
+        group_rewards = _per_group_rewards(rows, label, main_agent_id)
+        reward_ci = _bootstrap_ci(group_rewards, np.mean, n_bootstrap, rng=rng)
 
-        # Bootstrap at the group level (groups are independent)
-        wr_ci = _bootstrap_ci(aggs["win_rate"], np.mean, n_bootstrap, rng=rng)
-        mr_ci = _bootstrap_ci(aggs["mean_rank"], np.mean, n_bootstrap, rng=rng)
-        mrw_ci = _bootstrap_ci(aggs["mean_reward"], np.mean, n_bootstrap, rng=rng)
-
-        # Episode-level raw statistics
         main_rows = [
             r for r in rows
             if r["model_label"] == label and int(r["agent_id"]) == main_agent_id
         ]
         raw_rewards = np.array([r["reward"] for r in main_rows])
-        raw_ranks = np.array([r["rank"] for r in main_rows])
-        raw_wins = np.array([r["is_winner"] for r in main_rows])
 
         results.append({
             "model_label": label,
-            "n_groups": len(aggs["win_rate"]),
+            "n_groups": len(group_rewards),
             "n_episodes": len(main_rows),
-            "win_rate": wr_ci,
-            "mean_rank": mr_ci,
-            "mean_reward": mrw_ci,
-            "raw_win_rate_episode": float(raw_wins.mean()),
+            "mean_reward": reward_ci,
             "raw_mean_reward_episode": float(raw_rewards.mean()),
             "raw_std_reward_episode": float(raw_rewards.std(ddof=0)),
             "median_reward": float(np.median(raw_rewards)),
-            "per_group_win_rates": {str(i): float(v) for i, v in enumerate(aggs["win_rate"])},
-            "per_group_mean_rewards": {str(i): float(v) for i, v in enumerate(aggs["mean_reward"])},
+            "per_group_mean_rewards": {str(i): float(v) for i, v in enumerate(group_rewards)},
         })
 
     return results
 
 
 # ═══════════════════════════════════════════════════════════════════════
-#  Pairwise statistical comparison
+#  Pairwise statistical comparison (reward only)
 # ═══════════════════════════════════════════════════════════════════════
 
 def _compute_pairwise(
@@ -499,61 +493,36 @@ def _compute_pairwise(
     model_labels: list[str],
     main_agent_id: int,
 ) -> list[dict[str, Any]]:
-    """Paired statistical tests between all model pairs.
-
-    Tests are performed at the group level (paired by group_id).
-
-    For each pair returns:
-      - models: (label_a, label_b)
-      - delta_win_rate: difference in group-level win rate [value, lower, upper bootstrap CI]
-      - ttest_win_rate: (statistic, p_value) paired t-test on per-group win rates
-      - ttest_reward: (statistic, p_value) paired t-test on per-group mean rewards
-      - cohens_d_win_rate: Cohen's d effect size
-      - cohens_d_reward: Cohen's d effect size
-      - significant_05: bool
-      - significant_01: bool
-    """
-    # Precompute per-group aggregates for each model
-    model_aggs = {}
-    for label in model_labels:
-        model_aggs[label] = _per_group_aggregates(rows, label, main_agent_id)
+    group_rewards = {
+        label: _per_group_rewards(rows, label, main_agent_id)
+        for label in model_labels
+    }
 
     results = []
     for i, label_a in enumerate(model_labels):
         for label_b in model_labels[i + 1:]:
-            aggs_a = model_aggs[label_a]
-            aggs_b = model_aggs[label_b]
-
-            # ---- Win rate comparison ----
-            delta_wr = aggs_a["win_rate"] - aggs_b["win_rate"]
-            delta_wr_ci = _bootstrap_ci(delta_wr, np.mean, 10000)
-            t_wr = scipy_stats.ttest_rel(aggs_a["win_rate"], aggs_b["win_rate"])
-
-            # Cohen's d for win rate
-            d_wr = _cohens_d(aggs_a["win_rate"], aggs_b["win_rate"])
-
-            # ---- Reward comparison ----
-            t_rw = scipy_stats.ttest_rel(aggs_a["mean_reward"], aggs_b["mean_reward"])
-            d_rw = _cohens_d(aggs_a["mean_reward"], aggs_b["mean_reward"])
+            r_a = group_rewards[label_a]
+            r_b = group_rewards[label_b]
+            delta = r_a - r_b
+            delta_ci = _bootstrap_ci(delta, np.mean, 10000)
+            t = scipy_stats.ttest_rel(r_a, r_b)
+            d = _cohens_d(r_a, r_b)
 
             results.append({
                 "models": (label_a, label_b),
-                "delta_win_rate": delta_wr_ci,
-                "win_rate_a": float(aggs_a["win_rate"].mean()),
-                "win_rate_b": float(aggs_b["win_rate"].mean()),
-                "ttest_win_rate": {"statistic": float(t_wr.statistic), "p_value": float(t_wr.pvalue)},
-                "ttest_reward": {"statistic": float(t_rw.statistic), "p_value": float(t_rw.pvalue)},
-                "cohens_d_win_rate": float(d_wr),
-                "cohens_d_reward": float(d_rw),
-                "significant_05": bool(t_rw.pvalue < 0.05),
-                "significant_01": bool(t_rw.pvalue < 0.01),
+                "delta_reward": delta_ci,
+                "reward_a": float(r_a.mean()),
+                "reward_b": float(r_b.mean()),
+                "ttest_reward": {"statistic": float(t.statistic), "p_value": float(t.pvalue)},
+                "cohens_d_reward": float(d),
+                "significant_05": bool(t.pvalue < 0.05),
+                "significant_01": bool(t.pvalue < 0.01),
             })
 
     return results
 
 
 def _cohens_d(x: np.ndarray, y: np.ndarray) -> float:
-    """Cohen's d for paired samples: mean(diff) / std(diff)."""
     diff = x - y
     if len(diff) < 2:
         return 0.0
@@ -567,26 +536,19 @@ def _cohens_d(x: np.ndarray, y: np.ndarray) -> float:
 #  Output: CSV
 # ═══════════════════════════════════════════════════════════════════════
 
-def _write_enhanced_csv(path: Optional[str], rows: list[dict[str, Any]]) -> None:
+def _write_csv(path: Optional[str], rows: list[dict[str, Any]]) -> None:
     if path is None:
         return
     output_path = pathlib.Path(path)
     if output_path.parent:
         output_path.parent.mkdir(parents=True, exist_ok=True)
-    fieldnames = [
-        "model_label", "group_id", "episode", "agent_id",
-        "reward", "rank", "is_winner",
-    ]
+    fieldnames = ["model_label", "group_id", "episode", "agent_id", "reward"]
     with output_path.open("w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames, extrasaction="ignore")
         writer.writeheader()
         writer.writerows(rows)
     print(f"[Eval] CSV saved to {output_path}")
 
-
-# ═══════════════════════════════════════════════════════════════════════
-#  Output: JSON stats
-# ═══════════════════════════════════════════════════════════════════════
 
 def _save_stats_json(
     path: Optional[str],
@@ -598,82 +560,66 @@ def _save_stats_json(
     output_path = pathlib.Path(path)
     if output_path.parent:
         output_path.parent.mkdir(parents=True, exist_ok=True)
-    payload = {
-        "models": model_stats,
-        "pairwise_comparisons": pairwise,
-    }
+    payload = {"models": model_stats, "pairwise_comparisons": pairwise}
     with output_path.open("w", encoding="utf-8") as f:
         json.dump(payload, f, indent=2, ensure_ascii=False, default=str)
     print(f"[Eval] Stats JSON saved to {output_path}")
 
 
 # ═══════════════════════════════════════════════════════════════════════
-#  Output: terminal summary
+#  Terminal summary
 # ═══════════════════════════════════════════════════════════════════════
 
-def _print_enhanced_summary(
+def _print_summary(
     model_stats: list[dict[str, Any]],
     pairwise: list[dict[str, Any]],
     model_labels: list[str],
 ) -> None:
-    """Print comprehensive evaluation summary to terminal."""
     SEP = "=" * 72
     SUB = "-" * 72
 
     print(f"\n{SEP}")
-    print("[Eval Summary]")
+    print("[Eval Summary]  (agent_0 reward only — different agents have different reward functions)")
     print(f"{SEP}")
 
-    # ---- Model table ----
-    header = f"{'Model':<10} {'Win Rate %':>15} {'Mean Rank':>15} {'Mean Reward':>15}"
+    # ---- Reward table ----
+    header = f"{'Model':<10} {'Mean Reward [95% CI]':>32} {'Std':>10}"
     print(f"\n{header}")
     print(SUB)
 
     for stat in model_stats:
-        wr = stat["win_rate"]
-        mr = stat["mean_rank"]
         mrw = stat["mean_reward"]
-        wr_str = f"{wr['value']*100:5.1f} [{wr['lower']*100:4.1f}, {wr['upper']*100:4.1f}]"
-        mr_str = f"{mr['value']:4.2f} [{mr['lower']:4.2f}, {mr['upper']:4.2f}]"
-        mrw_str = f"{mrw['value']:6.2f} [{mrw['lower']:5.2f}, {mrw['upper']:5.2f}]"
-        print(f"{stat['model_label']:<10} {wr_str:>15} {mr_str:>15} {mrw_str:>15}")
+        rw_str = f"{mrw['value']:7.1f} [{mrw['lower']:6.1f}, {mrw['upper']:6.1f}]"
+        std_str = f"{stat['raw_std_reward_episode']:7.1f}"
+        print(f"{stat['model_label']:<10} {rw_str:>32} {std_str:>10}")
 
-    print(f"\n  Total groups per model: {model_stats[0]['n_groups']}")
-    print(f"  Episodes per group:     {model_stats[0]['n_episodes'] // model_stats[0]['n_groups']}")
-    print(f"  CI:                     95% bootstrap ({10000} resamples)")
+    print(f"\n  Groups: {model_stats[0]['n_groups']}  |  Episodes/group: {model_stats[0]['n_episodes'] // model_stats[0]['n_groups']}")
+    print(f"  CI:     95% bootstrap ({10000} resamples at group level)")
 
-    # ---- Pairwise comparison ----
+    # ---- Pairwise ----
     if len(pairwise) > 0:
         print(f"\n{SEP}")
-        print("[Pairwise Comparison]  (paired t-test on per-group means, n=20)")
+        print("[Pairwise Comparison]  (paired t-test on per-group mean rewards, n=20)")
         print(f"{SEP}")
-        header = f"{'Pair':<16} {'Δ Win Rate':>14} {'Δ Reward':>14} {'p (reward)':>12} {'Cohen d':>10} {'Sig':>6}"
+        header = f"{'Pair':<16} {'Δ Reward [95% CI]':>28} {'p':>10} {'Cohen d':>10} {'Sig':>6}"
         print(header)
         print(SUB)
 
         for pw in pairwise:
             a, b = pw["models"]
             pair_str = f"{a} vs {b}"
-            d_wr = pw["delta_win_rate"]
-            d_wr_str = f"{d_wr['value']*100:+.1f}%"
-            mrw_a = [s for s in model_stats if s["model_label"] == a][0]
-            mrw_b = [s for s in model_stats if s["model_label"] == b][0]
-            d_rw = mrw_a["mean_reward"]["value"] - mrw_b["mean_reward"]["value"]
-            d_rw_str = f"{d_rw:+.2f}"
+            dr = pw["delta_reward"]
+            dr_str = f"{dr['value']:+.1f} [{dr['lower']:+.1f}, {dr['upper']:+.1f}]"
             p_str = f"{pw['ttest_reward']['p_value']:.4f}"
             d_str = f"{pw['cohens_d_reward']:.2f}"
-            sig = ""
-            if pw["significant_01"]:
-                sig = "**"
-            elif pw["significant_05"]:
-                sig = "*"
-            print(f"{pair_str:<16} {d_wr_str:>14} {d_rw_str:>14} {p_str:>12} {d_str:>10} {sig:>6}")
+            sig = "**" if pw["significant_01"] else ("*" if pw["significant_05"] else "")
+            print(f"{pair_str:<16} {dr_str:>28} {p_str:>10} {d_str:>10} {sig:>6}")
 
         print(f"\n  * p < 0.05,  ** p < 0.01")
 
-    # ---- Per-group breakdown (compact) ----
+    # ---- Per-group rewards ----
     print(f"\n{SEP}")
-    print("[Per-Group Win Rate]  (fraction of episodes where agent_0 had highest reward)")
+    print("[Per-Group Mean Rewards]")
     print(f"{SEP}")
 
     group_header = f"{'Group':<7}"
@@ -686,42 +632,28 @@ def _print_enhanced_summary(
     for g in range(n_groups):
         row_str = f"{g:<7}"
         for stat in model_stats:
-            wr = stat["per_group_win_rates"].get(str(g), 0.0)
-            row_str += f" {wr*100:>9.1f}%"
+            rw = stat["per_group_mean_rewards"].get(str(g), 0.0)
+            row_str += f" {rw:>10.1f}"
         print(row_str)
 
-    # ---- Cross-model rank distribution ----
-    print(f"\n{SEP}")
-    print("[Rank Distribution]  (how often did agent_0 place 1st/2nd/3rd/4th)")
-    print(f"{SEP}")
-    rank_header = f"{'Model':<10} {'1st(Win)%':>12} {'2nd%':>10} {'3rd%':>10} {'4th%':>10}"
-    print(rank_header)
-    print(SUB)
-
-    # Recompute from model_stats for rank distribution
-    # We need the raw data, which we don't have in model_stats.
-    # But we have win_rate and mean_rank, which give a good picture.
-    # Let's skip detailed rank distro for now and keep mean_rank.
-
+    # ---- Interpretation ----
     print(f"\n{SEP}")
     print("[Interpretation]")
     print(f"{SEP}")
     if len(model_stats) >= 2:
-        best = max(model_stats, key=lambda s: s["win_rate"]["value"])
-        print(f"  Highest win rate: {best['model_label']} ({best['win_rate']['value']*100:.1f}%)")
+        best = max(model_stats, key=lambda s: s["mean_reward"]["value"])
+        print(f"  Highest mean reward: {best['model_label']} ({best['mean_reward']['value']:.1f})")
+        most_stable = min(model_stats, key=lambda s: s["raw_std_reward_episode"])
+        print(f"  Lowest reward std:   {most_stable['model_label']} ({most_stable['raw_std_reward_episode']:.1f})")
 
-        # Determine which pair has strongest effect
         if len(pairwise) > 0:
             best_pair = max(pairwise, key=lambda p: abs(p["cohens_d_reward"]))
             print(f"  Largest effect size: {best_pair['models'][0]} vs {best_pair['models'][1]} "
                   f"(d={best_pair['cohens_d_reward']:.2f})")
-
             sig_pairs = [p for p in pairwise if p["significant_05"]]
             if sig_pairs:
                 names = [" vs ".join(p["models"]) for p in sig_pairs]
-                print(f"  Significant differences (p<0.05): {', '.join(names)}")
-            else:
-                print(f"  No pairwise differences reached significance (p<0.05).")
+                print(f"  Significant (p<0.05): {', '.join(names)}")
 
     print()
 
@@ -732,16 +664,14 @@ def _print_enhanced_summary(
 
 def run_pool_evaluation(args: PoolEvaluateArgs) -> None:
     if args.main_agent_id not in _agent_ids(args):
-        raise ValueError(f"main_agent_id={args.main_agent_id} is not in agent ids: {_agent_ids(args)}")
+        raise ValueError(f"main_agent_id={args.main_agent_id} not in {_agent_ids(args)}")
     if not args.eval_model_paths:
         raise ValueError("At least one evaluated model path is required.")
 
     eval_args = copy.deepcopy(args)
     eval_args.n_parallel = int(args.pool_eval_groups)
     eval_args.agent_configs = _with_train_flags(
-        eval_args,
-        train_ids=set(),
-        policy_opponent_ids=set(_agent_ids(eval_args)),
+        eval_args, train_ids=set(), policy_opponent_ids=set(_agent_ids(eval_args)),
     )
     eval_args.ppo_model_paths = [None for _ in eval_args.agent_configs]
     model_labels = _make_model_labels(eval_args.eval_model_paths, eval_args.eval_model_labels)
@@ -752,56 +682,44 @@ def run_pool_evaluation(args: PoolEvaluateArgs) -> None:
         n_actions = int(envs.single_action_space.n)
         pool = _build_recent_opponent_pool(eval_args)
         opponent_ids = [
-            agent_id for agent_id in _agent_ids(eval_args)
-            if agent_id != int(eval_args.main_agent_id)
+            aid for aid in _agent_ids(eval_args) if aid != int(eval_args.main_agent_id)
         ]
         opponent_groups = _sample_opponent_groups(
-            pool,
-            opponent_ids,
-            int(eval_args.pool_eval_groups),
-            int(eval_args.seed),
+            pool, opponent_ids, int(eval_args.pool_eval_groups), int(eval_args.seed),
         )
 
-        # ---- Phase 1: run all evaluations (unchanged from original) ----
+        # Phase 1: run all evaluations
         rows: list[dict[str, Any]] = []
         for model_label, model_path in zip(model_labels, eval_args.eval_model_paths):
             print(f"[Eval] {model_label}: {model_path}")
-            policies = _build_policy_groups(
-                model_path,
-                int(eval_args.main_agent_id),
-                opponent_groups,
-                eval_args,
-                n_actions,
-                seg,
-                device,
-            )
-            rows.extend(
-                _evaluate_policy_groups(
-                    model_label,
-                    policies,
-                    eval_args,
-                    envs,
-                    device,
+            if model_path == "__random__":
+                rows.extend(
+                    _evaluate_random_baseline(
+                        model_label, opponent_groups, eval_args, envs,
+                        n_actions, seg, device,
+                    )
                 )
-            )
+            else:
+                policies = _build_policy_groups(
+                    model_path, int(eval_args.main_agent_id), opponent_groups,
+                    eval_args, n_actions, seg, device,
+                )
+                rows.extend(
+                    _evaluate_policy_groups(model_label, policies, eval_args, envs, device)
+                )
 
-        # ---- Phase 2: enrich rows with rank/winner ----
-        rows = _enrich_rows_with_ranks(rows, eval_args.agent_configs, int(eval_args.main_agent_id))
-
-        # ---- Phase 3: compute statistics ----
+        # Phase 2: compute statistics
         model_stats = _compute_model_stats(
             rows, model_labels, int(eval_args.main_agent_id), int(eval_args.bootstrap_samples),
         )
-        pairwise = _compute_pairwise(
-            rows, model_labels, int(eval_args.main_agent_id),
-        )
+        pairwise = _compute_pairwise(rows, model_labels, int(eval_args.main_agent_id))
 
-        # ---- Phase 4: save outputs ----
-        _write_enhanced_csv(eval_args.pool_eval_output_path, rows)
+        # Phase 3: save outputs
+        _write_csv(eval_args.pool_eval_output_path, rows)
         _save_stats_json(eval_args.stats_json_path, model_stats, pairwise)
 
-        # ---- Phase 5: print summary ----
-        _print_enhanced_summary(model_stats, pairwise, model_labels)
+        # Phase 4: print summary
+        _print_summary(model_stats, pairwise, model_labels)
 
     finally:
         envs.close()
