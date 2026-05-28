@@ -1005,7 +1005,7 @@ def main():
 
     load_ppo_models_if_requested(args.ppo_model_paths, agents, device)
 
-    #note：中断点加载优先级更高.此步会覆盖上一步的ppo模型
+    #note：中断点加载优先级更高，会覆盖上一步的ppo模型
     resume_path = args.resume_from or args.load_model_path
     is_resume = bool(args.resume_from)
     start_global_step, start_update, start_episode_count, episode_returns = (

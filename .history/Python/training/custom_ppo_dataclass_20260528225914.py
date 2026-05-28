@@ -230,7 +230,7 @@ class IppoArgs:
     """游戏可执行文件路径"""
     config_path: str = "godot-game/configs/game_config.tres"
     """Godot 游戏配置文件路径（.tres）"""
-    n_parallel: int = 16
+    n_parallel: int = 1
     """并行 Godot 进程数"""
     seed: int = 0
     """随机种子"""
@@ -284,41 +284,23 @@ class IppoArgs:
     """实验名称"""
     experiment_dir: str = "logs/cleanrl_ippo"
     """实验日志根目录"""
-    save_model_path: Optional[str] = "saved_models/ippo_direct"
-    """最终模型保存基础路径。
-    实际会为每个 agent 生成独立文件，如 ippo_direct_agent0.pt, ippo_direct_agent1.pt, ..."""
+    save_model_path: Optional[str] = "saved_models/ippo_direct_agent0"
+    """最终模型保存路径（.pt）"""
     track: bool = False
     """是否记录到 WandB"""
     save_checkpoint: bool = True
-    """是否在训练中周期性保存中断点。
-    checkpoint 同样按 agent 独立保存，如 ippo_direct_episode20_agent0.pt"""
+    """是否在训练中周期性保存中断点"""
     resume_from: Optional[str] = None
-    """从中断点完整恢复训练的基础路径（设为 None 则跳过）。
-    恢复内容包括：模型权重 + 优化器状态 + reward_normalizer + 训练步数/计数器。
-    传入单个基础路径，自动推导每个 agent 的文件，如：
-    resume_from="saved_models/ippo_direct_episode20"
-      ->加载 ippo_direct_episode20_agent0.pt, agent1.pt, agent2.pt, agent3.pt
-    
-    与 load_model_path 的区别：resume_from 恢复优化器和训练进度，load_model_path 只恢复权重。
-    加载优先级：resume_from > load_model_path > ppo_model_paths"""
+    """从中断点恢复训练的路径（设置为 None 不恢复）"""
     load_model_path: Optional[str] = None
-    """从已有 IPPO checkpoint 加载模型权重的基础路径（不恢复优化器和训练步数）。
-    与 resume_from 使用相同的路径推导规则（单个基础路径 -> 自动拼接 _agent{id}.pt），
-    但只恢复 agent_state_dict + reward_normalizer，训练步数从 0 开始。
-    适用场景：用之前 IPPO 联合训练的某个 checkpoint 权重初始化新一轮训练，
-    但重置优化器状态（例如换用不同的学习率策略）。
-    加载优先级：resume_from > load_model_path > ppo_model_paths"""
+    """加载已有模型权重但不恢复优化器、计数器"""
     # ppo_model_paths: list[Optional[str]] = field(default_factory=lambda: [None, None, None, None])
     ppo_model_paths: list[Optional[str]] = field(default_factory=lambda: [
         "saved_models/ippo_bootstrap_agent0.pt",
         "saved_models/ippo_bootstrap_agent1.pt",
         "saved_models/ippo_bootstrap_agent2.pt",
         "saved_models/ippo_bootstrap_agent3.pt",])
-    """按 agent 显式指定 PPO 预训练模型权重路径，列表中 None 表示跳过该 agent。
-    与 load_model_path 的区别：
-    - ppo_model_paths：每个 agent 的路径独立指定，可以指向完全不同的模型来源
-    - load_model_path：单个基础路径，自动推导各 agent 文件（要求各 agent 来自同一轮 IPPO 训练）
-    加载优先级最低."""
+    """按 agent 下标加载 PPO 预训练模型权重，None 表示不加载"""
     save_every_n_episodes: int = 20
     """每 N 个 episode 保存一次中断点"""
     max_checkpoints: int = 3

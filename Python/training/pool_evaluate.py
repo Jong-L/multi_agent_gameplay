@@ -58,8 +58,8 @@ class PoolEvaluateArgs(IppoPoolArgs):
     main_agent_id: int = 0
     eval_model_paths: tuple[str, ...] = (
         "saved_models/ippo_direct_agent0.pt",
-        "saved_models/pool_step102400_agent0.pt",
-        "saved_models/ippo_average_opponent_agent0_final_agent0.pt",
+        "saved_models/agent0_extra_pool_step8089600_agent0.pt",
+        "saved_models/agent0_vs_average_opponents_step8089600_agent0.pt",
         "__random__",
     )
     """待评估的模型路径. '__random__' 表示随机动作基线."""

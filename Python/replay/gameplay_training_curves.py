@@ -40,14 +40,14 @@ OUTPUT_DIR = _PROJECT_ROOT / "article" / "imgs"
 FILES = {
     "IPPO":       DATA_DIR / "cleanrl_ippo_ippo_bootstrap_direct_direct.csv",
     "对手池博弈": DATA_DIR / "cleanrl_ippo_ippo_pool_agent0_extra.csv",
-    "对手策略平均化": DATA_DIR / "cleanrl_ippo_ippo_average_opponent_agent0.csv",
+    "平均策略博弈": DATA_DIR / "cleanrl_ippo_ippo_average_opponent_agent0.csv",
 }
 
 # 颜色映射（与 pool_eval_plots.py 保持一致）
 METHOD_COLORS = {
     "IPPO":           DEFAULT_PALETTE[0],  # blue
     "对手池博弈":     DEFAULT_PALETTE[1],  # orange
-    "对手策略平均化": DEFAULT_PALETTE[2],  # green
+    "平均策略博弈": DEFAULT_PALETTE[2],  # green
 }
 
 
@@ -86,7 +86,7 @@ def main():
     fig, ax = plt.subplots(figsize=(9, 5.5))
 
     stats_lines = []
-    for label in ("IPPO", "对手池博弈", "对手策略平均化"):
+    for label in ("IPPO", "对手池博弈", "平均策略博弈"):
         x, y = all_data[label]
         e = np.full_like(y, half_band)
 
