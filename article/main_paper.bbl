@@ -1,4 +1,4 @@
-\begin{thebibliography}{50}
+\begin{thebibliography}{44}
 \providecommand{\natexlab}[1]{#1}
 \providecommand{\url}[1]{#1}
 \expandafter\ifx\csname urlstyle\endcsname\relax\else
@@ -215,36 +215,6 @@ DEVLIN S, KUDENKO D.
 Proceedings of the 10th International Conference on Autonomous Agents and Multiagent Systems (AAMAS).
 \newblock 2011: 225-232.
 
-\bibitem[Ng et~al.(2000)Ng and Russell]{Ng2000algorithmsinversereinforcementlearning}
-NG A~Y, RUSSELL S.
-\newblock Algorithms for inverse reinforcement learning\allowbreak[C]//\allowbreak
-Proceedings of the 17th International Conference on Machine Learning (ICML).
-\newblock 2000: 663-670.
-
-\bibitem[Ziebart et~al.(2008)Ziebart, Maas, Bagnell, and Dey]{Ziebart2008maximum}
-ZIEBART B~D, MAAS A, BAGNELL J~A, et~al.
-\newblock Maximum entropy inverse reinforcement learning\allowbreak[C]//\allowbreak
-Proceedings of the 23rd AAAI Conference on Artificial Intelligence.
-\newblock 2008: 1433-1438.
-
-\bibitem[Wulfmeier et~al.(2015)Wulfmeier, Ondruska, and Posner]{Wulfmeier2015maximum}
-WULFMEIER M, ONDRUSKA P, POSNER I.
-\newblock Maximum entropy deep inverse reinforcement learning\allowbreak[A].
-\newblock 2015.
-\newblock arXiv: \eprint{https://arxiv.org/abs/1507.04888}{1507.04888}.
-
-\bibitem[Self et~al.(2022)Self, Abudia, Mahmud, and Kamalapurkar]{Self2022modelbased}
-SELF R, ABUDIA M, MAHMUD S~M~N, et~al.
-\newblock Model-based inverse reinforcement learning for deterministic systems\allowbreak[J].
-\newblock Automatica, 2022, 140: 110242.
-
-\bibitem[Hadfield-Menell et~al.(2020)Hadfield-Menell, Milli, Abbeel, Russell, and Dragan]{hadfieldmenell2020inverserewarddesign}
-HADFIELD-MENELL D, MILLI S, ABBEEL P, et~al.
-\newblock Inverse reward design\allowbreak[A/OL].
-\newblock 2020.
-\newblock arXiv: \eprint{https://arxiv.org/abs/1711.02827}{1711.02827}.
-\newblock \url{https://arxiv.org/abs/1711.02827}.
-
 \bibitem[Pathak et~al.(2017)Pathak, Agrawal, Efros, and Darrell]{pathak2017curiositydrivenexplorationselfsupervisedprediction}
 PATHAK D, AGRAWAL P, EFROS A~A, et~al.
 \newblock Curiosity-driven exploration by self-supervised prediction\allowbreak[A/OL].
@@ -264,13 +234,6 @@ DEVIDZE R, KAMALARUBAN P, SINGLA A.
 \newblock Exploration-guided reward shaping for reinforcement learning under sparse rewards\allowbreak[C]//\allowbreak
 Advances in Neural Information Processing Systems (NeurIPS): Vol.~35.
 \newblock 2022: 5829-5842.
-
-\bibitem[Xie et~al.(2024)Xie, Zhao, Wu, Liu, Luo, Zhong, Yang, and Yu]{xie2024text2rewardrewardshapinglanguage}
-XIE T, ZHAO S, WU C~H, et~al.
-\newblock Text2reward: Reward shaping with language models for reinforcement learning\allowbreak[A/OL].
-\newblock 2024.
-\newblock arXiv: \eprint{https://arxiv.org/abs/2309.11489}{2309.11489}.
-\newblock \url{https://arxiv.org/abs/2309.11489}.
 
 \bibitem[王琦，杨毅远，江季(2022)]{EASYRL}
 王琦，杨毅远，江季.
@@ -296,6 +259,19 @@ SCHULMAN J, LEVINE S, ABBEEL P, et~al.
 Proceedings of the 32nd International Conference on Machine Learning (ICML): Vol.~37.
 \newblock PMLR, 2015: 1889-1897.
 
+\bibitem[Daskalakis et~al.(2021)Daskalakis, Foster, and Golowich]{daskalakis2021independentpolicygradientmethods}
+DASKALAKIS C, FOSTER D~J, GOLOWICH N.
+\newblock Independent policy gradient methods for competitive reinforcement learning\allowbreak[A/OL].
+\newblock 2021.
+\newblock arXiv: \eprint{https://arxiv.org/abs/2101.04233}{2101.04233}.
+\newblock \url{https://arxiv.org/abs/2101.04233}.
+
+\bibitem[Deng et~al.(2022)Deng, Li, Mguni, Wang, and Yang]{Deng_2022ppad}
+DENG X, LI N, MGUNI D, et~al.
+\newblock On the complexity of computing markov perfect equilibrium in general-sum stochastic games\allowbreak[J/OL].
+\newblock National Science Review, 2022, 10\allowbreak (1).
+\newblock \url{http://dx.doi.org/10.1093/nsr/nwac256}.
+
 \bibitem[Gao et~al.(2015)Gao and Toni]{10.5555/2832581.2832737pbrs}
 GAO Y, TONI F.
 \newblock Potential based reward shaping for hierarchical reinforcement learning\allowbreak[C]//\allowbreak
@@ -308,18 +284,5 @@ SMIRNOV I, GU S.
 \newblock 2025.
 \newblock arXiv: \eprint{https://arxiv.org/abs/2505.15040}{2505.15040}.
 \newblock \url{https://arxiv.org/abs/2505.15040}.
-
-\bibitem[Deng et~al.(2022)Deng, Li, Mguni, Wang, and Yang]{Deng_2022ppad}
-DENG X, LI N, MGUNI D, et~al.
-\newblock On the complexity of computing markov perfect equilibrium in general-sum stochastic games\allowbreak[J/OL].
-\newblock National Science Review, 2022, 10\allowbreak (1).
-\newblock \url{http://dx.doi.org/10.1093/nsr/nwac256}.
-
-\bibitem[Daskalakis et~al.(2021)Daskalakis, Foster, and Golowich]{daskalakis2021independentpolicygradientmethods}
-DASKALAKIS C, FOSTER D~J, GOLOWICH N.
-\newblock Independent policy gradient methods for competitive reinforcement learning\allowbreak[A/OL].
-\newblock 2021.
-\newblock arXiv: \eprint{https://arxiv.org/abs/2101.04233}{2101.04233}.
-\newblock \url{https://arxiv.org/abs/2101.04233}.
 
 \end{thebibliography}
