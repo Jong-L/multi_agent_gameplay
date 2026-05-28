@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.26 (TeX Live 2024) (preloaded format=pdflatex 2025.5.5)  28 MAY 2026 00:27
+This is pdfTeX, Version 3.141592653-2.6-1.40.26 (TeX Live 2024) (preloaded format=pdflatex 2025.5.5)  28 MAY 2026 13:46
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -977,10 +977,12 @@ LaTeX Info: Command `\ddddot' is already robust on input line 228.
 \c@lstlisting=\count347
 Package hyperref Info: Link coloring OFF on input line 228.
 <imgs/ncepu.png, id=3, 637.78275pt x 142.73325pt>
-File: imgs/ncepu.png Graphic file (type png)
-<use imgs/ncepu.png>
-Package pdftex.def Info: imgs/ncepu.png  used on input line 239.
-(pdftex.def)             Requested size: 258.21019pt x 57.78922pt.
+LaTeX Font Info:    Trying to load font information for OT1+ntxtt on input line 239.
+ (d:/texlive/2024/texmf-dist/tex/latex/newtx/ot1ntxtt.fd
+File: ot1ntxtt.fd 2012/04/20 v3.1
+)
+LaTeX Font Info:    Font shape `OT1/ntxtt/m/n' will be
+(Font)              scaled to size 12.0pt on input line 239.
 LaTeX Font Info:    Font shape `OT1/ntxtlf/m/n' will be
 (Font)              scaled to size 36.135pt on input line 244.
 LaTeX Font Info:    Trying to load font information for C70+zhhei on input line 244.
@@ -994,7 +996,7 @@ LaTeX Font Info:    Font shape `OT1/ntxtlf/m/n' will be
 File: ctex-zhmap-windows.tex 2022/07/14 v2.5.10 Windows font map loader for pdfTeX and DVIPDFMx (CTEX)
 {d:/texlive/2024/texmf-var/fonts/map/pdftex/updmap/pdftex.map}{UGBK.sfd}{Unicode.sfd}) [1
 
-{d:/texlive/2024/texmf-dist/fonts/enc/dvips/newtx/ntx-ot1-tlf.enc} <./imgs/ncepu.png>]
+{d:/texlive/2024/texmf-dist/fonts/enc/dvips/newtx/ntx-ot1-tlf.enc}]
 LaTeX Font Info:    Font shape `OT1/ntxtlf/m/n' will be
 (Font)              scaled to size 18.06749pt on input line 274.
 
@@ -1055,11 +1057,7 @@ LaTeX Font Info:    Font shape `OT1/ntxtlf/m/n' will be
 
 
 pdfTeX warning: pdflatex.exe (file ./imgs/rl_gameplay.drawio.pdf): PDF inclusion: found PDF version <1.7>, but at most version <1.5> allowed
-<imgs/rl_gameplay.drawio.pdf, id=296, 1111.2717pt x 741.73106pt>
-File: imgs/rl_gameplay.drawio.pdf Graphic file (type pdf)
-<use imgs/rl_gameplay.drawio.pdf>
-Package pdftex.def Info: imgs/rl_gameplay.drawio.pdf  used on input line 344.
-(pdftex.def)             Requested size: 375.57782pt x 250.67995pt.
+<imgs/rl_gameplay.drawio.pdf, id=303, 1111.2717pt x 741.73106pt>
 LaTeX Font Info:    Font shape `OT1/ntxtlf/m/n' will be
 (Font)              scaled to size 10.53937pt on input line 345.
 [1
@@ -1067,7 +1065,7 @@ LaTeX Font Info:    Font shape `OT1/ntxtlf/m/n' will be
 ]
 LaTeX Font Info:    Font shape `OT1/ntxtlf/m/n' will be
 (Font)              scaled to size 14.05249pt on input line 383.
- [2 <./imgs/rl_gameplay.drawio.pdf>]
+ [2]
 Underfull \hbox (badness 2698) in paragraph at lines 386--387
 []\C70/rm/m/n/12/5f : \C70/rm/m/n/12/53 ^^V \C70/rm/m/n/12/5b f \C70/rm/m/n/12/4e ` \C70/rm/m/n/12/7b ó \C70/rm/m/n/12/6c ’ \C70/rm/m/n/12/90 ^^Z \C70/rm/m/n/12/5e 8 \C70/rm/m/n/12/4e ^^N \C70/rm/m/n/12/6d Ò \C70/rm/m/n/12/5e ¶ \C70/rm/m/n/12/5b f \C70/rm/m/n/12/4e ` \C70/rm/m/n/12/7e ” \C70/rm/m/n/12/54 ^^H \C70/rm/m/n/12/4f ^^? \C70/rm/m/n/12/75 (|\C70/rm/m/n/12/ff ^^L| \C70/rm/m/n/12/8f Ÿ \C70/rm/m/n/12/5f R \C70/rm/m/n/12/52 ü \C70/rm/m/n/12/4e é \C70/rm/m/n/12/79 ^ \C70/rm/m/n/12/7e œ \C70/rm/m/n/12/7f Q \C70/rm/m/n/12/7e ‹ \C70/rm/m/n/12/67 Å \C70/rm/m/n/12/51 v \C70/rm/m/n/12/4f ^^X \C70/rm/m/n/12/79 ¿ \C70/rm/m/n/12/76 Ñ \C70/rm/m/n/12/62 ﬂ \C70/rm/m/n/12/54 ^^H \C70/rm/m/n/12/60 '
  []
@@ -1086,274 +1084,147 @@ Underfull \hbox (badness 1205) in paragraph at lines 439--440
 [4] [5]
 
 pdfTeX warning: pdflatex.exe (file ./imgs/rl_diagram.drawio.pdf): PDF inclusion: found PDF version <1.7>, but at most version <1.5> allowed
-<imgs/rl_diagram.drawio.pdf, id=505, 695.7192pt x 406.3983pt>
-File: imgs/rl_diagram.drawio.pdf Graphic file (type pdf)
-<use imgs/rl_diagram.drawio.pdf>
-Package pdftex.def Info: imgs/rl_diagram.drawio.pdf  used on input line 548.
-(pdftex.def)             Requested size: 375.57782pt x 219.396pt.
-[6] [7 <./imgs/rl_diagram.drawio.pdf>]
+<imgs/rl_diagram.drawio.pdf, id=431, 695.7192pt x 406.3983pt>
+[6] [7]
 LaTeX Font Info:    Font shape `OT1/ntxtlf/m/n' will be
 (Font)              scaled to size 6.6pt on input line 586.
- [8] [9] [10] [11]
+ [8]
+
+pdfTeX warning: pdflatex.exe (file ./imgs/gru_network.drawio.pdf): PDF inclusion: found PDF version <1.7>, but at most version <1.5> allowed
+<imgs/gru_network.drawio.pdf, id=462, 796.89719pt x 463.7325pt>
+[9] [10] [11] [12]
 
 pdfTeX warning: pdflatex.exe (file ./imgs/gdrl.drawio.pdf): PDF inclusion: found PDF version <1.7>, but at most version <1.5> allowed
-<imgs/gdrl.drawio.pdf, id=759, 683.6742pt x 209.8239pt>
-File: imgs/gdrl.drawio.pdf Graphic file (type pdf)
-<use imgs/gdrl.drawio.pdf>
-Package pdftex.def Info: imgs/gdrl.drawio.pdf  used on input line 731.
-(pdftex.def)             Requested size: 375.57782pt x 115.26903pt.
-[12 <./imgs/gdrl.drawio.pdf>]
-Underfull \hbox (badness 1540) in paragraph at lines 792--792
+<imgs/gdrl.drawio.pdf, id=516, 683.6742pt x 209.8239pt>
+[13]
+Underfull \hbox (badness 1540) in paragraph at lines 801--801
 []|\OT1/minntx/m/n/12 36 \C70/rm/m/n/12/67 a \C70/rm/m/n/12/5c ^^D \C70/rm/m/n/12/7e ø \C70/rm/m/n/12/68 ¿ \C70/rm/m/n/12/6d K \C70/rm/m/n/12/8d › \C70/rm/m/n/12/79 ª|\C70/rm/m/n/12/ff ^^L| \C70/rm/m/n/12/5f R \C70/rm/m/n/12/4e ^^@ \C70/rm/m/n/12/53 ^^V \C70/rm/m/n/12/52 0
  []
 
-[13] [14]
-Overfull \hbox (61.86559pt too wide) in paragraph at lines 824--843
+[14] [15]
+Overfull \hbox (61.86559pt too wide) in paragraph at lines 833--852
  [][] 
  []
 
 LaTeX Font Info:    Font shape `OT1/ntxtlf/m/n' will be
-(Font)              scaled to size 10.0pt on input line 844.
-[15] [16]
+(Font)              scaled to size 10.0pt on input line 853.
+[16] [17]
 
 pdfTeX warning: pdflatex.exe (file ./imgs/network_architectures.drawio.pdf): PDF inclusion: found PDF version <1.7>, but at most version <1.5> allowed
-<imgs/network_architectures.drawio.pdf, id=879, 1361.085pt x 542.025pt>
-File: imgs/network_architectures.drawio.pdf Graphic file (type pdf)
-<use imgs/network_architectures.drawio.pdf>
-Package pdftex.def Info: imgs/network_architectures.drawio.pdf  used on input line 903.
-(pdftex.def)             Requested size: 375.57782pt x 149.56596pt.
-<imgs/valid_mask_comparison_total_ball_score.png, id=884, 710.1732pt x 421.3341pt>
-File: imgs/valid_mask_comparison_total_ball_score.png Graphic file (type png)
-<use imgs/valid_mask_comparison_total_ball_score.png>
-Package pdftex.def Info: imgs/valid_mask_comparison_total_ball_score.png  used on input line 927.
-(pdftex.def)             Requested size: 225.34383pt x 133.69173pt.
+<imgs/network_architectures.drawio.pdf, id=578, 1361.085pt x 542.025pt>
+<imgs/valid_mask_comparison_total_ball_score.png, id=583, 710.1732pt x 421.3341pt>
 LaTeX Font Info:    Font shape `OT1/ntxtlf/m/n' will be
-(Font)              scaled to size 10.95pt on input line 928.
-<imgs/valid_mask_comparison_player_ball_score.png, id=885, 999.2532pt x 731.1315pt>
-File: imgs/valid_mask_comparison_player_ball_score.png Graphic file (type png)
-<use imgs/valid_mask_comparison_player_ball_score.png>
-Package pdftex.def Info: imgs/valid_mask_comparison_player_ball_score.png  used on input line 934.
-(pdftex.def)             Requested size: 225.34383pt x 164.8768pt.
-[17] [18 <./imgs/network_architectures.drawio.pdf> <./imgs/valid_mask_comparison_total_ball_score.png> <./imgs/valid_mask_comparison_player_ball_score.png>]
-<imgs/per_player_comparison-ball.png, id=941, 998.7714pt x 737.8767pt>
-File: imgs/per_player_comparison-ball.png Graphic file (type png)
-<use imgs/per_player_comparison-ball.png>
-Package pdftex.def Info: imgs/per_player_comparison-ball.png  used on input line 969.
-(pdftex.def)             Requested size: 225.34383pt x 166.47672pt.
-<imgs/total_comparison-ball.png, id=942, 782.4432pt x 421.3341pt>
-File: imgs/total_comparison-ball.png Graphic file (type png)
-<use imgs/total_comparison-ball.png>
-Package pdftex.def Info: imgs/total_comparison-ball.png  used on input line 976.
-(pdftex.def)             Requested size: 225.34383pt x 121.34155pt.
-<imgs/nearest_vs_all_player_comparison.png, id=944, 854.7132pt x 664.6431pt>
-File: imgs/nearest_vs_all_player_comparison.png Graphic file (type png)
-<use imgs/nearest_vs_all_player_comparison.png>
-Package pdftex.def Info: imgs/nearest_vs_all_player_comparison.png  used on input line 987.
-(pdftex.def)             Requested size: 281.68515pt x 219.04893pt.
- [19 <./imgs/per_player_comparison-ball.png> <./imgs/total_comparison-ball.png>]
-<imgs/wall-penalty-player_wall_count_comparison.png, id=961, 999.2532pt x 738.3585pt>
-File: imgs/wall-penalty-player_wall_count_comparison.png Graphic file (type png)
-<use imgs/wall-penalty-player_wall_count_comparison.png>
-Package pdftex.def Info: imgs/wall-penalty-player_wall_count_comparison.png  used on input line 1015.
-(pdftex.def)             Requested size: 225.34383pt x 166.50655pt.
-<imgs/wall_collision_evolution.png, id=962, 710.1732pt x 421.3341pt>
-File: imgs/wall_collision_evolution.png Graphic file (type png)
-<use imgs/wall_collision_evolution.png>
-Package pdftex.def Info: imgs/wall_collision_evolution.png  used on input line 1022.
-(pdftex.def)             Requested size: 225.34383pt x 133.69173pt.
-<imgs/wall-penalty-player_ball_score_comparison.png, id=963, 999.2532pt x 738.3585pt>
-File: imgs/wall-penalty-player_ball_score_comparison.png Graphic file (type png)
-<use imgs/wall-penalty-player_ball_score_comparison.png>
-Package pdftex.def Info: imgs/wall-penalty-player_ball_score_comparison.png  used on input line 1031.
-(pdftex.def)             Requested size: 225.34383pt x 166.50655pt.
-<imgs/wall-penalty-total_ball_score_comparison.png, id=964, 710.1732pt x 421.3341pt>
-File: imgs/wall-penalty-total_ball_score_comparison.png Graphic file (type png)
-<use imgs/wall-penalty-total_ball_score_comparison.png>
-Package pdftex.def Info: imgs/wall-penalty-total_ball_score_comparison.png  used on input line 1038.
-(pdftex.def)             Requested size: 225.34383pt x 133.69173pt.
- [20 <./imgs/nearest_vs_all_player_comparison.png>] [21 <./imgs/wall-penalty-player_wall_count_comparison.png> <./imgs/wall_collision_evolution.png> <./imgs/wall-penalty-player_ball_score_comparison.png> <./imgs/wall-penalty-total_ball_score_comparison.png>]
-<imgs/wall_potential_comparison_player_walls.png, id=987, 999.2532pt x 738.3585pt>
-File: imgs/wall_potential_comparison_player_walls.png Graphic file (type png)
-<use imgs/wall_potential_comparison_player_walls.png>
-Package pdftex.def Info: imgs/wall_potential_comparison_player_walls.png  used on input line 1077.
-(pdftex.def)             Requested size: 225.34383pt x 166.50655pt.
-<imgs/wall_potential_comparison_total_walls.png, id=988, 782.4432pt x 421.3341pt>
-File: imgs/wall_potential_comparison_total_walls.png Graphic file (type png)
-<use imgs/wall_potential_comparison_total_walls.png>
-Package pdftex.def Info: imgs/wall_potential_comparison_total_walls.png  used on input line 1084.
-(pdftex.def)             Requested size: 225.34383pt x 121.34155pt.
-<imgs/wall_potential_comparison_player_score.png, id=989, 999.2532pt x 738.3585pt>
-File: imgs/wall_potential_comparison_player_score.png Graphic file (type png)
-<use imgs/wall_potential_comparison_player_score.png>
-Package pdftex.def Info: imgs/wall_potential_comparison_player_score.png  used on input line 1093.
-(pdftex.def)             Requested size: 225.34383pt x 166.50655pt.
-<imgs/wall_potential_comparison_total_score.png, id=990, 782.4432pt x 421.3341pt>
-File: imgs/wall_potential_comparison_total_score.png Graphic file (type png)
-<use imgs/wall_potential_comparison_total_score.png>
-Package pdftex.def Info: imgs/wall_potential_comparison_total_score.png  used on input line 1100.
-(pdftex.def)             Requested size: 225.34383pt x 121.34155pt.
- [22 <./imgs/wall_potential_comparison_player_walls.png> <./imgs/wall_potential_comparison_total_walls.png> <./imgs/wall_potential_comparison_player_score.png> <./imgs/wall_potential_comparison_total_score.png>]
-<imgs/s1_total_ball_score.png, id=1004, 710.1732pt x 421.3341pt>
-File: imgs/s1_total_ball_score.png Graphic file (type png)
-<use imgs/s1_total_ball_score.png>
-Package pdftex.def Info: imgs/s1_total_ball_score.png  used on input line 1121.
-(pdftex.def)             Requested size: 225.34383pt x 133.69173pt.
-<imgs/sarl_total_score.png, id=1005, 710.1732pt x 421.3341pt>
-File: imgs/sarl_total_score.png Graphic file (type png)
-<use imgs/sarl_total_score.png>
-Package pdftex.def Info: imgs/sarl_total_score.png  used on input line 1128.
-(pdftex.def)             Requested size: 225.34383pt x 133.69173pt.
-<imgs/game_snapshot_0.png, id=1008, 489.32813pt x 493.845pt>
-File: imgs/game_snapshot_0.png Graphic file (type png)
-<use imgs/game_snapshot_0.png>
-Package pdftex.def Info: imgs/game_snapshot_0.png  used on input line 1159.
-(pdftex.def)             Requested size: 187.78532pt x 189.52429pt.
- [23 <./imgs/s1_total_ball_score.png> <./imgs/sarl_total_score.png>]
-<imgs/parallel_coordinate.png, id=1022, 1092.9633pt x 457.4691pt>
-File: imgs/parallel_coordinate.png Graphic file (type png)
-<use imgs/parallel_coordinate.png>
-Package pdftex.def Info: imgs/parallel_coordinate.png  used on input line 1216.
-(pdftex.def)             Requested size: 225.34383pt x 94.31926pt.
-<imgs/param_importances.png, id=1023, 492.8814pt x 301.3659pt>
-File: imgs/param_importances.png Graphic file (type png)
-<use imgs/param_importances.png>
-Package pdftex.def Info: imgs/param_importances.png  used on input line 1223.
-(pdftex.def)             Requested size: 225.34383pt x 137.78387pt.
- [24 <./imgs/game_snapshot_0.png>] [25 <./imgs/parallel_coordinate.png> <./imgs/param_importances.png>]
+(Font)              scaled to size 10.95pt on input line 937.
+<imgs/valid_mask_comparison_player_ball_score.png, id=584, 999.2532pt x 731.1315pt>
+[18]
+<imgs/per_player_comparison-ball.png, id=599, 998.7714pt x 737.8767pt>
+<imgs/total_comparison-ball.png, id=600, 782.4432pt x 421.3341pt>
+<imgs/nearest_vs_all_player_comparison.png, id=602, 854.7132pt x 664.6431pt>
+ [19] [20]
+<imgs/wall-penalty-player_wall_count_comparison.png, id=623, 999.2532pt x 738.3585pt>
+<imgs/wall_collision_evolution.png, id=624, 710.1732pt x 421.3341pt>
+<imgs/wall-penalty-player_ball_score_comparison.png, id=625, 999.2532pt x 738.3585pt>
+<imgs/wall-penalty-total_ball_score_comparison.png, id=626, 710.1732pt x 421.3341pt>
+ [21]
+<imgs/wall_potential_comparison_player_walls.png, id=638, 999.2532pt x 738.3585pt>
+<imgs/wall_potential_comparison_total_walls.png, id=639, 782.4432pt x 421.3341pt>
+<imgs/wall_potential_comparison_player_score.png, id=640, 999.2532pt x 738.3585pt>
+<imgs/wall_potential_comparison_total_score.png, id=641, 782.4432pt x 421.3341pt>
+ [22]
+<imgs/s1_total_ball_score.png, id=652, 710.1732pt x 421.3341pt>
+<imgs/sarl_total_score.png, id=653, 710.1732pt x 421.3341pt>
+ [23]
+<imgs/game_snapshot_0.png, id=663, 489.32813pt x 493.845pt>
+<imgs/parallel_coordinate.png, id=667, 1092.9633pt x 457.4691pt>
+<imgs/param_importances.png, id=668, 492.8814pt x 301.3659pt>
+ [24] [25]
+<imgs/optuna_round2_compare.png, id=688, 564.9105pt x 384.2355pt>
+ [26] [27]
 
 pdfTeX warning: pdflatex.exe (file ./imgs/gameplay_evaluate.drawio.pdf): PDF inclusion: found PDF version <1.7>, but at most version <1.5> allowed
-<imgs/gameplay_evaluate.drawio.pdf, id=1045, 984.5583pt x 623.44919pt>
-File: imgs/gameplay_evaluate.drawio.pdf Graphic file (type pdf)
-<use imgs/gameplay_evaluate.drawio.pdf>
-Package pdftex.def Info: imgs/gameplay_evaluate.drawio.pdf  used on input line 1240.
-(pdftex.def)             Requested size: 375.57782pt x 237.8264pt.
-[26 <./imgs/gameplay_evaluate.drawio.pdf>]
-Underfull \hbox (badness 2318) in paragraph at lines 1254--1256
+<imgs/gameplay_evaluate.drawio.pdf, id=711, 984.5583pt x 623.44919pt>
+[28]
+Underfull \hbox (badness 2318) in paragraph at lines 1346--1348
 []\C70/rm/b/n/12/8f n \C70/rm/b/n/12/63 b \C70/rm/b/n/12/8b ≠ \C70/rm/b/n/12/7e √|\C70/rm/m/n/12/ff ^^Z| \C70/rm/m/n/12/4f ù \C70/rm/m/n/12/6b ! \C70/rm/m/n/12/89 „ \C70/rm/m/n/12/51 ª \C70/rm/m/n/12/4e  ^^@ * \C70/rm/m/n/12/66 z \C70/rm/m/n/12/80 ˝ \C70/rm/m/n/12/4f S|\C70/rm/m/n/12/30 ^^A| \C70/rm/m/n/12/51 ª \C70/rm/m/n/12/7e ” \C70/rm/m/n/12/51 v \C70/rm/m/n/12/4f Y \C70/rm/m/n/12/4e 	 \C70/rm/m/n/12/65 π|\C70/rm/m/n/12/ff ^^L| \C70/rm/m/n/12/91 Õ \C70/rm/m/n/12/59 ^^M \C70/rm/m/n/12/4e 
  \C70/rm/m/n/12/8f  « \C70/rm/m/n/12/7a |\C70/rm/m/n/12/ff ^^L| \C70/rm/m/n/12/83 ∑ \C70/rm/m/n/12/5f ó
  []
 
-[27]
-<imgs/eval_compare_reward.png, id=1480, 420.3705pt x 312.2064pt>
-File: imgs/eval_compare_reward.png Graphic file (type png)
-<use imgs/eval_compare_reward.png>
-Package pdftex.def Info: imgs/eval_compare_reward.png  used on input line 1320.
-(pdftex.def)             Requested size: 375.57782pt x 278.95375pt.
-<imgs/eval_compare_effectsize.png, id=1484, 420.8523pt x 240.4182pt>
-File: imgs/eval_compare_effectsize.png Graphic file (type png)
-<use imgs/eval_compare_effectsize.png>
-Package pdftex.def Info: imgs/eval_compare_effectsize.png  used on input line 1355.
-(pdftex.def)             Requested size: 375.57782pt x 214.5548pt.
- [28] [29 <./imgs/eval_compare_reward.png> <./imgs/eval_compare_effectsize.png>]
-<imgs/eval_compare_pergroup.png, id=1503, 714.2685pt x 316.0608pt>
-File: imgs/eval_compare_pergroup.png Graphic file (type png)
-<use imgs/eval_compare_pergroup.png>
-Package pdftex.def Info: imgs/eval_compare_pergroup.png  used on input line 1392.
-(pdftex.def)             Requested size: 399.05278pt x 176.5829pt.
- [30 <./imgs/eval_compare_pergroup.png>]
+[29]
+<imgs/eval_compare_reward.png, id=733, 420.3705pt x 312.2064pt>
+<imgs/eval_compare_effectsize.png, id=737, 420.8523pt x 240.4182pt>
+ [30] [31]
+<imgs/eval_compare_pergroup.png, id=754, 714.2685pt x 316.0608pt>
+ [32]
 
 Package hyperref Warning: Token not allowed in a PDF string (Unicode):
 (hyperref)                \hskip 12.0pt
-(hyperref)                replaced by space on input line 1436.
+(hyperref)                replaced by space on input line 1528.
 
 
 Package hyperref Warning: Token not allowed in a PDF string (Unicode):
 (hyperref)                \hskip 12.0pt
-(hyperref)                replaced by space on input line 1436.
+(hyperref)                replaced by space on input line 1528.
 
-[31] [32] (./main_paper.bbl [33
+[33] [34] (./main_paper.bbl [35
 
-] [34] [35]) [36]
-
-Package hyperref Warning: Token not allowed in a PDF string (Unicode):
-(hyperref)                \hskip 12.0pt
-(hyperref)                replaced by space on input line 1506.
-
-
-Package hyperref Warning: Token not allowed in a PDF string (Unicode):
-(hyperref)                \hskip 12.0pt
-(hyperref)                replaced by space on input line 1506.
-
-
-Overfull \hbox (469.47049pt too wide) detected at line 1511
- [] 
+] [36] [37]) [38]
+Overfull \hbox (11.56477pt too wide) in paragraph at lines 1640--1640
+[]|\OT1/minntx/m/n/12 PLAYER 
  []
 
 
-Underfull \hbox (badness 10000) in alignment at lines 1510--1516
-[] [] [] [] [] []
+Overfull \hbox (8.51678pt too wide) in paragraph at lines 1657--1657
+[]|\OT1/minntx/m/n/12 ENEMY 
  []
 
+[39
 
-Overfull \hbox (469.47049pt too wide) detected at line 1518
- [] 
- []
+]
+LaTeX Font Info:    Trying to load font information for OMS+ntxtlf on input line 1833.
+LaTeX Font Info:    No file OMSntxtlf.fd. on input line 1833.
 
-
-Underfull \hbox (badness 10000) in alignment at lines 1516--1522
-[] [] [] [] [] []
- []
-
-
-Underfull \hbox (badness 10000) in alignment at lines 1522--1525
-[] [] [] [] [] []
- []
-
-
-Overfull \hbox (11.56477pt too wide) in paragraph at lines 1541--1541
-[]|\OT1/minntx/m/n/12 PLAYER  
- []
-
-
-Overfull \hbox (8.51678pt too wide) in paragraph at lines 1567--1567
-[]|\OT1/minntx/m/n/12 ENEMY  
- []
-
-
-Overfull \vbox (19.63309pt too high) detected at line 1581
- []
-
-
-Underfull \hbox (badness 10000) in alignment at lines 1525--1587
-[] [] [] [] [] []
- []
-
-[37
-
-] [38]
-Overfull \hbox (57.86963pt too wide) in paragraph at lines 1723--1733
- [][] 
- []
-
-LaTeX Font Info:    Trying to load font information for OMS+ntxtlf on input line 1744.
-LaTeX Font Info:    No file OMSntxtlf.fd. on input line 1744.
 
 LaTeX Font Warning: Font shape `OMS/ntxtlf/m/n' undefined
 (Font)              using `OMS/cmsy/m/n' instead
-(Font)              for symbol `textbraceleft' on input line 1744.
+(Font)              for symbol `textbraceleft' on input line 1833.
 
 
-Overfull \hbox (183.48569pt too wide) in paragraph at lines 1740--1752
- [][] 
+Overfull \hbox (13.1004pt too wide) in paragraph at lines 1833--1834
+[]|\OT1/minntx/m/n/10.95 mlp[]s1[]agent[]\OMS/ntxtlf/m/n/10.95 f\OT1/minntx/m/n/10.95 id\OMS/ntxtlf/m/n/10.95 g\OT1/minntx/m/n/10.95 .pt|  
  []
 
 
-Overfull \hbox (18.53355pt too wide) in paragraph at lines 1763--1781
+Overfull \hbox (13.1004pt too wide) in paragraph at lines 1834--1835
+[]|\OT1/minntx/m/n/10.95 mlp[]s2[]agent[]\OMS/ntxtlf/m/n/10.95 f\OT1/minntx/m/n/10.95 id\OMS/ntxtlf/m/n/10.95 g\OT1/minntx/m/n/10.95 .pt|  
+ []
+
+
+Overfull \hbox (13.1004pt too wide) in paragraph at lines 1835--1836
+[]|\OT1/minntx/m/n/10.95 mlp[]s3[]agent[]\OMS/ntxtlf/m/n/10.95 f\OT1/minntx/m/n/10.95 id\OMS/ntxtlf/m/n/10.95 g\OT1/minntx/m/n/10.95 .pt|  
+ []
+
+
+Overfull \hbox (13.1004pt too wide) in paragraph at lines 1836--1837
+[]|\OT1/minntx/m/n/10.95 mlp[]s4[]agent[]\OMS/ntxtlf/m/n/10.95 f\OT1/minntx/m/n/10.95 id\OMS/ntxtlf/m/n/10.95 g\OT1/minntx/m/n/10.95 .pt|  
+ []
+
+
+Overfull \hbox (18.53355pt too wide) in paragraph at lines 1852--1870
  [][] 
  []
 
-[39] [40] [41]
+[40] [41] [42] [43]
 
 Package hyperref Warning: Token not allowed in a PDF string (Unicode):
 (hyperref)                \hskip 12.0pt
-(hyperref)                replaced by space on input line 1794.
+(hyperref)                replaced by space on input line 1883.
 
 
 Package hyperref Warning: Token not allowed in a PDF string (Unicode):
 (hyperref)                \hskip 12.0pt
-(hyperref)                replaced by space on input line 1794.
+(hyperref)                replaced by space on input line 1883.
 
-[42
+[44
 
 ] (./main_paper.aux)
  ***********
@@ -1366,17 +1237,17 @@ LaTeX Font Warning: Some font shapes were not available, defaults substituted.
 
  ) 
 Here is how much of TeX's memory you used:
- 27706 strings out of 474116
- 471957 string characters out of 5747718
- 1989190 words of memory out of 5000000
- 48614 multiletter control sequences out of 15000+600000
- 802014 words of font info for 772 fonts, out of 8000000 for 9000
+ 27796 strings out of 474116
+ 473246 string characters out of 5747718
+ 1994190 words of memory out of 5000000
+ 48675 multiletter control sequences out of 15000+600000
+ 804394 words of font info for 781 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
- 80i,15n,93p,1660b,816s stack positions out of 10000i,1000n,20000p,200000b,200000s
-<c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><d:/texlive/2024/texmf-dist/fonts/type1/public/newtx/NewTXMI.pfb><d:/texlive/2024/texmf-dist/fonts/type1/public/newtx/NewTXMI7.pfb><d:/texlive/2024/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb><d:/texlive/2024/texmf-dist/fonts/type1/public/newtx/txexs.pfb><d:/texlive/2024/texmf-dist/fonts/type1/public/newtx/txmiaX.pfb><d:/texlive/2024/texmf-dist/fonts/type1/public/newtx/txsym.pfb><d:/texlive/2024/texmf-dist/fonts/type1/public/newtx/txsys.pfb><d:/texlive/2024/texmf-dist/fonts/type1/public/newtx/ztmb.pfb><d:/texlive/2024/texmf-dist/fonts/type1/public/newtx/ztmr.pfb>
-Output written on main_paper.pdf (47 pages, 33853007 bytes).
+ 80i,14n,93p,1660b,816s stack positions out of 10000i,1000n,20000p,200000b,200000s
+<c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><d:/texlive/2024/texmf-dist/fonts/type1/public/newtx/NewTXMI.pfb><d:/texlive/2024/texmf-dist/fonts/type1/public/newtx/NewTXMI7.pfb><d:/texlive/2024/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb><d:/texlive/2024/texmf-dist/fonts/type1/public/newtx/txexs.pfb><d:/texlive/2024/texmf-dist/fonts/type1/public/newtx/txmiaX.pfb><d:/texlive/2024/texmf-dist/fonts/type1/public/newtx/txsym.pfb><d:/texlive/2024/texmf-dist/fonts/type1/public/newtx/txsys.pfb><d:/texlive/2024/texmf-dist/fonts/type1/public/txfonts/txtt.pfb><d:/texlive/2024/texmf-dist/fonts/type1/public/newtx/ztmb.pfb><d:/texlive/2024/texmf-dist/fonts/type1/public/newtx/ztmr.pfb>
+Output written on main_paper.pdf (49 pages, 1343808 bytes).
 PDF statistics:
- 2291 PDF objects out of 2487 (max. 8388607)
- 228 named destinations out of 1000 (max. 500000)
- 816 words of extra memory for PDF output out of 10000 (max. 10000000)
+ 1564 PDF objects out of 1728 (max. 8388607)
+ 241 named destinations out of 1000 (max. 500000)
+ 850 words of extra memory for PDF output out of 10000 (max. 10000000)
 

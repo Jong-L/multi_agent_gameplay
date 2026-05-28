@@ -66,7 +66,7 @@ _PROJECT_ROOT = pathlib.Path(__file__).resolve().parent.parent.parent
 
 # 常见数据库搜索路径 (按优先级排序)
 COMMON_DB_PATHS = [
-    # _PROJECT_ROOT / "logs" / "optuna" / "custom_ppo.db",
+    _PROJECT_ROOT / "logs"/"optuna"/"custom_ppo(1).db",
     _PROJECT_ROOT / "logs" / "custom_ppo_new.db",
     _PROJECT_ROOT / "logs" / "optuna.db",
     _PROJECT_ROOT / "logs" / "optuna" / "study.db",
@@ -889,6 +889,100 @@ def plot_timeline(study: optuna.Study, output_dir: str,
     return fig
 
 
+def plot_architecture_comparison(study: optuna.Study, output_dir: str,
+                                   fmt: str = 'png') -> plt.Figure:
+    """
+    第二轮搜索: 三种网络架构的奖励分布对比。
+    散点 + 箱线图 + 均值标注, 用于论文4.5节。
+    """
+    _setup_style_safe()
+    trials = _get_completed_trials(study)
+    if len(trials) == 0:
+        print("[skip] 架构对比: 无已完成 trial")
+        return None
+
+    # 分组
+    groups = {'segmented_mlp': [], 'mlp': [], 'gru_mlp': []}
+    for t in trials:
+        nt = t.params.get('network_type', None)
+        if nt in groups and t.value is not None:
+            groups[nt].append(t.value)
+
+    # 过滤空组
+    groups = {k: np.array(v) for k, v in groups.items() if len(v) > 0}
+    if len(groups) < 2:
+        print("[skip] 架构对比: 需要至少 2 种架构")
+        return None
+
+    # 标签和颜色映射
+    label_map = {
+        'segmented_mlp': 'Segmented\nMLP',
+        'mlp': 'MLP',
+        'gru_mlp': 'GRU-MLP',
+    }
+    color_map = {
+        'segmented_mlp': GREEN,
+        'mlp': BLUE,
+        'gru_mlp': ORANGE,
+    }
+
+    arch_order = ['segmented_mlp', 'mlp', 'gru_mlp']
+    present = [k for k in arch_order if k in groups]
+
+    fig, ax = plt.subplots(figsize=(8, 5.5))
+
+    # ── 箱线图 + 散点 ──
+    bp_data = [groups[k] for k in present]
+    bp_labels = [label_map.get(k, k) for k in present]
+    bp_colors = [color_map.get(k, BLUE) for k in present]
+
+    bp = ax.boxplot(bp_data, patch_artist=True, widths=0.4,
+                    showfliers=False,
+                    medianprops=dict(color='#222222', linewidth=1.5),
+                    whiskerprops=dict(linewidth=1.0),
+                    capprops=dict(linewidth=1.0))
+
+    for patch, color in zip(bp['boxes'], bp_colors):
+        patch.set_facecolor(color)
+        patch.set_alpha(0.30)
+        patch.set_edgecolor(color)
+        patch.set_linewidth(1.2)
+
+    # 散点
+    for i, (k, vals) in enumerate(groups.items()):
+        if len(vals) == 0:
+            continue
+        jitter = np.random.uniform(-0.12, 0.12, len(vals))
+        ax.scatter(np.full(len(vals), i + 1) + jitter, vals,
+                   s=14, c=color_map.get(k, BLUE), alpha=0.35,
+                   edgecolors='none', zorder=4)
+
+    # ── 均值标注 ──
+    for i, k in enumerate(present):
+        mean_val = np.mean(groups[k])
+        ax.annotate(f'μ={mean_val:.0f}',
+                    xy=(i + 1 + 0.25, mean_val),
+                    fontsize=9, color=color_map.get(k, BLUE),
+                    fontweight='bold', va='center')
+
+    # ── Trial 数量标注 ──
+    for i, k in enumerate(present):
+        n = len(groups[k])
+        ax.text(i + 1, ax.get_ylim()[0] - 0.04 * (ax.get_ylim()[1] - ax.get_ylim()[0]),
+                f'n={n}', ha='center', fontsize=8, color=GRAY)
+
+    ax.set_xticks(range(1, len(present) + 1))
+    ax.set_xticklabels(bp_labels, fontsize=11)
+    ax.set_ylabel('最近 100 回合平均奖励', fontsize=13)
+    ax.set_title('三种网络架构的奖励分布对比（第二轮搜索）',
+                 fontsize=14, fontweight='bold')
+    ax.grid(axis='y', alpha=0.25, linewidth=0.4)
+    fig.tight_layout()
+
+    _save(fig, output_dir, 'optuna_round2_compare', fmt)
+    return fig
+
+
 def plot_dashboard(study: optuna.Study, output_dir: str,
                     fmt: str = 'png') -> plt.Figure:
     """
@@ -1023,6 +1117,7 @@ def generate_all(study: optuna.Study, output_dir: str,
         'edf':          ('经验分布函数',   plot_edf),
         'timeline':     ('Trial 时间线',   plot_timeline),
         'dashboard':    ('综合仪表盘',     plot_dashboard),
+        'arch_compare': ('架构对比',       plot_architecture_comparison),
     }
 
     # 确定要生成哪些图

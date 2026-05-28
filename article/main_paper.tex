@@ -15,7 +15,7 @@
 \usepackage{tocloft}        % 目录条目控制
 \usepackage{fancyhdr}       % 页眉页脚
 \usepackage{booktabs}       % 三线表
-\usepackage{graphicx}       % 图片插入
+\usepackage[draft]{graphicx}       % 图片插入
 \usepackage{float}          % 图片浮动
 \usepackage{caption}        % 图表标题
 \usepackage{subcaption}     % 子图标题
@@ -365,13 +365,13 @@ QMIX\cite{rashid2018qmix} 和 MAPPO\cite{yu2022surprisingeffectivenessppocoopera
 这些方法通过集中式 Critic 缓解多智能体环境的非平稳性问题，
 在协作型任务上有很好的表现。
 
-然而，CTDE 范式引入集中式 Critic 的前提是训练阶段允许全局信息共享，
+CTDE 范式引入集中式 Critic 的前提是训练阶段允许全局信息共享，
 对于完全对抗的混战环境，本文基于智能体之间无法共享任何信息的假设，将保持执行去中心化与对手信息隔离，选择 DTDE作为训练方式。
 DTDE 的一种典型实现是独立 PPO（Independent PPO, IPPO）：
 每个智能体独立运行 PPO 算法，将其他智能体视为环境的一部分，
 不引入任何集中式组件。
 de Witt 等人\cite{dewitt2020independentlearningneedstarcraft}的研究
-表明，IPPO能够在SMAC协作任务中
+表明，IPPO能够在SMAC协同对抗任务中
 超越QMIX方法。其成功很大程度上源于 PPO 算法所固有的策略更新约束
 ——通过裁剪机制限制新旧策略之间的差异，
 使得训练过程本身较为平稳，在一定程度上
@@ -390,7 +390,7 @@ de Witt 等人\cite{dewitt2020independentlearningneedstarcraft}的研究
 PPO 使用广义优势估计（Generalized Advantage Estimation, GAE）\cite{schulman2015highdimensional}配合重要性采样有效利用样本来计算策略梯度，
 同时限制新旧策略之间的差异约束策略更新幅度，在保持训练稳定性的同时兼顾样本效率，
 且对超参数相对鲁棒，使其成为复杂任务中的首选算法。
-近年来，PPO 及其改进版本在游戏 AI、路径规划、自动驾驶和机器人控制等领域
+近年来，PPO 及其改进版本在路径规划、自动驾驶和机器人控制等领域
 取得了广泛成功\cite{lujingguihua20230406,yaoyue2023improvedppo,wanyuhang2025improvedppo}，
 展现出从虚拟环境策略到现实世界应用的可迁移潜力。
 
@@ -581,31 +581,40 @@ Text2Reward\cite{xie2024text2rewardrewardshapinglanguage}通过 LLM 理解自然
 
 \subsubsection{深度强化学习}
 
-深度强化学习（Deep Reinforcement Learning, DRL）将深度学习与强化学习相结合，利用深度神经网络近似策略函数 $\pi_\theta(a|s)$ 和价值函数 $V_\phi(s)$ 或 $Q_\phi(s,a)$，解决了传统表格型方法在高维连续状态空间中面临的"维数灾难"——当状态空间维度增大时，表格存储所有状态-动作对的开销呈指数增长。神经网络通过参数共享与泛化能力，能够从未见过的状态中推断合理的价值估计。Cybenko\cite{cybenko1989approximation}与 Hornik 等人\cite{hornik1989multilayer}从理论上证明了具有单隐藏层的前馈神经网络能够以任意精度逼近任意连续函数，这一定理为使用神经网络拟合策略与价值函数提供了严格保证。在 DQN\cite{mnih2015human}中，深度卷积神经网络将 Atari 游戏原始像素映射为各动作的 Q 值，在多数游戏中超越人类水平，验证了深度神经网络在 RL 中的有效性。
+传统强化学习使用表格型方法记录或用初等函数拟合Q值，表格型方法在高维连续状态空间中会面临“维数灾难”，用初等函数拟合又会面临函数选取问题，什么场景该用什么函数没有定论。深度强化学习（Deep Reinforcement Learning, DRL）将深度学习与强化学习相结合，利用深度神经网络近似策略函数 $\pi_\theta(a|s)$ 和价值函数 $V_\phi(s)$ 或 $Q_\phi(s,a)$，。Cybenko与 Hornik 等人从理论上证明了单隐层的前馈神经网络能够以任意精度逼近任意连续函数，这一定理为使用神经网络拟合策略与价值函数提供了理论保障，同时神经网络通过参数共享与泛化能力，能够从未见过的状态中推断合理的价值估计。在 DQN中，研究者用神经网络拟合价值函数，在多数雅达利游戏中超越人类水平，验证了深度神经网络在强化学习中的有效性。
 
-\textbf{多层感知机（MLP）}。多层感知机（Multilayer Perceptron, MLP）是最基本的前馈神经网络，由多个全连接层堆叠而成，层间通过非线性激活函数连接。设输入向量为 $\mathbf{x} \in \mathbb{R}^{d_{\text{in}}}$，一个 $L$ 层 MLP 的前向传播为：
+\textbf{多层感知机}：多层感知机（Multilayer Perceptron, MLP）是最基本的前馈神经网络，由多个全连接层堆叠而成，层间通过非线性激活函数连接。设输入向量为 $\mathbf{x} \in \mathbb{R}^{d_{\text{in}}}$，一个 $L$ 层 MLP 的前向传播为：
 \begin{equation}
   \mathbf{h}^{(0)} = \mathbf{x},\quad
   \mathbf{h}^{(l)} = \sigma\bigl( \mathbf{W}^{(l)} \mathbf{h}^{(l-1)} + \mathbf{b}^{(l)} \bigr),\quad l = 1,\dots,L
   \label{eq:mlp}
 \end{equation}
-其中 $\mathbf{W}^{(l)}$ 和 $\mathbf{b}^{(l)}$ 分别为第 $l$ 层的权重矩阵和偏置，$\sigma(\cdot)$ 为激活函数。常用激活函数包括 ReLU（$\sigma(z)=\max(0,z)$）、tanh 和 ELU，ReLU 因计算简单且能缓解梯度消失而最为常用。MLP 的核心假设是输入各维度间不存在固定的空间或时间依赖关系，每层神经元与上一层全部连接，适合处理扁平无结构化的特征向量。在本文的博弈环境中，观测为 174 维扁平特征向量，MLP 可直接将所有维度拼接后输入全连接网络进行端到端学习。
+其中 $\mathbf{W}^{(l)}$ 和 $\mathbf{b}^{(l)}$ 分别为第 $l$ 层的权重矩阵和偏置，$\sigma(\cdot)$ 为激活函数。常用激活函数包括 ReLU（$\sigma(z)=\max(0,z)$）、tanh 和 Sigmoid，ReLU 因计算简单且能缓解梯度消失而最为常用。MLP假定样本是独立同分布的，输入信息没有空间特征或时序特征，在MDP中，状态转移概率只与状态和动作有关而与之前的状态-动作无关，使用MLP拟合价值函数或策略函数是最为合适的。
 
-\textbf{循环神经网络与 GRU}。在部分可观测环境中，单步观测 $o_t$ 不足以完整描述潜在真实状态，智能体需依赖观测历史 $h_t = (o_0, a_0, o_1, a_1, \ldots, o_t)$ 推断缺失信息。循环神经网络（Recurrent Neural Network, RNN）专为序列数据设计，在每个时间步接收当前输入并更新内部隐藏状态（hidden state），将历史信息压缩传递：
+\textbf{循环神经网络与 GRU}：在部分可观测环境中，单步观测 $o_t$ 不足以完整描述潜在真实状态，智能体需依赖观测历史序列 $(o_0, a_0, o_1, a_1, \ldots, o_t)$ 推断缺失信息。循环神经网络（Recurrent Neural Network, RNN）专为序列数据设计，在每个时间步接收当前输入并更新内部隐藏状态（hidden state），将历史信息压缩传递。
+
+设第 $t$ 时刻的输入向量为 $\mathbf{x}_t \in \mathbb{R}^{d_{\text{in}}}$，上一时刻的隐藏状态为 $\mathbf{h}_{t-1} \in \mathbb{R}^{d_h}$，标准 RNN 的隐藏状态更新为：
 \begin{equation}
-  \mathbf{h}_t = \tanh(\mathbf{W}_{ih} \mathbf{x}_t + \mathbf{b}_{ih} + \mathbf{W}_{hh} \mathbf{h}_{t-1} + \mathbf{b}_{hh})
+  \mathbf{h}_t = \tanh(\mathbf{W}_{xh} \mathbf{x}_t + \mathbf{W}_{hh} \mathbf{h}_{t-1} + \mathbf{b}_h)
   \label{eq:rnn}
 \end{equation}
-然而，标准 RNN 在长序列上训练时面临梯度消失和梯度爆炸问题，难以捕获长程时序依赖。门控循环单元（Gated Recurrent Unit, GRU）\cite{cho2014learning}通过引入门控机制缓解了上述问题，同时保持比 LSTM 更简洁的结构。GRU 包含重置门 $r_t$ 和更新门 $z_t$：重置门控制历史状态对候选状态的贡献比例，更新门控制历史状态与新候选状态之间的插值权重：
+其中 $\mathbf{W}_{xh} \in \mathbb{R}^{d_h \times d_{\text{in}}}$ 为输入权重矩阵，将当前输入映射到隐藏空间；$\mathbf{W}_{hh} \in \mathbb{R}^{d_h \times d_h}$ 为循环权重矩阵，对历史状态进行线性变换；$\mathbf{b}_h \in \mathbb{R}^{d_h}$ 为偏置向量。两项之和经双曲正切激活函数 $\tanh(\cdot)$ 非线性变换后得到当前隐藏状态。
+\begin{figure}[htbp!]
+  \centering
+  \includegraphics[width=0.8\textwidth]{imgs/gru_network.drawio.pdf}
+  \caption{GRU 网络结构}
+  \label{fig:gru_network}
+\end{figure}
+然而，标准 RNN 在长序列上训练时，因反向传播中梯度通过 $\mathbf{W}_{hh}$ 和 $\tanh$ 导数的反复连乘，会面临梯度消失与梯度爆炸问题，难以捕获长程时序依赖。如\autoref{fig:gru_network}所示，门控循环单元（Gated Recurrent Unit, GRU）\cite{cho2014learning}是长短时记忆网络（Long Short-Term Memory，LSTM）的简化变体，延用了门控机制缓解上述问题的同时降低了计算复杂度和内存占用。GRU 在每个时间步计算重置门 $\mathbf{r}_t$ 和更新门 $\mathbf{z}_t$ 两个门控信号以及一个候选隐藏状态 $\tilde{\mathbf{h}}_t$，并对历史状态与候选状态进行门控线性插值：
 \begin{align}
-  r_t &= \sigma(\mathbf{W}_{ir} \mathbf{x}_t + \mathbf{b}_{ir} + \mathbf{W}_{hr} \mathbf{h}_{t-1} + \mathbf{b}_{hr}) \label{eq:gru_r} \\
-  z_t &= \sigma(\mathbf{W}_{iz} \mathbf{x}_t + \mathbf{b}_{iz} + \mathbf{W}_{hz} \mathbf{h}_{t-1} + \mathbf{b}_{hz}) \label{eq:gru_z} \\
-  \mathbf{n}_t &= \tanh(\mathbf{W}_{in} \mathbf{x}_t + \mathbf{b}_{in} + r_t \odot (\mathbf{W}_{hn} \mathbf{h}_{t-1} + \mathbf{b}_{hn})) \label{eq:gru_n} \\
-  \mathbf{h}_t &= (1 - z_t) \odot \mathbf{n}_t + z_t \odot \mathbf{h}_{t-1} \label{eq:gru_h}
+  \mathbf{r}_t &= \sigma(\mathbf{W}_{xr} \mathbf{x}_t + \mathbf{W}_{hr} \mathbf{h}_{t-1} + \mathbf{b}_r) \label{eq:gru_r} \\
+  \mathbf{z}_t &= \sigma(\mathbf{W}_{xz} \mathbf{x}_t + \mathbf{W}_{hz} \mathbf{h}_{t-1} + \mathbf{b}_z) \label{eq:gru_z} \\
+  \tilde{\mathbf{h}}_t &= \tanh(\mathbf{W}_{xh} \mathbf{x}_t + \mathbf{W}_{hh}(\mathbf{r}_t \odot \mathbf{h}_{t-1}) + \mathbf{b}_h) \label{eq:gru_n} \\
+  \mathbf{h}_t &= (1 - \mathbf{z}_t) \odot \tilde{\mathbf{h}}_t + \mathbf{z}_t \odot \mathbf{h}_{t-1} \label{eq:gru_h}
 \end{align}
-其中 $\sigma(\cdot)$ 为 sigmoid 函数，$\odot$ 表示逐元素乘法。当 $z_t \to 1$ 时，隐藏状态几乎完全保留上一步的值，梯度可在时间上畅通回传；当 $z_t \to 0$ 时，隐藏状态更多地由当前输入决定。这种自适应门控使 GRU 能灵活调节信息在时间维度上的保留与遗忘，显著提升长序列建模能力，参数量约为 LSTM 的三分之二，在序列长度中等或计算资源受限时具有更高性价比。在本文第4.5节中，GRU 被用于对 SELF、PLAYER、ENEMY 和 LiDAR 等时序观测分段进行序列建模，以考察时序记忆对部分可观测环境中策略学习的影响。
+在式(\ref{eq:gru_r})--(\ref{eq:gru_h})中，各符号含义如下：$\sigma(u)=1/(1+e^{-u})$ 为 sigmoid 激活函数，将门控输出压缩至 $[0,1]$ 区间；$\odot$ 表示逐元素乘法（Hadamard 积）；$\mathbf{r}_t, \mathbf{z}_t \in [0,1]^{d_h}$ 分别为重置门与更新门向量；$\tilde{\mathbf{h}}_t, \mathbf{h}_t \in \mathbb{R}^{d_h}$ 分别为候选隐藏状态与最终隐藏状态。权重矩阵的命名遵循"源变量到目标变量"的约定：$\mathbf{W}_{xr}, \mathbf{W}_{xz}, \mathbf{W}_{xh} \in \mathbb{R}^{d_h \times d_{\text{in}}}$ 分别为三种变换中对应于当前输入 $\mathbf{x}_t$ 的权重矩阵；$\mathbf{W}_{hr}, \mathbf{W}_{hz}, \mathbf{W}_{hh} \in \mathbb{R}^{d_h \times d_h}$ 为对应于历史状态 $\mathbf{h}_{t-1}$ 的循环权重矩阵；各 $\mathbf{b} \in \mathbb{R}^{d_h}$ 为对应的偏置向量。
 
-在深度强化学习的训练中，网络参数通过反向传播算法计算损失梯度，并利用随机梯度下降（SGD）或其变体（如 Adam 优化器）迭代更新。策略网络和价值网络可共享底层特征提取躯干（shared trunk）以减少参数量，也可各自独立维护完整网络。本文采用共享躯干设计，在特征提取层之上分叉出策略头（policy head）和价值头（value head），分别输出动作概率分布与状态价值估计。
+重置门 $\mathbf{r}_t$ 通过逐元素乘法 $\mathbf{r}_t \odot \mathbf{h}_{t-1}$ 控制历史状态中哪些维度的信息参与候选状态 $\tilde{\mathbf{h}}_t$ 的计算——当某维度的 $r_t^{(i)} \to 0$ 时，该维度对应的历史信息被阻断，迫使候选状态更依赖当前输入 $\mathbf{x}_t$，实现对历史信息的"选择性遗忘"。更新门 $\mathbf{z}_t$ 控制最终隐藏状态中历史信息与新信息的混合权重：当 $\mathbf{z}_t \to \mathbf{1}$ 时，$\mathbf{h}_t \approx \mathbf{h}_{t-1}$，历史状态几乎完整保留，梯度可在时间步之间畅通回传，从而缓解长序列训练中的梯度消失问题；当 $\mathbf{z}_t \to \mathbf{0}$ 时，$\mathbf{h}_t \approx \tilde{\mathbf{h}}_t$，隐藏状态由当前输入主导，实现对状态的大幅更新。这种自适应门控机制使 GRU 能灵活调节信息在时间维度上的保留与遗忘，显著提升长序列建模能力。GRU 的参数量约为 LSTM 的三分之二——LSTM 包含输入门、遗忘门和输出门共三个门控单元以及一个独立的记忆单元状态，而 GRU 仅使用两个门控单元直接从输入和上一隐藏状态计算当前隐藏状态，在序列长度中等或计算资源受限时具有更高性价比。在本文第4.5节中，GRU 被用于对 SELF、PLAYER、ENEMY 和 LiDAR 等时序观测分段进行序列建模，以考察时序记忆对部分可观测环境中策略学习的影响。
 
 \subsubsection{近端策略优化算法}
 近端策略优化算法（PPO）是本文主要使用的算法，是一种策略梯度算法，
@@ -794,11 +803,11 @@ Python 端接收观测数据并执行推理后将动作返回给 Godot，
 
 各分段的关键编码特点如下：
 \begin{enumerate}[label=(\arabic*)]
-  \item \textbf{以自身为中心}：所有实体的位置坐标均转换为相对于当前智能体的偏移量 $(dx, dy)$，除以视野半径 $r_{\text{vision}}=200$ 像素后归一化到 $[-1,1]$，确保平移不变性——无论智能体位于地图何处，相同相对位置的实体产生相同的观测编码。距离同样除以视野半径归一化到 $[0,1]$。
-  \item \textbf{固定槽位编码}：PLAYER 段按对手 ID 固定槽位（ID 较小的对手占低槽位，较大的占高槽位，跳过自身 ID），ENEMY 段按场景数组索引固定槽位，BALL 段按距离由近到远排列。固定槽位使同一槽位在每个时间步始终承载同一类语义，观测向量在时间维度上保持位置一致性，从而能够直接送入 GRU 等循环网络而无需前置 MLP 进行特征重排。
-  \item \textbf{有效位掩码}：PLAYER、BALL、ENEMY 三个分段中，每个实体槽位末尾附加 1 维有效标志（valid mask）。视野内实体对应槽位 $=1$，视野外或实体不存在的空槽位填 0 且 valid 位 $=0$，使网络能明确区分"数值为 0 的有效观测"与"因实体不可见而填充的零值噪声"。
-  \item \textbf{时序信息显式编码}：对手与敌人的攻击动画状态（第 5、7 维）和技能冷却比例（第 6、8 维）直接编码了时序动态信息——网络无需依赖历史记忆即可获知"对手刚发动攻击，冷却剩余 0.8"等关键决策依据，降低了部分可观测条件下对时序网络的依赖。
-  \item \textbf{朝向与攻击方向}：SELF 和 PLAYER 段均包含精灵翻转标志（flip\_h），与相对位置联合决定了攻击扇形的实际朝向，使网络能够判断对手攻击是否威胁自身。
+  \item \textbf{以自身为中心}：所有实体的位置坐标均转换为相对于当前智能体的偏移量 $(dx, dy)$，除以视野半径 $r_{\text{vision}}$ 像素后归一化到 $[-1,1]$，确保平移不变性，即无论智能体位于地图何处，相同相对位置的实体产生相同的观测编码。距离同样除以视野半径归一化到 $[0,1]$。
+  \item \textbf{固定槽位编码}：PLAYER 段按对手 ID 固定槽位，ID 较小的对手占低槽位，较大的占高槽位，跳过自身 ID，ENEMY 段按场景数组索引固定槽位，BALL 段按距离由近到远排列。固定槽位使同一槽位在每个时间步始终承载同一类语义，观测向量在时间维度上保持位置一致性，从而能够直接送入 GRU 等循环网络而无需前置 MLP 进行特征重排。
+  \item \textbf{有效位掩码}：PLAYER、BALL、ENEMY 三个分段中，每个实体槽位末尾附加 1 维有效标志（valid mask）。视野内实体对应槽位 $=1$，视野外或实体不存在的空槽位填 0 且 valid 位 $=0$，帮助网络明确区分"数值为 0 的有效观测"与"因实体不可见而填充的零值噪声"。
+  \item \textbf{动力学信息}：包含智能体和敌人的攻击动画状态、技能冷却比例，速度等信息，SELF字段还有上一次执行的动作的one-hot编码。
+  \item \textbf{朝向}：智能体和敌人的朝向决定了攻击方向，与位置信息联合决定了攻击范围。
 \end{enumerate}
 
 \subsection{奖励函数设计}
@@ -1108,11 +1117,23 @@ $d$ 为智能体到球的距离。
 \end{figure}
 
 \subsection{网络架构对比}
-对于部分可观测马尔可夫决策过程，时序网络的表现通常优于MLP等非时序网络\cite{smirnov2025rlbenchnetrightnetworkright}。
-采球任务使用多智能体课程1环境，记录所有智能体的总分均值，战斗任务使用单智能体课程3环境，每局游戏时间3分钟，训练情况200万步，对比了 MLP、Segmented MLP 和 GRU-MLP 三种网络架构，其中GRU网络还对比了96和128两种隐藏层维度，MLP、Segmented MLP 和 GRU-96-MLP保持总参数量大体相当以保证公平性。
-\autoref{fig:network_architecture_comparison}展示了四种网络架构在两种任务场景下的表现对比：
-\subref{fig:network_s1}课程1拾取奖励球任务，场景中只有奖励球，没有障碍物和敌人，
-\subref{fig:network_sarl}为课程3单智能体战斗任务，智能体和敌人被围在一个小的中心区域中，智能体将被迫战斗。
+
+对于部分可观测马尔可夫决策过程，时序网络的表现通常优于 MLP 等非时序网络\cite{smirnov2025rlbenchnetrightnetworkright}。
+在将单智能体训练方案迁移到多智能体博弈训练之前，需确定策略网络的架构与对应超参数。
+理想情况下应针对每种架构独立进行超参数优化，再以各自最优配置进行最终的性能与稳定性比较。
+但完整的全因子搜索（架构类型 $\times$ 超参数组合）计算开销巨大——以本文的单次 Optuna 搜索约需数天计算时间估算，完成三种架构的独立搜索需数周以上。
+为此，本节采用渐进式筛选策略：先通过固定参数对比完成粗筛，排除明显不适用的架构后集中算力对候选架构进行超参数优化，
+最终确定用于多智能体博弈实验的配置。
+
+\subsubsection{固定参数对比}
+
+首先在标准超参数配置下对比三种网络架构在两种任务场景中的表现。
+采球任务使用多智能体课程1环境，战斗任务使用单智能体课程3环境（智能体和敌人被围在中心区域，强制战斗），每局游戏时间3分钟，训练步数200万步。
+MLP、Segmented MLP 和 GRU-96-MLP 保持总参数量大体相当以保证公平性，其中 GRU 还额外对比了 96 和 128 两种隐藏层维度。
+
+图~\ref{fig:network_architecture_comparison} 展示了四种网络架构在两种任务场景下的总得分对比：
+\subref{fig:network_s1} 为课程1拾取奖励球任务（仅含奖励球，无障碍物和敌人），
+\subref{fig:network_sarl} 为课程3战斗任务。
 
 \begin{figure}[htbp]
   \centering
@@ -1131,29 +1152,30 @@ $d$ 为智能体到球的距离。
   \end{subfigure}
   \caption{\zihao{5} 不同网络架构在两种任务场景下的总得分对比。
   蓝色为 MLP，橙色为 Segmented MLP，绿色为 GRU-MLP（隐藏层 96），粉色为 GRU-MLP（隐藏层 128）。
-  曲线为 4个并行环境运行均值。}
+  曲线为 4 个并行环境运行均值。}
   \label{fig:network_architecture_comparison}
 \end{figure}
 
 \textbf{拾取奖励球任务}：Segmented MLP 表现较好（均值 911.1），
 略高于 MLP（857.4）和 GRU-MLP（853.6--856.4）。
 在仅需感知奖励球位置的简单任务中，
-Segmented MLP 对观测槽位的分段编码略有益处，因为分段子网络的设计使其在这个简单任务里不会受到其他大量0值输入的干扰。但四种架构在学习趋势上未呈现质变差异，
+Segmented MLP 对观测槽位的分段编码略有益处，因为分段子网络的设计使其不会受到其他大量零值输入的干扰。但四种架构在学习趋势上未呈现质变差异，
 该任务复杂度不足以充分体现网络结构的优劣。
 
 \textbf{战斗任务}：普通 MLP 在总分上表现较好（775.2），
 Segmented MLP 次之（714.6），
-GRU-MLP 总分明显落后（582.9 / 578.5）。
-其中 GRU-MLP 128 的攻击次数最高（79.0 vs MLP 的 69.5，见附录表\ref{tab:network_sarl_detail}），
+GRU-MLP 总分明显落后（582.9/578.5）。
+其中 GRU-MLP 128 的攻击次数最高（79.0 vs MLP 的 69.5，见附录表~\ref{tab:network_sarl_detail}），
 且受击次数和死亡次数略优，但其撞墙次数极高（GRU-MLP 96：23.6 次/回合 vs MLP：3.4 次/回合），
 反映出时序网络在该环境中对空间避障信息的利用效率不足。
-在攻击密集的实时战斗场景中，GRU 的时序依赖带来的学习成本反而拖累了训练效率。该实验结果与直觉预期相反——在部分可观测环境中，时序网络通常应优于 MLP。
+在攻击密集的实时战斗场景中，GRU 的时序依赖带来的额外学习成本反而拖累了训练效率。
+
+该实验结果与直觉预期相反——在部分可观测环境中，时序网络通常应优于 MLP。
 经分析，这一现象可能源于本实验环境设计的两个特征。
-其一，如\autoref{fig:game_arena_view}所示，竞技场中央土色区域为资源密集区，随着训练进行，智能体会倾向于前往该区域并停留以试图获取更高奖励，在智能体的活动高度集中于该区域的情况下，同时智能体的视野半径设置较大，使得处于中央的智能体的视野可覆盖竞技场核心区域的大部分信息，大部分时间内智能体总能看到其他实体，MLP 的单帧观测已包含充分的决策依据。
-其二，观测向量中直接编码了对手的攻击状态（如是否在播放攻击动画以及攻击冷却时间）与移动速度等动态信息，网络无需依赖历史记忆来推断"上一秒发动攻击，现在无法攻击"这类时序关联关系。
-因此在本环境和当前训练设置下，GRU 的时序建模能力未能转化为实际优势，反而增加了训练收敛难度。需要说明的是，受实验周期限制，本文未对 GRU 的序列长度、隐藏层规模、学习率等超参数进行单独搜索，
-因此上述结果只能说明在当前训练预算和参数设置下 MLP 更适合作为后续实验的基础架构，而不能排除经过充分调参后的循环网络取得更好表现的可能。
-综合训练成本与当前实验结果，后续实验选择 MLP 作为主训练网络架构。
+其一，如~\ref{fig:game_arena_view} 所示，竞技场中央土色区域为资源密集区，随着训练进行智能体会倾向于前往该区域并停留，且视野半径设置较大，使处于中央的智能体大部分时间内能观测到核心区域的大部分动态信息，MLP 的单帧观测已包含充分的决策依据。
+其二，观测向量中直接编码了对手的攻击状态与移动速度等动态信息，网络无需依赖历史记忆来推断时序关联关系。
+因此在本环境和当前训练设置下，GRU 的时序建模能力未能转化为实际优势，反而增加了训练收敛难度。
+
 \begin{figure}[htbp]
   \centering
   \includegraphics[width=0.4\linewidth]{imgs/game_snapshot_0.png}
@@ -1162,13 +1184,16 @@ GRU-MLP 总分明显落后（582.9 / 578.5）。
   \label{fig:game_arena_view}
 \end{figure}
 
-\textbf{超参数配置}：确定使用MLP作为训练网络架构后，在最终环境下经过 Optuna 参数搜索得到了一组效果比较好的超参数配置。
-搜索过程在单智能体环境下以智能体 0 为训练对象，共进行 100 个 trial，优化目标为最近 100 回合的平均奖励，搜索得到的最优目标值为 830.45。
-主要搜索空间如表~\ref{tab:optuna_space}所示，最终采用的关键超参数由表~\ref{tab:hyperparams} 给出，\autoref{fig:parallel_coordinate_and_importances}展示了超参数搜索结果。
-此后各课程会在此基础上动态调整以取得较好性能——例如战斗课程需要更大的熵系数以鼓励探索。
+\subsubsection{超参数搜索}
+
+固定参数对比揭示了架构间的基础差异，但各架构的最优超参数可能不同。
+为此，本文先后进行了两轮 Optuna 超参数搜索。
+
+\textbf{第一轮搜索（完整环境，MLP 架构）}。在包含所有游戏元素的最终环境下，以 MLP 架构为对象、智能体 0 为训练目标，优化最近 100 回合的平均奖励。搜索空间如表~\ref{tab:optuna_space} 所示，共进行 100 个 trial，搜索得到的最优目标值为 830.45。最终采用的关键超参数见表~\ref{tab:hyperparams}，图~\ref{fig:parallel_coordinate_and_importances} 展示了搜索结果可视化。此后各课程阶段在此基础上动态调整——例如战斗课程需要更大的熵系数以鼓励探索。
+
 \begin{table}[htbp]
   \centering
-  \caption{\zihao{5} Optuna 超参数搜索空间}
+  \caption{\zihao{5} 第一轮 Optuna 超参数搜索空间（固定 MLP 架构）}
   \label{tab:optuna_space}
   \begin{tabularx}{\textwidth}{lX}
     \toprule
@@ -1179,15 +1204,16 @@ GRU-MLP 总分明显落后（582.9 / 578.5）。
     PPO 裁剪系数 $\epsilon$ & $[0.1, 0.3]$，均匀采样 \\
     熵系数 & $[1\times10^{-4},\,5\times10^{-2}]$，对数均匀采样 \\
     学习率退火 & $\{\text{False}, \text{True}\}$ \\
-    奖励归一化 & $\{\text{True}, \text{False}\}$ \\
+    奖励归一化 & $\{\text{False}, \text{True}\}$ \\
     奖励归一化范围 & 启用奖励归一化时，从 $\{1.0,2.0,3.0,4.0,5.0\}$ 中选择 \\
     MLP 隐藏层结构 & $\{128\text{-}64,\ 256\text{-}128\text{-}64,\ 256\text{-}256\text{-}128\}$ \\
     \bottomrule
   \end{tabularx}
 \end{table}
+
 \begin{table}[htbp]
   \centering
-  \caption{\zihao{5} PPO 训练超参数}
+  \caption{\zihao{5} PPO 训练超参数（第一轮搜索最优结果）}
   \label{tab:hyperparams}
   \begin{tabular}{cc}
     \toprule
@@ -1224,11 +1250,88 @@ GRU-MLP 总分明显落后（582.9 / 578.5）。
     \caption{\zihao{5} 超参数重要性排名}
     \label{fig:param_importances}
   \end{subfigure}
-  \caption{\zihao{5} Optuna 超参数搜索结果可视化。
-  \subref{fig:parallel_coordinate}展示各 trial 的超参数取值与对应奖励的分布关系，颜色越接近金色表示奖励越高；
-  \subref{fig:param_importances}展示各参数对最终奖励的影响权重。}
+  \caption{\zihao{5} 第一轮 Optuna 超参数搜索结果可视化。
+  \subref{fig:parallel_coordinate} 展示各 trial 的超参数取值与对应奖励的分布关系，颜色越接近金色表示奖励越高；
+  \subref{fig:param_importances} 展示各参数对最终奖励的影响权重。}
   \label{fig:parallel_coordinate_and_importances}
 \end{figure}
+
+\textbf{第二轮搜索（探索性架构联合搜索）}。为进一步验证固定参数结论，同时探索各架构在放宽超参数约束后的表现上限，本文将网络架构类型纳入搜索变量（\texttt{mlp}/\texttt{segmented\_mlp}/\texttt{gru\_mlp}），配合各架构专属的超参数空间（隐藏层结构、GRU 隐藏维度与层数、循环序列长度等），共提交 321 个 trial。
+环境改为无 B 类奖励球的战斗导向环境，保留 A 类球、敌人和障碍物，优化目标同第一轮。
+Optuna 的 TPE 采样器根据中期结果动态分配算力——Segmented MLP 和 MLP 持续获得高奖励，分别被分配 187 和 72 个 trial；
+GRU-MLP 因前期表现持续落后，仅分配 17 个 trial 后便被算法自动放弃。
+\footnote{第二轮搜索的 trial 数非事先固定，而是 Optuna 采样器根据各架构的在线表现自适应分配的结果。}
+
+表~\ref{tab:optuna_round2} 给出了三种架构在第二轮搜索中的表现对比。
+Segmented MLP 在最优值和均值上全面领先，Top 10 中占据 8 席，表明在以战斗为主要目标的任务中，分段编码带来的语义分解优势超越了全连接 MLP。
+GRU-MLP 在仅 17 个 trial 的搜索后最佳值仅 192.2、均值 43.4，未观察到收敛迹象。
+需注意本轮搜索并非为每种架构找到独立最优配置，
+而是在有限算力约束下验证：\textbf{在本文环境下，GRU-MLP 引入的时序依赖带来的额外学习成本显著拖累了早期训练效率}，
+其性能在相同搜索预算内远低于 MLP 类架构。图~\ref{fig:optuna_round2_compare} 展示了三种架构的奖励分布。
+
+\begin{table}[htbp]
+  \centering
+  \caption{\zihao{5} 第二轮 Optuna 搜索：三种网络架构表现对比（276 个完成 trial）}
+  \label{tab:optuna_round2}
+  \begin{tabular}{lcccc}
+    \toprule
+    架构 & Trial 数 & 最佳奖励 & 均值 & 标准差 \\
+    \midrule
+    Segmented MLP & 187 & \textbf{1116.3} & \textbf{607.6} & 428.1 \\
+    MLP            & 72  & 1092.3 & 320.5 & 415.5 \\
+    GRU-MLP        & 17  & 192.2  & 43.4  & 60.8  \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+表~\ref{tab:optuna_round2_best} 列出了三种架构各自的最优超参数。
+从高奖励 trial 的共性特征来看：较大的 rollout 步数（512）、更多的更新轮数（10）与 minibatch 数（16）、关闭奖励归一化和学习率退火，在战斗环境中最为有利。
+这组超参数与第一轮搜索（完整环境）得到的最优配置差异明显，反映出最优超参数配置与任务类型密切相关。
+
+\begin{table}[htbp]
+  \centering
+  \caption{\zihao{5} 第二轮搜索中各架构最优 trial 的超参数}
+  \label{tab:optuna_round2_best}
+  \small
+  \setlength{\tabcolsep}{4pt}
+  \begin{tabular}{lccc}
+    \toprule
+    参数 & MLP（\#93, 1092.3） & Segmented MLP（\#260, 1116.3） & GRU-MLP（\#51, 192.2） \\
+    \midrule
+    学习率                & $7.37\times10^{-4}$ & $9.33\times10^{-4}$ & $1.17\times10^{-4}$ \\
+    Rollout 步数          & 256   & 512   & 256   \\
+    Minibatch 数          & 4     & 16    & 2     \\
+    更新轮数              & 10    & 10    & 8     \\
+    裁剪系数 $\epsilon$   & 0.212 & 0.274 & 0.160 \\
+    熵系数                & $2.03\times10^{-3}$ & $1.42\times10^{-3}$ & $6.53\times10^{-3}$ \\
+    GAE $\lambda$         & 0.954 & 0.932 & 0.981 \\
+    奖励归一化            & True  & False & False \\
+    学习率退火            & True  & False & False \\
+    隐藏层结构            & 256-256-128 & 256-128 & 128-64-32 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.8\linewidth]{imgs/optuna_round2_compare.png}
+  \caption{\zihao{5} 第二轮 Optuna 搜索中三种网络架构的奖励分布对比。
+  每个点为一个 trial，横轴为网络架构类型，纵轴为最近 100 回合平均奖励。
+  箱线图展示四分位分布，μ 标注为各组均值。}
+  \label{fig:optuna_round2_compare}
+\end{figure}
+
+\subsubsection{讨论}
+
+综合固定参数对比与两轮超参数搜索，可以得到以下认识：
+
+\begin{enumerate}[label=(\arabic*)]
+  \item \textbf{网络架构的优劣取决于任务类型}。在同时包含吃球和战斗的完整任务中，MLP 与 Segmented MLP 差距不大（775.2 vs 714.6）；但在以战斗为主的无 B 类球环境中，Segmented MLP 在最优超参数下最优值无明显差异但是均值优势更明显。
+  \item \textbf{GRU-MLP 在本文环境中收益不显著}。两轮实验中 GRU-MLP 均明显落后于 MLP 和 Segmented MLP。如前文分析，这主要源于环境设计中的大视野半径和观测向量中的显式状态编码削弱了对时序记忆的需求，同时 GRU 的循环状态给训练带来了额外收敛开销。需指出的是，由于第二轮搜索中 GRU 仅分得 17 个 trial，其超参数搜索的充分性有限——本文的结论仅表明 GRU 在当前设置和搜索预算下未能体现优势，不能排除在更充分的超参数优化后其性能改善的可能性。这一方向有待进一步验证。
+  \item \textbf{超参数最优值与任务类型高度耦合}。第一轮搜索（完整环境）倾向于启用奖励归一化和学习率退火；第二轮搜索（战斗环境）的高奖励 trial 则统一关闭这两项，且需要更大的 rollout 步数（512 vs 256）和更细粒度的 minibatch 划分（16 vs 4）。这表明不存在一套"通用最优"超参数，针对不同阶段的训练目标调整配置是必要的。
+\end{enumerate}
+
+需要说明的是，第二轮搜索与第 5 章的多智能体博弈实验在时间上几乎同步开展。在第 5 章实验启动时，仅完成了固定参数对比和第一轮搜索（仅 MLP 的超参数优化），当时的结论是 MLP 在完整环境中与 Segmented MLP 差距不大、且训练效率更高。因此第 5 章的多智能体博弈实验采用了表~\ref{tab:hyperparams} 中的 MLP 架构配合第一轮最优超参数的配置。第二轮搜索的结果表明，若将 Segmented MLP 配合战斗环境最优化超参数应用于多智能体博弈训练，有望获得更强的对抗表现，这为后续研究提供了明确的优化方向。
 
 % ==================== 第5章 ====================
 \section{多智能体博弈方法对比}
@@ -1501,23 +1604,32 @@ IPPO 与对手池博弈的策略质量处于同一水平（$p=0.547$），
 % ----------------------------------------------------------
 \clearpage
 \appendix
-\stepcounter{section}
-\section*{附\quad\quad 录A 补充数据}
-\addcontentsline{toc}{section}{附\quad\quad 录}
+% 附录 section 格式：附录A 标题，小三黑体居中（比正文章节小二降一级）
+\titleformat{\section}[block]
+  {\zihao{3}\heiti\centering}
+  {附录\thesection}{1em}{}
+  [\vspace{1\baselineskip}]
+% 将目录格式变更写入 .toc 文件（因为 \tableofcontents 在文档开头已执行，
+% 只能在 .toc 文件中注入重定义来控制附录条目的格式）
+\addtocontents{toc}{\protect\renewcommand{\protect\cftsecpresnum}{附录}}
+\addtocontents{toc}{\protect\renewcommand{\protect\cftsecaftersnum}{\hspace{0.5em}}}
+\addtocontents{toc}{\protect\setlength{\protect\cftsecnumwidth}{6em}}
+\renewcommand{\thesection}{\Alph{section}}
+\section{补充图表}
 % --- 附录表：观测空间详细组成（长表，自动跨页 + 续表） ---
-\setlength{\LTleft}{0pt}
-\setlength{\LTright}{0pt}
-\begin{longtable}{l>{\raggedright}p{0.9cm}c>{\raggedright\arraybackslash}p{2.5cm}>{\raggedright\arraybackslash}p{2.2cm}p{5.5cm}}
-  \caption{\zihao{5} 观测空间逐维编码详表。带 $^\dagger$ 的槽位在实体不在视野内时全部填 0，末尾 valid 位为 0 以区分有效信息与零填充噪声。}
+\setlength{\LTleft}{\fill}
+\setlength{\LTright}{\fill}
+\begin{longtable}{l >{\raggedright\arraybackslash}p{2.5cm}>{\raggedright\arraybackslash}p{2.2cm}p{5.5cm}}
+  \caption{\zihao{5} 观测空间逐维编码详表。实体不在视野内时对应信息全部填 0，末尾 valid 位为 0 以区分有效信息与零填充。}
   \label{tab:appendix_observation} \\
   \toprule
-  分段 & 槽位 & 维数/槽 & 各维序号与内容 & 取值范围 & 编码说明 \\
+  分段 & 各维序号与内容 & 取值范围 & 编码说明 \\
   \midrule
   \endfirsthead
 
   \caption*{\zihao{5} 续\quad 表\thetable} \\
   \toprule
-  分段 & 槽位 & 维数/槽 & 各维序号与内容 & 取值范围 & 编码说明 \\
+  分段 & 各维序号与内容 & 取值范围 & 编码说明 \\
   \midrule
   \endhead
 
@@ -1525,66 +1637,50 @@ IPPO 与对手池博弈的策略质量处于同一水平（$p=0.547$），
   \endfoot
 
   \small
-  \multirow{8}{1.2cm}{SELF\\（自身）\\15 维}
-    & \multirow{8}{0.9cm}{1 组} &
-    \multirow{8}{1.5cm}{15（无分槽）} &
-    1. 自身 x 坐标 & $[-1,1]$ & 相对竞技场中心归一化 \\
-    &&& 2. 自身 y 坐标 & $[-1,1]$ & 相对竞技场中心归一化 \\
-    &&& 3. 生命值比例 & $[0,1]$ & 当前血量/最大血量 \\
-    &&& 4. 朝向标志 & $\{0,1\}$ & 精灵翻转状态，决定攻击方向 \\
-    &&& 5. 攻击动画状态 & $\{0,1\}$ & 是否正在播放攻击动画 \\
-    &&& 6. 技能冷却比例 & $[0,1]$ & 当前冷却/最大冷却时间 \\
-    &&& 7--8. 自身速度 & $[-1,1]$ & 归一化速度分量 $(v_x, v_y)$ \\
-    &&& 9--14. 上一动作 & $\{0,1\}$ & 6 维 one-hot 编码 \\
-    &&& 15. 回合进度 & $[0,1]$ & 当前步数/总步数 \\
-  \cmidrule{2-6}
-  \multirow{9}{1.2cm}{PLAYER\\（对手）\\33 维$^\dagger$}
-    & \multirow{3}{0.9cm}{槽位 0} &
-    \multirow{3}{1.5cm}{11} &
-    1. 对手 ID & $[0,1]$ & 归一化到 $[0,1]$ \\
-    &&& 2--3. 相对位置 & $[-1,1]$ & $(dx, dy)$ / 视野半径 \\
-    &&& 4. 生命值比例 & $[0,1]$ & 同 SELF 第 3 维 \\
-    &&& 5. 朝向标志 & $\{0,1\}$ & 同 SELF 第 4 维 \\
-    &&& 6. 相对距离 & $[0,1]$ & 距离 / 视野半径 \\
-    &&& 7. 攻击动画状态 & $\{0,1\}$ & 同 SELF 第 5 维 \\
-    &&& 8. 技能冷却比例 & $[0,1]$ & 同 SELF 第 6 维 \\
-    &&& 9--10. 速度 & $[-1,1]$ & 同 SELF 第 7--8 维 \\
-    &&& 11. 有效标志$^\dagger$ & $\{0,1\}$ & 1=在视野内，0=槽位空 \\
-    \cmidrule{2-2}
-    & 槽位 1 & 11 & \multicolumn{3}{l}{结构同上，对应 ID 第二大对手} \\
-    & 槽位 2 & 11 & \multicolumn{3}{l}{结构同上，对应 ID 第三大对手} \\
-  \cmidrule{2-6}
-  \multirow{6}{1.2cm}{BALL\\（奖励球）\\40 维$^\dagger$}
-    & \multirow{2}{0.9cm}{槽位 0} &
-    \multirow{2}{1.5cm}{5} &
-    1--2. 相对位置 & $[-1,1]$ & $(dx, dy)$ / 视野半径 \\
-    &&& 3. 球类型 & $\{0,1\}$ & 0=A 类（出生点附近），1=B 类（中央） \\
-    &&& 4. 相对距离 & $[0,1]$ & 距离 / 视野半径 \\
-    &&& 5. 有效标志$^\dagger$ & $\{0,1\}$ & 同 PLAYER 第 11 维 \\
-    \cmidrule{2-2}
-    & 槽位 1--7 & 5 & \multicolumn{3}{l}{结构同上，按距离由近到远排列} \\
-  \cmidrule{2-6}
-  \multirow{6}{1.2cm}{ENEMY\\（敌人）\\50 维$^\dagger$}
-    & \multirow{2}{0.9cm}{槽位 0} &
-    \multirow{2}{1.5cm}{10} &
-    1--2. 相对位置 & $[-1,1]$ & 同 PLAYER 第 2--3 维 \\
-    &&& 3. 生命值比例 & $[0,1]$ & 同 PLAYER 第 4 维 \\
-    &&& 4. 朝向标志 & $\{0,1\}$ & 同 PLAYER 第 5 维 \\
-    &&& 5. 相对距离 & $[0,1]$ & 同 PLAYER 第 6 维 \\
-    &&& 6. 攻击动画状态 & $\{0,1\}$ & 同 PLAYER 第 7 维 \\
-    &&& 7. 技能冷却比例 & $[0,1]$ & 同 PLAYER 第 8 维 \\
-    &&& 8--9. 速度 & $[-1,1]$ & 同 PLAYER 第 9--10 维 \\
-    &&& 10. 有效标志$^\dagger$ & $\{0,1\}$ & 同 PLAYER 第 11 维 \\
-    \cmidrule{2-2}
-    & 槽位 1--4 & 10 & \multicolumn{3}{l}{结构同上，ENEMY 不含对手 ID，按数组索引固定} \\
-  \cmidrule{2-6}
-  \multirow{3}{1.2cm}{MAP\\（地图）\\36 维}
-    & \multirow{3}{0.9cm}{36 条} &
-    \multirow{3}{1.5cm}{1} &
-    1--36. 射线检测距离 & $[0,1]$ & 从智能体位置向四周均匀发射 36 条射线（每 $10^\circ$ 一条），
-    记录击中最远障碍物的距离 / 视野半径。无碰撞=1.0（开阔），近距离碰撞$\to 0$（贴近障碍物）。无需有效掩码，36 条射线始终有效 \\
+  \multirow{8}{1.2cm}{SELF（自身）}
+    & 1. 自身 x 坐标 & $[-1,1]$ & 相对竞技场中心归一化 \\
+    & 2. 自身 y 坐标 & $[-1,1]$ & 相对竞技场中心归一化 \\
+    & 3. 生命值比例 & $[0,1]$ & 当前血量/最大血量 \\
+    & 4. 朝向标志 & $\{0,1\}$ & 精灵翻转状态，决定攻击方向 \\
+    & 5. 攻击动画状态 & $\{0,1\}$ & 是否正在播放攻击动画 \\
+    & 6. 技能冷却比例 & $[0,1]$ & 当前冷却/最大冷却时间 \\
+    & 7--8. 自身速度 & $[-1,1]$ & 归一化速度分量 $(v_x, v_y)$ \\
+    & 9--14. 上一动作 & $\{0,1\}$ & 6 维 one-hot 编码 \\
+    & 15. 回合进度 & $[0,1]$ & 当前步数/总步数 \\
+  \cmidrule{2-4}
+  \multirow{9}{1.2cm}{PLAYER（对手）}
+    & 1. 对手 ID & $[0,1]$ & 归一化到 $[0,1]$ \\
+    & 2--3. 相对位置 & $[-1,1]$ & $(dx, dy)$ / 视野半径 \\
+    & 4. 生命值比例 & $[0,1]$ & 同 SELF 第 3 维 \\
+    & 5. 朝向标志 & $\{0,1\}$ & 同 SELF 第 4 维 \\
+    & 6. 相对距离 & $[0,1]$ & 距离 / 视野半径 \\
+    & 7. 攻击动画状态 & $\{0,1\}$ & 同 SELF 第 5 维 \\
+    & 8. 技能冷却比例 & $[0,1]$ & 同 SELF 第 6 维 \\
+    & 9--10. 速度 & $[-1,1]$ & 同 SELF 第 7--8 维 \\
+    & 11. 有效标志 & $\{0,1\}$ & 视野内最多 3 个对手，按 ID 排序填入对应槽位 \\
+  \cmidrule{2-4}
+  \multirow{4}{1.2cm}{BALL（奖励球）}
+    & 1--2. 相对位置 & $[-1,1]$ & $(dx, dy)$ / 视野半径 \\
+    & 3. 球类型 & $\{0,1\}$ & 0=A 类（出生点附近），1=B 类（中央） \\
+    & 4. 相对距离 & $[0,1]$ & 距离 / 视野半径 \\
+    & 5. 有效标志 & $\{0,1\}$ & 视野内最多 8 个奖励球，按距离由近到远排列 \\
+  \cmidrule{2-4}
+  \multirow{8}{1.2cm}{ENEMY（敌人）}
+    & 1--2. 相对位置 & $[-1,1]$ & 同 PLAYER 第 2--3 维 \\
+    & 3. 生命值比例 & $[0,1]$ & 同 PLAYER 第 4 维 \\
+    & 4. 朝向标志 & $\{0,1\}$ & 同 PLAYER 第 5 维 \\
+    & 5. 相对距离 & $[0,1]$ & 同 PLAYER 第 6 维 \\
+    & 6. 攻击动画状态 & $\{0,1\}$ & 同 PLAYER 第 7 维 \\
+    & 7. 技能冷却比例 & $[0,1]$ & 同 PLAYER 第 8 维 \\
+    & 8--9. 速度 & $[-1,1]$ & 同 PLAYER 第 9--10 维 \\
+    & 10. 有效标志 & $\{0,1\}$ & 视野内最多 5 个敌人，按数组索引固定排列 \\
+  \cmidrule{2-4}
+  \multirow{3}{1.2cm}{MAP（地图）}
+    & 1--36. 射线检测距离 & $[0,1]$ & 从智能体位置向四周均匀发射 36 条射线（每 $10^\circ$ 一条），
+    记录击中最近障碍物的距离 / 视野半径。无碰撞=1.0（开阔），近距离碰撞$\to 0$（贴近障碍物）。\\
   \bottomrule
 \end{longtable}
+
 % --- 附录表：有效位掩码对比 ---
 \begin{table}[htbp]
   \centering
@@ -1720,6 +1816,8 @@ IPPO 与对手池博弈的策略质量处于同一水平（$p=0.547$），
   \centering
   \caption{\zihao{5} Sarl 战斗任务网络架构对比（单智能体，5 次独立运行均值）}
   \label{tab:network_sarl_detail}
+  \small
+  \setlength{\tabcolsep}{3.5pt}
   \begin{tabular}{lccccccc}
     \toprule
     网络架构 & 总得分 & 攻击次数 & 造成伤害 & 承受伤害 & 击杀数 & 死亡数 & 撞墙次数 \\
@@ -1737,7 +1835,9 @@ IPPO 与对手池博弈的策略质量处于同一水平（$p=0.547$），
   \centering
   \caption{\zihao{5} 课程学习阶段配置表}
   \label{tab:appendix_curriculum}
-  \begin{tabular}{lllrrl}
+  \small
+  \setlength{\tabcolsep}{3.5pt}
+  \begin{tabular}{l >{\raggedright\arraybackslash}p{3.2cm} >{\raggedright\arraybackslash}p{3.5cm} r r >{\raggedright\arraybackslash}p{2.8cm}}
     \toprule
     阶段 & 环境名称 & 新增要素 & 训练步数 & 累计步数 & 输出模型 \\
     \midrule
