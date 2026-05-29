@@ -71,15 +71,7 @@ class ContinueAverageOpponentAgentArgs(IppoPoolArgs):
     phase_name: str = "agent0_vs_average_opponents"
     save_model_path: Optional[str] = "saved_models/ippo_average_opponent_agent0_final"
     pool_checkpoint_dir: Optional[str] = "saved_models/ippo_average_opponent_checkpoints"
-<<<<<<< HEAD
-    pool_final_timesteps: int = 1_000_0000
-=======
-<<<<<<< HEAD
-    pool_final_timesteps: int = 1_000_0000
-=======
-    pool_final_timesteps: int = 5_000_000
->>>>>>> a8f2e64396083729257a317ec62386ff5983c09f
->>>>>>> 397661c67e2ddd0684da121c21254fcb707366c6
+    pool_final_timesteps: int = 10_000_000
     run_name: Optional[str] = "ippo_average_opponent_agent0"
     ppo_model_paths: list[Optional[str]] = None
 
@@ -120,7 +112,7 @@ def _parse_args() -> ContinueAverageOpponentAgentArgs:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--main-agent-id", type=int, default=args.main_agent_id)
     parser.add_argument("--main-checkpoint-path", default=args.main_checkpoint_path)
-    parser.add_argument("--load-mode", choices=["resume", "weights"], default=args.load_mode)
+    parser.add_argument("--load-mode", choices=["resume", "checkpoint", "weights"], default=args.load_mode)
     parser.add_argument("--opponent-checkpoint-dir", default=args.opponent_checkpoint_dir)
     parser.add_argument("--opponent-keep-per-agent", type=int, default=args.opponent_keep_per_agent)
     parser.add_argument("--allow-fewer-opponents", action="store_true")
@@ -170,8 +162,6 @@ def _parse_args() -> ContinueAverageOpponentAgentArgs:
     args.pool_final_agent_id = args.main_agent_id
     args.pool_final_save_agent_ids = (args.main_agent_id,)
     args.ppo_model_paths = [None for _ in args.agent_configs]
-    args.resume_from = None
-    args.load_model_path = None
     args.save_checkpoint = False
     return args
 
@@ -535,8 +525,7 @@ def run_continue_average_opponent_agent(args: ContinueAverageOpponentAgentArgs) 
         train_ids={int(args.main_agent_id)},
     )
     setup_args.ppo_model_paths = [None for _ in setup_args.agent_configs]
-    setup_args.resume_from = None
-    setup_args.load_model_path = None
+    setup_args.load_mode = "weights"
 
     ctx = None
     try:

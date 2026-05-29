@@ -170,9 +170,8 @@ def _parse_args() -> PoolEvaluateArgs:
     args.n_parallel = int(args.pool_eval_groups)
     args.use_opponent_pool = False
     args.save_checkpoint = False
-    args.resume_from = None
-    args.load_model_path = None
     args.ppo_model_paths = [None for _ in args.agent_configs]
+    args.load_mode = "weights"
     return args
 
 
@@ -573,6 +572,7 @@ def run_pool_evaluation(args: PoolEvaluateArgs) -> None:
         eval_args, train_ids=set(), policy_opponent_ids=set(_agent_ids(eval_args)),
     )
     eval_args.ppo_model_paths = [None for _ in eval_args.agent_configs]
+    eval_args.load_mode = "weights"
     model_labels = _make_model_labels(eval_args.eval_model_paths, eval_args.eval_model_labels)
 
     writer, device, envs, seg, _ = init_training_setup(eval_args)

@@ -40,8 +40,8 @@ from custom_ippo import (
     IPPOAgent,
     _build_train_state,
     _count_completed_episodes,
+    _make_agent_model_path,
     collect_parallel_rollout_ippo,
-    load_checkpoint_if_requested,
     load_ppo_models_if_requested,
     log_ippo,
     save_ippo_model,
@@ -262,8 +262,7 @@ def _parse_cli(args: IppoPoolArgs) -> IppoPoolArgs:
     parser.add_argument("--total-timesteps", type=int)
     parser.add_argument("--num-steps", type=int)
     parser.add_argument("--save-model-path")
-    parser.add_argument("--load-model-path")
-    parser.add_argument("--resume-from")
+    parser.add_argument("--load-mode", choices=["weights", "checkpoint", "resume"])
     parser.add_argument("--ppo-model-paths", nargs=4)
     parser.add_argument("--run-name")
     parser.add_argument("--pool-initial-checkpoint-dir")
@@ -289,8 +288,7 @@ def _parse_cli(args: IppoPoolArgs) -> IppoPoolArgs:
         "total_timesteps": "total_timesteps",
         "num_steps": "num_steps",
         "save_model_path": "save_model_path",
-        "load_model_path": "load_model_path",
-        "resume_from": "resume_from",
+        "load_mode": "load_mode",
         "run_name": "run_name",
         "pool_initial_checkpoint_dir": "pool_initial_checkpoint_dir",
         "pool_checkpoint_dir": "pool_checkpoint_dir",
@@ -390,19 +388,15 @@ def setup_training_context(args: IppoPoolArgs) -> TrainingContext:
     n_actions = int(envs.single_action_space.n)
     agents, optimizers, reward_normalizers = _make_agents(args, n_actions, seg, device)
 
-    #加载PPO模型参数，单独进行pool cycle时应该保证args.ppo_model_paths为None
-    load_ppo_models_if_requested(args.ppo_model_paths, agents, device)
-    resume_path = args.resume_from or args.load_model_path
-    is_resume = bool(args.resume_from)
-    #加载检查点，从四个模型开始ippo同时训练或单独跑pool cycle时应该保持检查点路径为None
-    global_step, start_update, episode_count, episode_returns = load_checkpoint_if_requested(
-        resume_path,
-        is_resume,
+    # 加载 PPO/IPPO 参数或从 checkpoint 恢复；统一由 ppo_model_paths + load_mode 控制。
+    global_step, start_update, episode_count, episode_returns = load_ppo_models_if_requested(
+        args.ppo_model_paths,
         agents,
+        device,
         optimizers,
         reward_normalizers,
         args,
-        device,
+        args.load_mode,
     )
 
     next_obs_array, _ = envs.reset(seed=args.seed)
@@ -571,9 +565,15 @@ def run_ippo_bootstrap_direct(args: IppoPoolArgs) -> None:
     phase2.run_name = f"{base_name}_direct"
     phase2.use_opponent_pool = False
     phase2.agent_configs = _with_train_flags(phase2, all_ids)
-    phase2.ppo_model_paths = [None for _ in phase2.agent_configs]
-    phase2.resume_from = args.bootstrap_save_model_path
-    phase2.load_model_path = None
+    if args.bootstrap_save_model_path:
+        phase2.ppo_model_paths = [
+            str(_make_agent_model_path(args.bootstrap_save_model_path, cfg.agent_id))
+            for cfg in phase2.agent_configs
+        ]
+        phase2.load_mode = "checkpoint"
+    else:
+        phase2.ppo_model_paths = [None for _ in phase2.agent_configs]
+        phase2.load_mode = "weights"
     phase2.total_timesteps = int(args.pool_bootstrap_checkpoint_timesteps + args.pool_bootstrap_extra_timesteps)
     phase2.save_checkpoint = False
     phase2.save_model_path = args.bootstrap_final_save_model_path
@@ -932,7 +932,7 @@ def run_pool_cycle(args: IppoPoolArgs) -> None:
     ctx = None
     try:
         ctx = setup_training_context(setup_args)
-        if not any(ctx.args.ppo_model_paths) and not ctx.args.resume_from and not ctx.args.load_model_path:
+        if not any(ctx.args.ppo_model_paths):
             _load_latest_pool_entries_into_agents(pool, ctx)#用最近的检查点模型
         #所有智能体的网络参数，shape(n_agents)
         current_agent_states: list[dict[str, torch.Tensor]] = _capture_agent_states(ctx.agents)
@@ -1264,9 +1264,8 @@ def run_full_plan(args: IppoPoolArgs) -> None:
     print("[Full Plan] Starting full plan...")
     run_ippo_bootstrap(args)
     pool_args = copy.deepcopy(args)
-    pool_args.load_model_path = None
-    pool_args.resume_from = None
     pool_args.ppo_model_paths = [None for _ in pool_args.agent_configs]
+    pool_args.load_mode = "weights"
     # Bootstrap checkpoints are saved as flat files in the parent directory
     # of bootstrap_save_model_path (e.g. saved_models/ippo_bootstrap_episode{N}_agent{id}.pt).
     # Override pool_initial_checkpoint_dir to point to the actual location.

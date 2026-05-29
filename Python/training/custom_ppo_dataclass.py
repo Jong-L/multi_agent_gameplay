@@ -292,33 +292,19 @@ class IppoArgs:
     save_checkpoint: bool = True
     """是否在训练中周期性保存中断点。
     checkpoint 同样按 agent 独立保存，如 ippo_direct_episode20_agent0.pt"""
-    resume_from: Optional[str] = None
-    """从中断点完整恢复训练的基础路径（设为 None 则跳过）。
-    恢复内容包括：模型权重 + 优化器状态 + reward_normalizer + 训练步数/计数器。
-    传入单个基础路径，自动推导每个 agent 的文件，如：
-    resume_from="saved_models/ippo_direct_episode20"
-      ->加载 ippo_direct_episode20_agent0.pt, agent1.pt, agent2.pt, agent3.pt
-    
-    与 load_model_path 的区别：resume_from 恢复优化器和训练进度，load_model_path 只恢复权重。
-    加载优先级：resume_from > load_model_path > ppo_model_paths"""
-    load_model_path: Optional[str] = None
-    """从已有 IPPO checkpoint 加载模型权重的基础路径（不恢复优化器和训练步数）。
-    与 resume_from 使用相同的路径推导规则（单个基础路径 -> 自动拼接 _agent{id}.pt），
-    但只恢复 agent_state_dict + reward_normalizer，训练步数从 0 开始。
-    适用场景：用之前 IPPO 联合训练的某个 checkpoint 权重初始化新一轮训练，
-    但重置优化器状态（例如换用不同的学习率策略）。
-    加载优先级：resume_from > load_model_path > ppo_model_paths"""
+    load_mode: str = "weights"
+    """IPPO 加载模式，只作用于 ppo_model_paths。
+    weights：只加载 agent_state_dict，训练计数和优化器状态从头开始。
+    checkpoint/resume：从 checkpoint 恢复 agent_state_dict、优化器、reward_normalizer、
+    global_step、update、episode_count 和 episode_returns。"""
     # ppo_model_paths: list[Optional[str]] = field(default_factory=lambda: [None, None, None, None])
     ppo_model_paths: list[Optional[str]] = field(default_factory=lambda: [
         "saved_models/ippo_bootstrap_agent0.pt",
         "saved_models/ippo_bootstrap_agent1.pt",
         "saved_models/ippo_bootstrap_agent2.pt",
         "saved_models/ippo_bootstrap_agent3.pt",])
-    """按 agent 显式指定 PPO 预训练模型权重路径，列表中 None 表示跳过该 agent。
-    与 load_model_path 的区别：
-    - ppo_model_paths：每个 agent 的路径独立指定，可以指向完全不同的模型来源
-    - load_model_path：单个基础路径，自动推导各 agent 文件（要求各 agent 来自同一轮 IPPO 训练）
-    加载优先级最低."""
+    """按 agent 显式指定 PPO/IPPO 模型或 checkpoint 路径，列表中 None 表示跳过该 agent。
+    权重初始化和 checkpoint 恢复都使用这一组路径，具体恢复内容由 load_mode 决定。"""
     save_every_n_episodes: int = 20
     """每 N 个 episode 保存一次中断点"""
     max_checkpoints: int = 3

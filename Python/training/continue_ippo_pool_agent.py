@@ -11,7 +11,7 @@ Default behavior:
   - opponent pool: recent 20 checkpoints per agent from
     saved_models/ippo_pool_checkpoints
   - training budget: 5,000,000 env steps
-  - load mode: resume (agent weights + optimizer + reward normalizer + counters)
+  - load mode: resume/checkpoint (agent weights + optimizer + reward normalizer + counters)
 
 Use --load-mode weights to initialize from model parameters only.
 """
@@ -77,7 +77,7 @@ def _parse_args() -> ContinuePoolAgentArgs:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--main-agent-id", type=int, default=args.main_agent_id)
     parser.add_argument("--main-checkpoint-path", default=args.main_checkpoint_path)
-    parser.add_argument("--load-mode", choices=["resume", "weights"], default=args.load_mode)
+    parser.add_argument("--load-mode", choices=["resume", "checkpoint", "weights"], default=args.load_mode)
     parser.add_argument("--opponent-checkpoint-dir", default=args.opponent_checkpoint_dir)
     parser.add_argument("--opponent-keep-per-agent", type=int, default=args.opponent_keep_per_agent)
     parser.add_argument("--timesteps", type=int, default=args.pool_final_timesteps)
@@ -135,8 +135,6 @@ def _parse_args() -> ContinuePoolAgentArgs:
     args.pool_final_agent_id = args.main_agent_id
     args.pool_final_save_agent_ids = (args.main_agent_id,)
     args.ppo_model_paths = [None for _ in args.agent_configs]
-    args.resume_from = None
-    args.load_model_path = None
     args.save_checkpoint = False
     return args
 
@@ -326,8 +324,7 @@ def run_continue_pool_agent(args: ContinuePoolAgentArgs) -> None:
         policy_opponent_ids=set(_agent_ids(args)) - {int(args.main_agent_id)},
     )
     setup_args.ppo_model_paths = [None for _ in setup_args.agent_configs]
-    setup_args.resume_from = None
-    setup_args.load_model_path = None
+    setup_args.load_mode = "weights"
 
     ctx = None
     try:

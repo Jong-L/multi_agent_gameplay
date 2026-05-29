@@ -492,19 +492,19 @@ def _load_agent_from_checkpoint(
     ckpt: dict,
     agent_id: int,
     agent: IPPOAgent,
-    optimizer: optim.Optimizer,
+    optimizer: Optional[optim.Optimizer],
     reward_normalizer: Optional[RewardNormalizer],
-    is_resume: bool,
-    should_restore_optimizer: bool,
+    restore_optimizer: bool,
+    restore_reward_normalizer: bool,
 ) -> bool:
     if "agent_state_dict" in ckpt:
         ckpt_agent_id = ckpt.get("agent_id")
         if ckpt_agent_id is not None and int(ckpt_agent_id) != agent_id:
             return False
         agent.load_state_dict(ckpt["agent_state_dict"])
-        if is_resume and should_restore_optimizer and "optimizer_state_dict" in ckpt:
+        if restore_optimizer and optimizer is not None and "optimizer_state_dict" in ckpt:
             optimizer.load_state_dict(ckpt["optimizer_state_dict"])
-        if reward_normalizer is not None and "reward_normalizer" in ckpt:
+        if restore_reward_normalizer and reward_normalizer is not None and "reward_normalizer" in ckpt:
             reward_normalizer.load_state_dict(ckpt["reward_normalizer"])
         return True
 
@@ -573,80 +573,83 @@ def _save_checkpoint(
     )
 
 
-def load_checkpoint_if_requested(
-    resume_path: Optional[str],
-    is_resume: bool,
-    agents: list[IPPOAgent],
-    optimizers: list[optim.Optimizer],
-    reward_normalizers: list[Optional[RewardNormalizer]],
-    args: IppoArgs,
-    device: torch.device,
-) -> tuple[int, int, int, list[deque]]:
-    n_agents = len(agents)
-    if not resume_path:
-        return 0, 1, 0, [deque(maxlen=20) for _ in range(n_agents)]
-
-    first_ckpt = None
-    loaded_any = False
-
-    for i, agent in enumerate(agents):
-        agent_id = args.agent_configs[i].agent_id
-        agent_path = _make_agent_model_path(resume_path, agent_id)
-        loaded = False
-        if agent_path.is_file():
-            print(f"[Resume] 加载 agent_{agent_id} checkpoint: {agent_path}")
-            ckpt = load_full_checkpoint(str(agent_path), device)
-            loaded = _load_agent_from_checkpoint(
-                ckpt, agent_id, agent, optimizers[i], reward_normalizers[i],
-                is_resume, args.agent_configs[i].train,
-            )
-            if not loaded:
-                raise KeyError(f"checkpoint agent_id does not match agent_{agent_id}: {agent_path}")
-            if first_ckpt is None:
-                first_ckpt = ckpt
-        elif args.agent_configs[i].train:
-            raise FileNotFoundError(f"Missing agent_{agent_id} checkpoint: {agent_path}")
-
-        loaded_any = loaded_any or loaded
-
-    if not loaded_any:
-        raise FileNotFoundError(
-            f"No per-agent IPPO checkpoint files found for base path: {resume_path}"
-        )
-
-    if is_resume:
-        start_global_step, start_update, start_episode_count, episode_returns = _load_train_state(first_ckpt, n_agents)
-        start_update += 1
-        print(
-            f"[Resume] 从 update {start_update} / step {start_global_step} "
-            f"/ episode {start_episode_count} 继续"
-        )
-    else:
-        print("[Load] 仅加载模型参数，其余从头初始化")
-        return 0, 1, 0, [deque(maxlen=20) for _ in range(n_agents)]
-
-    return start_global_step, start_update, start_episode_count, episode_returns
-
-
 def load_ppo_models_if_requested(
     ppo_model_paths: list[Optional[str]],
     agents: list[IPPOAgent],
     device: torch.device,
-) -> None:
+    optimizers: Optional[list[optim.Optimizer]] = None,
+    reward_normalizers: Optional[list[Optional[RewardNormalizer]]] = None,
+    args: Optional[IppoArgs] = None,
+    load_mode: str = "weights",
+) -> tuple[int, int, int, list[deque]]:
+    n_agents = len(agents)
+    initial_state = (0, 1, 0, [deque(maxlen=20) for _ in range(n_agents)])
+    mode = str(load_mode).lower()
+    if mode == "resume":
+        mode = "checkpoint"
+    if mode not in {"weights", "checkpoint"}:
+        raise ValueError(
+            f"Unknown IPPO load_mode='{load_mode}'. Expected 'weights', 'checkpoint', or 'resume'."
+        )
+
     if not ppo_model_paths:
-        return
+        if mode == "checkpoint":
+            raise ValueError("load_mode='checkpoint' requires ppo_model_paths.")
+        return initial_state
 
-    for i, path in enumerate(ppo_model_paths):
+    if mode == "checkpoint" and (optimizers is None or reward_normalizers is None or args is None):
+        raise ValueError("load_mode='checkpoint' requires optimizers, reward_normalizers and args.")
+
+    first_ckpt = None
+    loaded_any = False
+    if len(ppo_model_paths) > len(agents):
+        raise ValueError(f"ppo_model_paths has more entries than agents: len={len(ppo_model_paths)}, n_agents={len(agents)}.")
+
+    for i in range(n_agents):
+        path = ppo_model_paths[i] if i < len(ppo_model_paths) else None
+        cfg = args.agent_configs[i] if args is not None else None
+        agent_id = cfg.agent_id if cfg is not None else i
+        should_train = cfg.train if cfg is not None else True
         if path is None:
+            if mode == "checkpoint" and should_train:
+                raise FileNotFoundError(f"Missing agent_{agent_id} checkpoint path in ppo_model_paths.")
             continue
-        if i >= len(agents):
-            raise ValueError(f"ppo_model_paths has more entries than agents: index={i}, n_agents={len(agents)}.")
 
-        print(f"[PPO Init] 加载 agent_{i} PPO model: {path}")
+        path = str(path)
+        label = "Checkpoint" if mode == "checkpoint" else "PPO Init"
+        print(f"[{label}] 加载 agent_{agent_id}: {path}")
         ckpt = load_full_checkpoint(path, device)
-        if "agent_state_dict" not in ckpt:
-            raise KeyError(f"PPO checkpoint missing agent_state_dict: {path}")
-        agents[i].load_state_dict(ckpt["agent_state_dict"])
+        loaded = _load_agent_from_checkpoint(
+            ckpt,
+            agent_id,
+            agents[i],
+            optimizers[i] if optimizers is not None else None,
+            reward_normalizers[i] if reward_normalizers is not None else None,
+            restore_optimizer=mode == "checkpoint" and should_train,
+            restore_reward_normalizer=mode == "checkpoint",
+        )
+        if not loaded:
+            raise KeyError(f"checkpoint missing agent_state_dict or agent_id mismatch for agent_{agent_id}: {path}")
+        if first_ckpt is None:
+            first_ckpt = ckpt
+        loaded_any = True
+
+    if not loaded_any:
+        if mode == "checkpoint":
+            raise FileNotFoundError("No IPPO checkpoint files found in ppo_model_paths.")
+        return initial_state
+
+    if mode == "weights":
+        print("[Load] load_mode=weights，仅加载网络参数，其余从头初始化")
+        return initial_state
+
+    start_global_step, start_update, start_episode_count, episode_returns = _load_train_state(first_ckpt, n_agents)
+    start_update += 1
+    print(
+        f"[Resume] load_mode=checkpoint，从 update {start_update} / step {start_global_step} "
+        f"/ episode {start_episode_count} 继续"
+    )
+    return start_global_step, start_update, start_episode_count, episode_returns
 
 
 #  Per-Agent 训练更新
@@ -1003,16 +1006,15 @@ def main():
         else:
             reward_normalizers.append(None)
 
-    load_ppo_models_if_requested(args.ppo_model_paths, agents, device)
-
-    #note：中断点加载优先级更高.此步会覆盖上一步的ppo模型
-    resume_path = args.resume_from or args.load_model_path
-    is_resume = bool(args.resume_from)
     start_global_step, start_update, start_episode_count, episode_returns = (
-        load_checkpoint_if_requested(
-            resume_path, is_resume,
-            agents, optimizers, reward_normalizers,
-            args, device,
+        load_ppo_models_if_requested(
+            args.ppo_model_paths,
+            agents,
+            device,
+            optimizers,
+            reward_normalizers,
+            args,
+            args.load_mode,
         )
     )
 
