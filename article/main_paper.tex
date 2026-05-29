@@ -90,10 +90,11 @@
   {\thesubsubsection}{1em}{}
 \titlespacing{\subsubsection}{0pt}{0.5\baselineskip}{0.5\baselineskip}
 
-% 四级标题：1.1.1.1，黑体小四，顶格
+% 四级标题：1.1.1.1，黑体小四，顶格，段前段后0.5行
 \titleformat{\paragraph}[hang]
   {\zihao{-4}\heiti}
   {\theparagraph}{1em}{}
+\titlespacing{\paragraph}{0pt}{0.5\baselineskip}{0.5\baselineskip}
 
 % 无编号一级标题（结论、致谢等）：黑体小二，居中，段后1行
 \titleformat{name=\section,numberless}[block]
@@ -197,7 +198,7 @@
   \addcontentsline{toc}{section}{ABSTRACT}
   \vspace{1\baselineskip}
   \zihao{-4}\rmfamily
-  \setlength{\parindent}{-2em}  % 首行空 4 个英文字母
+  \setlength{\parindent}{2em}   % 首行空 4 个英文字母（约 2em）
   \setstretch{1.438}  % Word 英文 1.5 倍 = 1.5*1.15/1.2
 }{
   \par\vspace{1\baselineskip}
@@ -272,20 +273,15 @@
 \setcounter{page}{1}
 \begin{cnabstract}{强化学习，独立近端策略优化，博弈对抗，奖励塑形}
 
-强化学习是机器学习及人工智能领域重要的研究方向与工程方法，用于解决序列决策问题，近年来在游戏、机器人路径规划、策略博弈等场景中被广泛使用。其中，智能体博弈问题涉及多个智能体在环境中的对抗与合作行为，核心挑战在于多个在线学习的智能体引入的非平稳性——每个智能体的策略更新都会改变其他智能体面对的环境，使单智能体算法的 Markov 假设不再成立。针对多智能体场景，集中式训练分布式执行（CTDE）范式虽在协作型任务中表现优良，但其对全局信息共享的依赖在对抗场景中难以满足，本文针对不共享信息的完全对抗型任务进行了方法探究与对比。
+强化学习通过试错与环境交互学习最优策略，已在游戏博弈、路径规划等复杂决策问题中取得突破性成果。智能体博弈场景涉及到多个自学习智能体间的对抗与合作行为，同时引入了非平稳性——每个智能体的策略更新都会改变其他智能体面对的环境，使单智能体算法的 Markov 假设不再成立。集中式训练分布式执行（CTDE）范式虽在协作型任务中表现优良，但其对全局信息共享的依赖在对抗场景中难以满足。本文针对不共享信息的完全对抗型任务进行了方法探究与对比。
 
 首先基于 Godot 游戏引擎构建了 2D 俯视角四人混战竞技场博弈环境《Tiny Swords》，包含智能体，敌人，拾取可获得奖励的奖励球等游戏元素，设计了包含自身状态、对手信息、环境元素感知与 LiDAR 射线检测障碍物的 174 维分段式观测空间，并为四个智能体配置了差异化的奖励函数以诱导多样化策略风格。然后，针对奖励稀疏问题，基于势能奖励塑形理论设计了多层奖励系统，通过实验系统对比了势函数形式（线性、指数、反比例函数）、多目标引导模式（最近球与所有球叠加）以及障碍物处理策略（稀疏惩罚与稠密塑形）。在部分可观测条件下，进一步对比了 MLP、Segmented MLP 与 GRU-MLP 三种网络架构在拾取奖励球与战斗任务中的性能，并通过观测空间有效掩码消融实验验证了区分有效与无效信息的必要性。
 
 在多智能体博弈阶段，本文以课程学习训练的四智能体模型为基础，
-通过轮换冻结迭代博弈构建对手池，随后对比了三种对抗训练方法与对手池中对手博弈表现，分别为
-独立近端策略优化（IPPO，作为评估基线）、
-基于联盟训练简化的对手池博弈、
-以及基于虚拟博弈思想的平均策略博弈方法。
-实验结果表明，平均策略博弈方法的均奖励（583.9）
-显著高于 IPPO（538.2，$p=0.002$，Cohen's $d=-0.80$）
-和对手池博弈（318.1，$p<0.01$，$d=-4.07$），
-在 Bootstrap 置信区间宽度（34.2）、奖励标准差（108.0）及逐组奖励波动（40.3）
-三项稳定性指标上亦优于另两种方法。
+通过轮换冻结迭代博弈构建对手池，随后对比了三种对抗训练方法与对手池中对手博弈表现，分别为独立近端策略优化（IPPO，作为评估基线）、基于联盟训练简化的对手池博弈、以及基于虚拟博弈思想的平均策略博弈方法。实验结果表明，在三种继续训练方法中，平均策略博弈方法的均奖励（586.3）最高，显著高于 IPPO（495.0，$p=1.36\times10^{-6}$，Cohen's $d=-1.55$）
+和对手池博弈（339.0，$p=6.64\times10^{-13}$，$d=-3.78$）。
+同时，未经博弈训练的初始策略对照取得了 603.1 的均奖励，
+但综合考虑稳定性与平均策略博弈之间差异不显著（$p=0.301$，$d=-0.24$），说明课程学习得到的初始策略已具备较强基础能力，当前博弈训练阶段的增益更多体现在不同训练机制间的相对差异，尚未在回合累计奖励指标上形成超过初始策略的统计学优势。该结果可能与本文环境中近战对抗收益风险近似对称、资源收集得分相对稳定有关：在不充分掌握对手建模时，延续课程学习中形成的资源获取策略反而可能比主动卷入对抗获得更高回合奖励。
 
 
 本文初步探索了多智能体博弈训练方法，为多智能体博弈环境中的非平稳性处理与策略泛化评估提供了一套从环境构建到博弈训练的完整实验方案与实证参考。
@@ -299,9 +295,9 @@
 
 Reinforcement learning (RL) is an important research direction and engineering method in machine learning and artificial intelligence for solving sequential decision-making problems. It has been widely applied in games, robotic navigation, and strategic gameplay in recent years. Multi-agent reinforcement learning (MARL) studies the adversarial and cooperative behaviors of multiple agents in a shared environment. Its core challenge lies in the non-stationarity introduced by concurrently learning agents --- each agent's policy update alters the environment faced by others, invalidating the Markov assumption of single-agent algorithms. While the centralized-training-decentralized-execution (CTDE) paradigm performs well in cooperative tasks, its reliance on global information sharing is difficult to satisfy in adversarial scenarios. This thesis investigates and compares methods for fully adversarial tasks without information sharing.
 
-First, this thesis constructs \textit{Tiny Swords}, a 2D top-down four-player battle-royale arena based on the Godot game engine, featuring agents, enemies, and reward balls. A 174-dimensional segmented observation space is designed, encompassing self state, opponent information, environmental perception, and LiDAR-based obstacle detection. Differentiated per-agent reward functions are configured to induce diverse strategic styles. To address reward sparsity, a multi-layer reward system based on potential-based reward shaping (PBRS) is designed. Systematic experiments compare potential function forms (linear, exponential, inverse-proportional), multi-target guidance modes (nearest-ball vs.\ all-ball superposition), and obstacle handling strategies (sparse penalty vs.\ dense shaping). Under partial observability, MLP, Segmented MLP, and GRU-MLP architectures are further compared in reward-ball collection and combat tasks.
+First, this thesis constructs \textit{Tiny Swords}, a 2D top-down four-player battle-royale arena based on the Godot game engine, featuring agents, enemies, and reward balls. A 174-dimensional segmented observation space is designed, encompassing self state, opponent information, environmental perception, and LiDAR-based obstacle detection. Differentiated per-agent reward functions are configured to induce diverse strategic styles. To address reward sparsity, a multi-layer reward system based on potential-based reward shaping (PBRS) is designed. Systematic experiments compare potential function forms (linear, exponential, inverse-proportional), multi-target guidance modes (nearest-ball vs.\ all-ball superposition), and obstacle handling strategies (sparse penalty vs.\ dense shaping). Under partial observability, MLP, Segmented MLP, and GRU-MLP architectures are further compared in reward-ball collection and combat tasks, and the necessity of distinguishing valid from invalid information is verified through observation-space effective-mask ablation experiments.
 
-In the multi-agent game phase, building on curriculum-trained models, an opponent pool is constructed through iterative games with rotated agent freezing. Three adversarial training methods are then systematically compared: Independent Proximal Policy Optimization (IPPO, as a distributed training baseline), opponent-pool game training (a simplified league-training variant using PFSP-based prioritized sampling), and an average-strategy method inspired by fictitious play. Experimental results show that the average-strategy method achieves a mean reward of 583.9, significantly outperforming IPPO (538.2, $p=0.002$, Cohen's $d=-0.80$) and opponent-pool training (318.1, $p<0.01$, $d=-4.07$). It also surpasses the other two methods on three stability metrics: Bootstrap CI width (34.2), reward standard deviation (108.0), and per-group reward fluctuation (40.3).
+In the multi-agent game phase, building on curriculum-trained models, an opponent pool is constructed through iterative games with rotated agent freezing. Three adversarial training methods are then systematically compared: Independent Proximal Policy Optimization (IPPO, as a distributed training baseline), opponent-pool game training (a simplified league-training variant using PFSP-based prioritized sampling), and an average-strategy method inspired by fictitious play. Experimental results show that among the three continued-training methods, the average-strategy method achieves the highest mean reward (586.3), significantly outperforming IPPO (495.0, $p=1.36\times10^{-6}$, Cohen's $d=-1.55$) and opponent-pool training (339.0, $p=6.64\times10^{-13}$, $d=-3.78$). However, the initial-policy control without the game-training stage achieves a mean reward of 603.1, which is not significantly different from the average-strategy method ($p=0.301$, $d=-0.24$). This indicates that the curriculum-trained initial policy is already strong, and the current game-training setup does not demonstrate a statistically significant improvement over this initial control. A possible explanation is that melee combat in the current environment has nearly symmetric risk and reward, while resource collection provides more stable returns; without sufficiently effective opponent modeling, preserving the previously learned resource-collection behavior may outperform actively engaging in combat.
 
 This thesis provides an initial exploration of multi-agent game training, offering a systematic experimental pipeline --- from environment construction to game-theoretic training and multi-dimensional evaluation --- as well as empirical reference for handling non-stationarity and evaluating policy generalization in multi-agent game environments.
 
@@ -332,21 +328,9 @@ This thesis provides an initial exploration of multi-agent game training, offeri
 
 \subsection{研究背景与意义}
 
-强化学习（Reinforcement Learning, RL）是机器学习的重要分支，
-通过试错与环境交互学习最优策略，已在复杂决策问题中展现出巨大潜力——从 AlphaGo\cite{Silveralphago2016} 在围棋中超越人类顶尖棋手，
-到 AlphaStar\cite{VinyalsAlphaStar2019} 在星际争霸II中达到宗师级水平，
-再到 OpenAI Five 在 Dota 2 中击败世界冠军队伍\cite{openai2019dota2largescale}，运用强化学习技术构建的人工智能在特定任务上已经能够超越顶级人类表现。然而如何成功地应用强化学习是一系列工程性问题：如何从零设计并实现一个博弈环境，并提供恰当的强化学习算法接口，如何将游戏状态编码为适合神经网络输入的观测向量，如何设计奖励函数以引导智能体逐步习得避障和战斗等基础技能，如何在部分可观测条件下选取合适的网络结构以平衡时序记忆与训练效率。本文针对这些问题给出了一套实践经验。
+强化学习（Reinforcement Learning, RL）是机器学习的重要分支，通过试错与环境交互学习最优策略，已在复杂决策问题中展现出巨大潜力——从 AlphaGo\cite{Silveralphago2016} 在围棋中超越人类顶尖棋手，到 AlphaStar\cite{VinyalsAlphaStar2019} 在星际争霸II中达到宗师级水平，再到 OpenAI Five 在 Dota 2 中击败世界冠军队伍\cite{openai2019dota2largescale}，运用强化学习技术构建的人工智能在特定任务上已经能够超越顶级人类表现。然而如何成功地应用强化学习是一系列工程性问题：如何从零设计并实现一个博弈环境，并提供恰当的强化学习算法接口，如何将游戏状态编码为适合神经网络输入的观测向量，如何设计奖励函数以引导智能体逐步习得避障和战斗等基础技能，如何在部分可观测条件下选取合适的网络结构以平衡时序记忆与训练效率。本文针对这些问题给出了一套实践经验。
 
-AlphaGo等里程碑不仅展示了 RL 的技术高度，更揭示了一个深层规律：
-AI 的重大突破往往发生在博弈对抗场景中。
-博弈对抗能成为 AI 研究的试金石，在于它天然要求智能体具备适应性决策能力。
-在博弈场景中，智能体不仅需要利用环境资源、遵循游戏规则，
-更需要感知对手策略并作出动态调整——
-"最优"策略并非静态存在，而是相对于对手策略的函数。
-从早期的 Deep Blue\cite{CAMPBELL200257} 到近年来的 AlphaStar，
-AI 博弈能力每一次提升的背后，都是对对手建模、策略适应与对抗进化等核心问题的深入回应。
-与完全信息的棋盘博弈不同，实时策略博弈具有状态空间庞大、信息不完全、
-决策异步等特点，更贴近真实世界的决策场景。
+AlphaGo等里程碑不仅展示了 RL 的技术高度，更揭示了一个深层规律：AI 的重大突破往往发生在博弈对抗场景中。博弈对抗能成为 AI 研究的试金石，在于它天然要求智能体具备适应性决策能力。在博弈场景中，智能体不仅需要利用环境资源、遵循游戏规则，更需要感知对手策略并作出动态调整——"最优"策略并非静态存在，而是相对于对手策略的函数。从早期的 Deep Blue\cite{CAMPBELL200257} 到近年来的 AlphaStar，AI 博弈能力每一次提升的背后，都是对对手建模、策略适应与对抗进化等核心问题的深入回应。与完全信息的棋盘博弈不同，实时策略博弈具有状态空间庞大、信息不完全、决策异步等特点，更贴近真实世界的决策场景。
 
 \begin{figure}[htbp]
   \centering
@@ -355,24 +339,9 @@ AI 博弈能力每一次提升的背后，都是对对手建模、策略适应�
   \label{fig:rl_gameplay}
 \end{figure}
 
-良好的博弈能力体现在智能体面对各种各样的对手时都有不错的表现，为了体现对手的丰富性，本课题将强化学习智能体作为对手，在多智能体博弈中探索智能体如何能够应对纷繁复杂，行为各不一致的对手。当多个自学习智能体共处同一博弈环境时，问题从单智能体优化升级为博弈动力学问题。
-多智能体强化学习（Multi-Agent RL, MARL）面临的核心挑战是非平稳性（non-stationarity）：
-每个智能体的策略更新都会改变其他智能体面对的环境转移概率，
-使单智能体 RL 中的 Markov 决策过程（MDP）假设不再成立\cite{Hernandez-Leal2019}。
-多智能体强化学习的训练范式按其信息利用方式可大致划分为三类：
-集中式训练集中式执行（CTCE）、集中式训练分布式执行（CTDE）
-和分布式训练分布式执行（DTDE）。
+良好的博弈能力体现在智能体面对各种各样的对手时都有不错的表现，为了体现对手的丰富性，本课题将强化学习智能体作为对手，在多智能体博弈中探索智能体如何能够应对纷繁复杂，行为各不一致的对手。当多个自学习智能体共处同一博弈环境时，问题从单智能体优化升级为博弈动力学问题。多智能体强化学习（Multi-Agent RL, MARL）面临的核心挑战是非平稳性（non-stationarity）：每个智能体的策略更新都会改变其他智能体面对的环境转移概率，使单智能体 RL 中的 Markov 决策过程（MDP）假设不再成立\cite{Hernandez-Leal2019}。多智能体强化学习的训练范式按其信息利用方式可大致划分为三类：集中式训练集中式执行（CTCE）、集中式训练分布式执行（CTDE）和分布式训练分布式执行（DTDE）。
 
-CTCE 范式假设训练和执行阶段均存在一个中心控制器，
-能够获取所有智能体的全局信息并输出联合动作。
-这一假设在多数实际场景中不成立，
-更常见的做法是采用 CTDE 范式：
-训练时利用全局信息学习 Critic 或价值函数，
-执行时每个智能体仅依赖局部观测做决策。
-代表性方法包括
-QMIX\cite{rashid2018qmix} 和 MAPPO\cite{yu2022surprisingeffectivenessppocooperative}。
-这些方法通过集中式 Critic 缓解多智能体环境的非平稳性问题，
-在协作型任务上有很好的表现。
+CTCE 范式假设训练和执行阶段均存在一个中心控制器，能够获取所有智能体的全局信息并输出联合动作。这一假设在多数实际场景中不成立，更常见的做法是采用 CTDE 范式：训练时利用全局信息学习 Critic 或价值函数，执行时每个智能体仅依赖局部观测做决策。代表性方法包括QMIX\cite{rashid2018qmix} 和 MAPPO\cite{yu2022surprisingeffectivenessppocooperative}。这些方法通过集中式 Critic 缓解多智能体环境的非平稳性问题，在协作型任务上有很好的表现。
 
 CTDE 范式引入集中式 Critic 的前提是训练阶段允许全局信息共享，
 对于完全对抗的混战环境，本文基于智能体之间无法共享任何信息的假设，将保持执行去中心化与对手信息隔离，选择 DTDE作为训练方式。
@@ -492,7 +461,7 @@ Devidze 等人\cite{Devidze2022explorationguided}进一步将探索与奖励塑�
 实现了 4 人混战游戏模式，支持课程学习与 per-player 差异化奖励配置。
 
 （2）设计了包含奖励球势能引导、战斗奖励塑形与事件稀疏奖励的
-多层奖励系统，通过系统的消融实验确定了最优的势函数形式
+多层奖励系统，通过对比实验确定了最优的势函数形式
 与障碍物处理策略。
 
 （3）探讨了针对该特定环境的时序网络使用方案，将门控循环单元GRU引入了强化学习算法，对比了在该特定环境下 MLP、Segmented MLP 与 GRU-MLP 三种网络架构在拾取奖励球任务
@@ -597,7 +566,7 @@ Devidze 等人\cite{Devidze2022explorationguided}进一步将探索与奖励塑�
 \end{align}
 在式(\ref{eq:gru_r})--(\ref{eq:gru_h})中，各符号含义如下：$\sigma(u)=1/(1+e^{-u})$ 为 sigmoid 激活函数，将门控输出压缩至 $[0,1]$ 区间；$\odot$ 表示逐元素乘法（Hadamard 积）；$\mathbf{r}_t, \mathbf{z}_t \in [0,1]^{d_h}$ 分别为重置门与更新门向量；$\tilde{\mathbf{h}}_t, \mathbf{h}_t \in \mathbb{R}^{d_h}$ 分别为候选隐藏状态与最终隐藏状态。权重矩阵的命名遵循"源变量到目标变量"的约定：$\mathbf{W}_{xr}, \mathbf{W}_{xz}, \mathbf{W}_{xh} \in \mathbb{R}^{d_h \times d_{\text{in}}}$ 分别为三种变换中对应于当前输入 $\mathbf{x}_t$ 的权重矩阵；$\mathbf{W}_{hr}, \mathbf{W}_{hz}, \mathbf{W}_{hh} \in \mathbb{R}^{d_h \times d_h}$ 为对应于历史状态 $\mathbf{h}_{t-1}$ 的循环权重矩阵；各 $\mathbf{b} \in \mathbb{R}^{d_h}$ 为对应的偏置向量。
 
-重置门 $\mathbf{r}_t$ 通过逐元素乘法 $\mathbf{r}_t \odot \mathbf{h}_{t-1}$ 控制历史状态中哪些维度的信息参与候选状态 $\tilde{\mathbf{h}}_t$ 的计算——当某维度的 $r_t^{(i)} \to 0$ 时，该维度对应的历史信息被阻断，迫使候选状态更依赖当前输入 $\mathbf{x}_t$，实现对历史信息的"选择性遗忘"。更新门 $\mathbf{z}_t$ 控制最终隐藏状态中历史信息与新信息的混合权重：当 $\mathbf{z}_t \to \mathbf{1}$ 时，$\mathbf{h}_t \approx \mathbf{h}_{t-1}$，历史状态几乎完整保留，梯度可在时间步之间畅通回传，从而缓解长序列训练中的梯度消失问题；当 $\mathbf{z}_t \to \mathbf{0}$ 时，$\mathbf{h}_t \approx \tilde{\mathbf{h}}_t$，隐藏状态由当前输入主导，实现对状态的大幅更新。这种自适应门控机制使 GRU 能灵活调节信息在时间维度上的保留与遗忘，显著提升长序列建模能力。GRU 的参数量约为 LSTM 的三分之二——LSTM 包含输入门、遗忘门和输出门共三个门控单元以及一个独立的记忆单元状态，而 GRU 仅使用两个门控单元直接从输入和上一隐藏状态计算当前隐藏状态，在序列长度中等或计算资源受限时具有更高性价比。在本文第4.5节中，GRU 被用于对 SELF、PLAYER、ENEMY 和 LiDAR 等时序观测分段进行序列建模，以考察时序记忆对部分可观测环境中策略学习的影响。
+重置门 $\mathbf{r}_t$ 通过逐元素乘法 $\mathbf{r}_t \odot \mathbf{h}_{t-1}$ 控制历史状态中哪些维度的信息参与候选状态 $\tilde{\mathbf{h}}_t$ 的计算——当某维度的 $r_t^{(i)} \to 0$ 时，该维度对应的历史信息被阻断，迫使候选状态更依赖当前输入 $\mathbf{x}_t$，实现对历史信息的"选择性遗忘"。更新门 $\mathbf{z}_t$ 控制最终隐藏状态中历史信息与新信息的混合权重：当 $\mathbf{z}_t \to \mathbf{1}$ 时，$\mathbf{h}_t \approx \mathbf{h}_{t-1}$，历史状态几乎完整保留，梯度可在时间步之间畅通回传，从而缓解长序列训练中的梯度消失问题；当 $\mathbf{z}_t \to \mathbf{0}$ 时，$\mathbf{h}_t \approx \tilde{\mathbf{h}}_t$，隐藏状态由当前输入主导，实现对状态的大幅更新。这种自适应门控机制使 GRU 能灵活调节信息在时间维度上的保留与遗忘，大幅提升长序列建模能力。GRU 的参数量约为 LSTM 的三分之二——LSTM 包含输入门、遗忘门和输出门共三个门控单元以及一个独立的记忆单元状态，而 GRU 仅使用两个门控单元直接从输入和上一隐藏状态计算当前隐藏状态，在序列长度中等或计算资源受限时具有更高性价比。在本文第4.5节中，GRU 被用于对 SELF、PLAYER、ENEMY 和 LiDAR 等时序观测分段进行序列建模，以考察时序记忆对部分可观测环境中策略学习的影响。
 
 \subsubsection{近端策略优化算法}
 近端策略优化算法（PPO）是本文主要使用的算法，是一种策略梯度算法，
@@ -881,7 +850,7 @@ $d$ 为智能体到球的距离。
 % ==================== 第4章 ====================
 \section{单智能体基础训练与对比实验}
 在进入多智能体博弈之前，首先需要确保单智能体具备完成基础游戏任务的能力。
-本章通过系统的对比实验，筛选适用于本文环境的配置与训练策略。
+本章通过对比实验，筛选适用于本文环境的配置与训练策略。
 
 \subsection{训练框架}
 为了能有对算法良好的控制性，训练框架基于 CleanRL 风格的手写 PPO 实现，针对多智能体场景扩展为 IPPO：
@@ -950,7 +919,7 @@ $d$ 为智能体到球的距离。
 
 \subsection{奖励球塑形方案对比}
 \label{sec:ball_shaping}
-正如前文所述，不同的势函数对训练效率有显著影响，而如何设计合适的势函数需要一定的专业领域知识，本文所构建的游戏环境不是被大量研究并验证的领域，不存在所谓的专家，因此每种方案都需要进行系统实验和对比。
+正如前文所述，不同的势函数对训练效率影响差异明显，而如何设计合适的势函数需要一定的专业领域知识，本文所构建的游戏环境不是被大量研究并验证的领域，不存在所谓的专家，因此每种方案都需要进行实验和对比。
 对于奖励球这类空间目标导航类任务，常见的奖励塑形方法有基于势能函数的塑形，距离奖励（每次靠近给予奖励，远离给予惩罚）。不同的奖励塑形方案直接影响智能体拾取奖励球行为的学习效率。
 
 针对势函数，本文设计了三种候选势函数进行对比，分别为线性势函数、指数势函数、反比例势函数：
@@ -991,7 +960,7 @@ $d$ 为智能体到球的距离。
 \subsection{障碍物避障策略}
 \label{sec:wall_avoidance}
 障碍物的存在增加了移动规划的难度。
-本文从惩罚力度和塑形方式两个维度进行系统实验。
+本文从惩罚力度和塑形方式两个维度进行实验对比。
 
 \textbf{撞墙惩罚力度对比}：在稀疏惩罚（仅碰撞时惩罚）策略下，
 分别测试了 0.05、0.5 和 5.0 三种惩罚值。
@@ -1250,7 +1219,7 @@ GRU-MLP 因前期表现持续落后，仅分配 17 个 trial 后便被算法自�
 在本轮搜索样本中，Segmented MLP 取得最高 trial 奖励，且搜索样本均值高于 MLP，提示在战斗导向任务中，分段编码可能具有更高的优化潜力。
 GRU-MLP 在仅 17 个 trial 的搜索后最佳值仅 192.2、均值 43.4，未观察到收敛迹象。
 需注意本轮搜索并非为每种架构找到独立最优配置，
-而是在有限算力约束下验证：\textbf{在本文环境下，GRU-MLP 引入的时序依赖带来的额外学习成本显著拖累了早期训练效率}，
+而是在有限算力约束下验证：\textbf{在本文环境下，GRU-MLP 引入的时序依赖带来的额外学习成本严重拖累了早期训练效率}，
 其性能在相同搜索预算内远低于 MLP 类架构。图~\ref{fig:optuna_round2_compare} 展示了三种架构的奖励分布。
 
 \begin{table}[htbp]
@@ -1311,7 +1280,7 @@ GRU-MLP 在仅 17 个 trial 的搜索后最佳值仅 192.2、均值 43.4，未�
 
 \begin{enumerate}[label=(\arabic*)]
   \item \textbf{网络架构的优劣取决于任务类型}。在固定参数战斗任务中，MLP 得分高于 Segmented MLP（775.2 vs 714.6）；但在无 B 类球的战斗导向搜索环境中，Segmented MLP 在搜索样本中表现出更高潜力。
-  \item \textbf{GRU-MLP 在本文环境中收益不显著}。两轮实验中 GRU-MLP 均明显落后于 MLP 和 Segmented MLP。如前文分析，这主要源于环境设计中的大视野半径和观测向量中的显式状态编码削弱了对时序记忆的需求，同时 GRU 的循环状态给训练带来了额外收敛开销。需指出的是，由于第二轮搜索中 GRU 仅分得 17 个 trial，其超参数搜索的充分性有限——本文的结论仅表明 GRU 在当前设置和搜索预算下未能体现优势，不能排除在更充分的超参数优化后其性能改善的可能性。这一方向有待进一步验证。
+  \item \textbf{GRU-MLP 在本文环境中收益不明显}。两轮实验中 GRU-MLP 均明显落后于 MLP 和 Segmented MLP。如前文分析，这主要源于环境设计中的大视野半径和观测向量中的显式状态编码削弱了对时序记忆的需求，同时 GRU 的循环状态给训练带来了额外收敛开销。需指出的是，由于第二轮搜索中 GRU 仅分得 17 个 trial，其超参数搜索的充分性有限——本文的结论仅表明 GRU 在当前设置和搜索预算下未能体现优势，不能排除在更充分的超参数优化后其性能改善的可能性。这一方向有待进一步验证。
   \item \textbf{超参数最优值与任务类型高度耦合}。第一轮搜索（完整环境）倾向于启用奖励归一化和学习率退火；第二轮搜索（战斗环境）的高奖励 trial 则统一关闭这两项，且需要更大的 rollout 步数（512 vs 256）和更细粒度的 minibatch 划分（16 vs 4）。这表明不存在一套"通用最优"超参数，针对不同阶段的训练目标调整配置是必要的。
 \end{enumerate}
 
@@ -1320,7 +1289,7 @@ GRU-MLP 在仅 17 个 trial 的搜索后最佳值仅 192.2、均值 43.4，未�
 % ==================== 第5章 ====================
 \section{多智能体博弈方法对比}
 
-第四章通过系统实验确立了单智能体基础训练的配置方案，使各智能体通过课程学习掌握了拾取奖励球、避障和战斗等基本技能。本章在此基础上进入全文核心问题：当已具备基础技能的多个智能体共处同一对抗环境时，何种训练机制能够产生应对多样化对手的鲁棒策略。
+第四章通过实验确立了单智能体基础训练的配置方案，使各智能体通过课程学习掌握了拾取奖励球、避障和战斗等基本技能。本章在此基础上进入全文核心问题：当已具备基础技能的多个智能体共处同一对抗环境时，何种训练机制能够产生应对多样化对手的鲁棒策略。
 
 如第\ref{sec:multiagent_theory}节所述，本文环境属于非对称多人一般和博弈——各智能体拥有不同的奖励配置，且不存在全局零和约束。对于该类型博弈，纳什均衡的求解在理论上被证明是PPAD-完全的，因此，本文不追求直接求解博弈均衡，而是以智能体0为代表，对比三种对抗训练方法：\textbf{IPPO}、\textbf{对手池博弈}和\textbf{平均策略博弈}，测试对比哪种方法能训练出泛化能力更强的策略，在面对风格各异的对手时获得更优且更稳定的表现。
 
@@ -1377,9 +1346,18 @@ GRU-MLP 在仅 17 个 trial 的搜索后最佳值仅 192.2、均值 43.4，未�
 其中 $T$ 为温度参数，控制采样分布的集中程度；$T$ 越小，对战后自身奖励越低的对手的采样权重越大，
 训练越聚焦于困难对手。
 
-\textbf{平均策略博弈}：本方法借鉴了虚拟博弈（Fictitious Play）的思想，让智能体与对手的平均策略对抗以学习更鲁棒的策略。具体而言，让智能体0的初始策略$\pi_0^{(0)}$与对手池中的平均策略进行对抗训练，每次对手执行动作时，对手池中所有对手的策略网络分别输出动作概率分布，对这些分布取平均得到平均策略的动作分布，再从中采样执行动作。与传统虚拟博弈通过参数平均或行为克隆拟合平均策略不同，本方法直接在动作概率空间进行集成平均。训练$T_e$步后保存智能体0的策略$\pi_0^{Fictitious}$。
+\textbf{平均策略博弈}：本方法借鉴了虚拟博弈（Fictitious Play）的思想，让智能体与对手的平均策略对抗以学习更鲁棒的策略。
 
-三种方法的训练过程如\autoref{fig:gameplay_training_curves}所示。由于初始策略相同，三种方法拥有相似的的起点曲线，在训练前中期，三种方法都表现出了很大的波动性，到了后期三种方法逐渐拉开差距，其中平均策略博弈在约7百万步后趋于稳定并保持在较高水平（约550-600），对手池博弈的奖励波动幅度较大、且在整个训练过程中一直保持这种波动性；IPPO的奖励在中后期逐步上升，最终稳定在三种方法的中间地带。后续评估将使用三种方法的8百万步的检查点进行评估。
+虚拟博弈的经典表格化实现方式是通过对手历史策略的逐状态的采样计数来构建平均策略。在深度强化学习场景中，为了处理大规模状态空间，提出了用神经网络来近似表达的方法，即神经虚拟自博弈（NFSP），它通过监督学习网络拟合对手历史策略的行为分布来显式地表达和逼近平均策略，从而替代了传统的查找表。本文的对手池已收集了多轮迭代博弈产生的 $N=20$ 组差异化对手策略，每组包含智能体 1、2、3 三个独立的策略网络。在这一前提下，在动作概率空间进行集成平均：在每个决策步 $t$，对于对手 $j\in\{1,2,3\}$，池中全部 $N$ 个对应策略网络分别输出动作概率分布 $\boldsymbol{p}_j^{(k)}(o_t) = \pi_j^{(k)}(\cdot|o_t)$（$k=1,\dots,N$），对这些分布取算术平均得到平均策略的动作分布
+\begin{equation}
+  \bar{\boldsymbol{p}}_j(o_t) = \frac{1}{N}\sum_{k=1}^{N} \pi_j^{(k)}(\cdot|o_t)
+  \label{eq:avg_strategy}
+\end{equation}
+再从 $\bar{\boldsymbol{p}}_j(o_t)$ 中采样执行动作。主智能体 0 的初始策略 $\pi_0^{(0)}$ 与上述方式构建的平均对手策略进行对抗训练，累计训练 $T_e$ 步后保存策略 $\pi_0^{\text{Fictitious}}$。
+
+选择动作概率平均而非参数平均的主要考虑是对手池已经把一个智能体抽象为了多个对手，而非一个对手的混合策略。采用该方法训练$T_e$步后保存智能体0的策略$\pi_0^{Fictitious}$。
+
+三种方法的训练过程如\autoref{fig:gameplay_training_curves}所示。由于初始策略相同，三种方法拥有相似的起点曲线，在训练前中期，三种方法都表现出了很大的波动性，到了后期三种方法逐渐拉开差距。平均策略博弈在约 4 百万步后进入持续上升阶段，并在后期保持最高奖励水平；IPPO 的奖励在中后期同样呈现上升趋势，但整体低于平均策略博弈；对手池博弈的奖励波动幅度较大，且在整个训练过程中一直保持这种波动性。需要注意的是，8 百万步处的 IPPO 和平均策略博弈曲线仍未完全呈现平台期，因此该检查点反映的是固定训练预算下的比较结果，不能排除更长训练后两者继续提升的可能性。
 
 \begin{figure}[htbp!]
   \centering
@@ -1390,10 +1368,10 @@ GRU-MLP 在仅 17 个 trial 的搜索后最佳值仅 192.2、均值 43.4，未�
 
 \subsection{实验结果与讨论}
 \subsubsection{评估设置}
-将智能体 0 自身的回合奖励
-作为评判标准，另设一组纯随机动作的智能体作为空白对照。
+将智能体 0 自身的回合奖励作为评判标准。除三种博弈训练方法外，本文另设一组初始策略对照：该策略为三种方法继续训练前的智能体 0 初始策略$\pi_0^{(0)}$，
+未经过本章的 IPPO、对手池博弈或平均策略博弈训练，该策略继承了前序课程学习得到的基础能力，用于检验后续博弈训练是否能在相同评估分布上带来额外增益。
 
-评估时从对手池中加载全部 20 组对手，每组进行 5 局对战。三类训练方法及随机基线共享
+评估时从对手池中加载全部 20 组对手，每组进行 5 局对战。三类训练方法及初始策略对照共享
 完全相同的 20 组对手配置。
 所有统计推断基于组级别（20 个独立样本），通过 10000 次 Bootstrap 重采样
 计算 95\% 置信区间，并采用配对 t 检验和 Cohen's d 进行两两比较。
@@ -1407,16 +1385,16 @@ GRU-MLP 在仅 17 个 trial 的搜索后最佳值仅 192.2、均值 43.4，未�
 \begin{table}[htbp]
   \centering
   \caption{\zihao{5} 评估结果总览。均奖励为智能体 0 在 100 局中的回合累计奖励均值，
-    置信区间为 95\% Bootstrap CI（10000 次组级别重采样）。}
+    置信区间为 95\% Bootstrap CI（10000 次组级别重采样）。加粗表示三种博弈训练方法中的最优结果。}
   \label{tab:eval_overall}
   \begin{tabular}{lccc}
     \toprule
     方法 & 均奖励 [95\% CI] & 奖励标准差 $\sigma$ \\
     \midrule
-    IPPO       & 538.2 [521.6, 556.1] & 109.9 \\
-    对手池博弈  & 318.1 [293.5, 343.1] & 140.2 \\
-    平均策略博弈    & \textbf{583.9 [567.1, 601.3]} & 108.0 \\
-    随机动作    & $-14.0$ [$-$19.3, $-7.4$] & 29.5 \\
+    IPPO       & 495.0 [474.1, 516.0] & 97.3 \\
+    对手池博弈  & 339.0 [313.9, 365.8] & 146.1 \\
+    平均策略博弈    & \textbf{586.3 [563.7, 608.2]} & 117.7 \\
+    初始策略对照    & 603.1 [576.0, 629.5] & 104.7 \\
     \bottomrule
   \end{tabular}
 \end{table}
@@ -1429,20 +1407,35 @@ GRU-MLP 在仅 17 个 trial 的搜索后最佳值仅 192.2、均值 43.4，未�
   \label{fig:eval_reward}
 \end{figure}
 
-从 \autoref{tab:eval_overall} 
-可以发现，平均策略博弈的均奖励最高，为583.9，显著高于 IPPO的538.2
-和对手池博弈的318.1。IPPO 与平均策略博弈的差异为 $-45.8$ 点，而对手池博弈
-的均奖励最低，且奖励标准差（140.2）
-在三者中最高，表明其策略处于高度不稳定状态，存在偏好对手和策略崩溃的现象。平均策略博弈在均奖励和奖励标准差（108.0）两个维度上均为最优。
+\autoref{tab:eval_overall}显示，在三种继续训练方法中，平均策略博弈的均奖励最高，为 586.3，
+显著高于 IPPO 的 495.0 和对手池博弈的 339.0。对手池博弈的均奖励最低，
+且奖励标准差（146.1）在三种训练方法中最高，表明其策略处于高度不稳定状态，
+存在偏好对手和策略崩溃的现象。
+
+初始策略对照的均奖励为 603.1，数值上高于平均策略博弈，但两者的置信区间高度重叠。
+该现象表明，前序课程学习得到的初始策略已经具备较强的奖励获取能力；
+在当前以回合累计奖励为核心的评估指标下，后续博弈训练并未稳定地产生超过初始策略的额外收益。
+因此，平均策略博弈是三种继续训练方法中表现最好的方案，但其相对初始策略的优势尚未得到统计支持。
+
+结合 \autoref{fig:gameplay_training_curves} 的训练曲线，这一结果并不意味着 IPPO 或平均策略博弈已经停止改进。
+二者在训练后期仍有上升趋势，说明继续增加训练预算可能进一步提升性能。
+但在本文固定训练预算下，初始策略仍能取得不低于平均策略博弈的评估得分，
+这可能与本文环境的博弈结构有关：智能体只能依赖近战攻击进行对抗，
+当一个智能体能够攻击其他智能体时，通常也处于被对方攻击的距离内，
+主动对抗的收益与风险近似对称；与此同时，奖励球和敌人提供了相对稳定的得分来源。
+因此，在尚未充分学会对手建模和风险控制时，
+继续训练可能会使策略将部分行为预算转向高风险对抗，
+反而削弱课程学习阶段已经形成的资源收集与机会性得分能力。
+换言之，初始策略对照的高分表明本文环境中"避免主动对抗、优先稳定得分"已构成较强基线策略，这提示未来需通过更丰富的战斗机制或奖励设计拉大主动博弈的收益差异。
 
 \subsubsection{统计显著性检验}
-\autoref{tab:eval_pairwise} 给出了三种训练方法间的配对 t 检验和 Cohen's d，
+\autoref{tab:eval_pairwise} 给出了四种策略间的配对 t 检验和 Cohen's d，
 见 \autoref{fig:eval_effectsize}。所有检验在组级别（20 个配对样本）
 上进行。
 
 \begin{table}[htbp]
   \centering
-  \caption{\zihao{5} 三种训练方法的配对统计比较（不含随机基线）。
+  \caption{\zihao{5} 四种策略的配对统计比较。
     配对 t 检验（自由度 = 19）在组级别进行。
     * $p<0.05$，** $p<0.01$。}
   \label{tab:eval_pairwise}
@@ -1450,9 +1443,12 @@ GRU-MLP 在仅 17 个 trial 的搜索后最佳值仅 192.2、均值 43.4，未�
     \toprule
     配对比较 & $\Delta$ 奖励 [95\% CI] & $p$ & Cohen's d \\
     \midrule
-    IPPO vs 对手池博弈  & $+220.1$ [$+187.8$, $+250.0$] & \textbf{$2.95\times10^{-11}$**} & $\mathbf{3.05}$ \\
-    IPPO vs 平均策略博弈   & $-45.8$ [$-$70.6, $-21.0$] & \textbf{0.002**} & $\mathbf{-0.80}$ \\
-    对手池博弈 vs 平均策略博弈 & $-265.9$ [$-$293.6, $-237.9$] & \textbf{$1.74\times10^{-13}$**} & $\mathbf{-4.07}$ \\
+    IPPO vs 对手池博弈  & $+156.1$ [$+124.8$, $+188.1$] & \textbf{$1.39\times10^{-8}$**} & $\mathbf{2.10}$ \\
+    IPPO vs 平均策略博弈   & $-91.3$ [$-$116.9, $-$66.4] & \textbf{$1.36\times10^{-6}$**} & $\mathbf{-1.55}$ \\
+    IPPO vs 初始策略对照   & $-108.0$ [$-$136.8, $-$79.6] & \textbf{$8.48\times10^{-7}$**} & $\mathbf{-1.60}$ \\
+    对手池博弈 vs 平均策略博弈 & $-247.4$ [$-$275.1, $-$219.3] & \textbf{$6.64\times10^{-13}$**} & $\mathbf{-3.78}$ \\
+    对手池博弈 vs 初始策略对照 & $-264.1$ [$-$296.1, $-$231.4] & \textbf{$3.49\times10^{-12}$**} & $\mathbf{-3.44}$ \\
+    平均策略博弈 vs 初始策略对照 & $-16.8$ [$-$45.6, $+14.6$] & 0.301 & $-0.24$ \\
     \bottomrule
   \end{tabular}
 \end{table}
@@ -1460,17 +1456,22 @@ GRU-MLP 在仅 17 个 trial 的搜索后最佳值仅 192.2、均值 43.4，未�
 \begin{figure}[htbp]
   \centering
   \includegraphics[width=0.8\linewidth]{imgs/eval_compare_effectsize.png}
-  \caption{\zihao{5} 三种训练方法间的配对效应量（Cohen's d）。正值表示前者优于后者。
+  \caption{\zihao{5} 四种策略间的配对效应量（Cohen's d）。正值表示前者优于后者。
     虚线标记了小（0.2）、中（0.5）、大（0.8）效应量参考线。}
   \label{fig:eval_effectsize}
 \end{figure}
 
-统计检验揭示了清晰的层次结构。三项两两比较均达到了极高的统计显著性（$p<0.01$）。
-IPPO 对对手池博弈的优势极大（$\Delta=+220.1$，$p=2.95\times10^{-11}$，$d=3.05$），
-表明 IPPO 的策略质量远超对手池博弈。
-IPPO 与平均策略博弈的差异同样显著（$p=0.002$，$d=-0.80$），效应量达到大效应水平，
-表明平均策略博弈带来的 45.8 点奖励优势在统计上高度可信。对手池博弈与平均策略博弈的
-差异最大（$\Delta=-265.9$，$p=1.74\times10^{-13}$，$d=-4.07$），效应量极大。
+统计检验揭示了两个层面的结果。首先，在三种继续训练方法内部，平均策略博弈显著优于
+IPPO（$\Delta=-91.3$，$p=1.36\times10^{-6}$，$d=-1.55$）和对手池博弈
+（$\Delta=-247.4$，$p=6.64\times10^{-13}$，$d=-3.78$），
+说明其在本文对手池评估分布上能产生更高的平均奖励。
+IPPO 也显著优于对手池博弈（$\Delta=+156.1$，$p=1.39\times10^{-8}$，$d=2.10$），
+进一步表明本文实现的 PFSP 对手池训练在该多人混战环境中存在明显不稳定性。
+
+其次，初始策略对照显著优于 IPPO 和对手池博弈，但与平均策略博弈的差异不显著
+（$\Delta=-16.8$，95\% CI 为 [$-45.6$, $+14.6$]，$p=0.301$，$d=-0.24$）。
+因此，平均策略博弈相对其他继续训练方法的优势是明确的，
+但“博弈训练相对初始策略带来显著提升”这一命题在当前实验中不能成立。
 
 \subsubsection{策略稳定性分析}
 奖励标准差和逐组奖励波动是衡量策略泛化能力的关键指标。
@@ -1483,13 +1484,13 @@ IPPO 与平均策略博弈的差异同样显著（$p=0.002$，$d=-0.80$），效
     逐组 $\sigma$ $=$ 20 个对手组均奖励的标准差。
     全部基于 10000 次 Bootstrap 重采样。}
   \label{tab:eval_stability}
-  \begin{tabular}{lccc}
+  \begin{tabular}{lcccc}
     \toprule
-    指标 & IPPO & 对手池博弈 & 平均策略博弈 \\
+    指标 & IPPO & 对手池博弈 & 平均策略博弈 & 初始策略对照 \\
     \midrule
-    奖励标准差 $\sigma$       & 109.9 & 140.2  & \textbf{108.0} \\
-    CI 宽度                    & 34.5  & 49.6   & \textbf{34.2}  \\
-    逐组均奖励 $\sigma$        & 40.8  & 57.7   & \textbf{40.3}  \\
+    奖励标准差 $\sigma$       & \textbf{97.3} & 146.1  & 117.7 & 104.7 \\
+    CI 宽度                    & \textbf{41.8} & 51.9   & 44.5  & 53.5  \\
+    逐组均奖励 $\sigma$        & \textbf{46.8} & 59.2   & 50.1  & 61.4  \\
     \bottomrule
   \end{tabular}
 \end{table}
@@ -1498,45 +1499,52 @@ IPPO 与平均策略博弈的差异同样显著（$p=0.002$，$d=-0.80$），效
   \centering
   \includegraphics[width=0.85\linewidth]{imgs/eval_compare_pergroup.png}
   \caption{\zihao{5} 四种策略在 20 组对手上的逐组均奖励对比。柱子越整齐说明面对
-    不同风格对手时表现越一致。随机动作基线在所有组上均为负分。}
+    不同风格对手时表现越一致。初始策略对照表示未经过本章博弈训练的起始模型。}
   \label{fig:eval_pergroup}
 \end{figure}
 
-\autoref{tab:eval_stability} 和 \autoref{fig:eval_pergroup} 共同揭示了
-三种训练方法在稳定性上的差异：
+\autoref{tab:eval_stability} 和 \autoref{fig:eval_pergroup} 共同揭示了不同策略在稳定性上的差异：
 
 \begin{enumerate}[label=(\arabic*)]
-  \item \textbf{平均策略博弈在三个稳定性指标上均最优}。
-    其奖励标准差（108.0）、CI 宽度（34.2）和逐组均奖励标准差（40.3）
-    均为三者最低，表明其策略在不同对手配置下表现最为一致。IPPO 的三项指标
-    （109.9 / 34.5 / 40.8）与平均策略博弈非常接近，两者在稳定性上处于同一水平。
-  \item \textbf{对手池博弈的波动最大}。其奖励标准差高达 140.2，
-    CI 宽度 49.6，逐组均奖励标准差 57.7，在三者中均为最高。
-    PFSP 的聚焦采样机制在多人环境中可能加剧策略循环，导致策略在面对不同风格对手时得分剧烈波动。
-  \item \textbf{IPPO 的波动水平与平均策略博弈相当}。
-    IPPO 的奖励标准差（109.9）与平均策略博弈（108.0）几乎一致，
-    呈现"稳定且表现良好"的特征。
+  \item \textbf{IPPO 的稳定性指标最低，但平均奖励不足}。
+    IPPO 在奖励标准差（97.3）、CI 宽度（41.8）和逐组均奖励标准差（46.8）
+    三项指标上均最低，说明其表现较稳定；但在均奖励上明显低于平均策略博弈，
+    持有较低波动但整体策略质量不高。
+  \item \textbf{对手池博弈的波动最大}。其奖励标准差高达 146.1，
+    CI 宽度 51.9，逐组均奖励标准差 59.2，在三种训练方法中均为最高，
+    表明其在面对不同风格对手时得分剧烈波动。
+  \item \textbf{平均策略博弈体现出收益与稳定性的折中}。
+    平均策略博弈的均奖励在三种继续训练方法中最高，但奖励标准差（117.7）和逐组波动（50.1）
+    略高于 IPPO。其优势主要体现在平均收益提升，而非所有稳定性指标同步最优。
+  \item \textbf{初始策略对照表现强但逐组差异较大}。
+    初始策略对照取得最高的数值均奖励，但其 CI 宽度（53.5）和逐组均奖励标准差（61.4）
+    均较高，说明该策略在不同对手组之间的表现差异明显。
+    这也表明了其与平均策略博弈之间虽有数值差距，却未能形成显著统计差异，策略质量上大致相同。
 \end{enumerate}
 
 \subsubsection{实验结论}
 
-综合以上分析，可以得出以下结论：
+综上所述，可以得出以下结论：
 
 \begin{enumerate}[label=(\arabic*)]
-  \item \textbf{平均策略博弈方法在三种训练方法中表现最优}。
-    在 20 组对手的评估中，其均奖励（583.9）显著高于 IPPO（538.2，
-    $p=0.002$，$d=-0.80$），并在奖励标准差、CI 宽度、逐组波动三个
-    稳定性指标上全面领先。
+  \item \textbf{平均策略博弈方法在三种继续训练方法中均奖励最高}。
+    在 20 组对手的评估中，其均奖励（586.3）显著高于 IPPO（495.0，
+    $p=1.36\times10^{-6}$，$d=-1.55$）和对手池博弈（339.0，
+    $p=6.64\times10^{-13}$，$d=-3.78$），说明与平均策略对抗的训练方式
+    在本文对手池评估分布上优于另外两种继续训练方法。
   \item \textbf{对手池博弈表现最差，训练过程波动性极大}。
-    对手池博弈的均奖励（318.1）显著低于 IPPO（$\Delta=+220.1$，
-    $p=2.95\times10^{-11}$，$d=3.05$），且其奖励标准差（140.2）和
-    逐组波动（57.7）均为三者最高。训练曲线显示，PFSP 的聚焦
-    采样机制使策略可能出现暂时性的性能崩溃，导致
-    对评估时间点的选择高度敏感。
-  \item \textbf{平均策略博弈在稳定性维度具有显著优势}。
-    与 IPPO 和对手池博弈相比，平均策略博弈在每项稳定性指标上均领先，
-    证明了与平均策略对抗的训练方式不仅提高了策略的平均表现，还增强了跨对手
-    泛化的稳定性。
+    对手池博弈的均奖励（339.0）显著低于 IPPO（$\Delta=+156.1$，
+    $p=1.39\times10^{-8}$，$d=2.10$），且其奖励标准差（146.1）和
+    逐组波动（59.2）均为三种训练方法中最高，对对手策略高度敏感的同时奖励始终维持在较低水平。
+  \item \textbf{初始策略对照揭示了当前博弈训练的局限}。
+    初始策略对照取得 603.1 的均奖励，但与平均策略博弈之间差异不显著
+    （$p=0.301$，$d=-0.24$）。一方面，这说明前序课程学习已经提供了较强的基础策略，
+    当前继续博弈训练方法尚未在回合累计奖励指标上超过该初始策略。另一方面，初始策略虽平均奖励高，但波动性大，从奖励上限和稳定性两个维度评估，其与平均策略博弈差异不显著，策略质量大致相当。在当前评估点，平均策略博弈是三种继续训练方法中唯一未出现明显退化、保持了初始策略基线水平的方法。
+    结合训练曲线可知，IPPO 和平均策略博弈在 8 百万步时仍有继续上升趋势，
+    因而该结论应理解为固定训练预算下的阶段性结果，而非二者性能上限的判断。
+    造成该现象的可能原因是本文环境中近战对抗的收益风险较对称，
+    奖励球和敌人等非直接对抗目标提供了更稳定的得分通道；
+    因此，初始策略延续课程学习中形成的稳定得分行为，可能优于尚未充分收敛的对手响应策略。基于此，本章结论应限定为三种继续训练方法之间的比较，而不能扩展为“博弈训练必然优于初始策略”，反而揭示了在收益风险对称的环境中，不主动博弈的资源收集策略本身已是强竞争策略。
 \end{enumerate}
 
 % ==================== 结论 ====================
@@ -1545,7 +1553,7 @@ IPPO 与平均策略博弈的差异同样显著（$p=0.002$，$d=-0.80$），效
 \markboth{结\quad\quad 论}{结\quad\quad 论}
 
 本文围绕智能体博弈对抗这一主题，
-从环境构建、基础训练到博弈对抗三个层面开展了系统研究。
+从环境构建、基础训练到博弈对抗三个层面开展了研究工作。
 主要工作总结如下：
 
 （1）基于 Godot 引擎设计并实现了《Tiny Swords》2D 多智能体竞技场博弈环境，
@@ -1560,24 +1568,20 @@ IPPO 与平均策略博弈的差异同样显著（$p=0.002$，$d=-0.80$），效
 实验表明 MLP 在固定参数战斗任务中取得最高总分，并因训练效率和实验进度原因被采用为后续多智能体实验的基础架构；探索性搜索结果同时显示 Segmented MLP 在战斗导向环境中具有进一步优化潜力。
 
 （4）构建了轮换冻结迭代博弈训练框架并初始化对手池，
-系统对比了 IPPO、对手池博弈和平均策略博弈
-三种方法在训练鲁棒策略上的差异，另设随机动作基线作为空白对照。
-实验表明，平均策略博弈方法在均奖励和策略稳定性上全面领先于 IPPO 和对手池博弈，
-其优势在统计上高度显著；
-对手池博弈表现最差，其训练曲线的高波动性反映了 PFSP 聚焦采样机制在多人环境策略循环严重时的不稳定性。
+对比了 IPPO、对手池博弈和平均策略博弈三种继续训练方法，另设未经博弈训练的初始策略作为诊断性对照。
+在三种方法中，平均策略博弈取得最高均奖励，显著优于 IPPO 和对手池博弈，
+但尚未在统计上超过课程学习得到的初始策略。
 
 基于上述工作，本文形成以下主要结论：
 
-（1）在奖励塑形设计上，线性势函数配合最近球模式在拾取奖励球任务中训练效率最高——相比于所有球叠加势能，最近球模式将多目标导航自然分解为阶段性子目标，避免了球间势能抵消导致的引导信号减弱。对于障碍物处理，稀疏碰撞惩罚（0.5）在得分与避障之间取得了最优平衡，稠密塑形虽显著降低撞墙次数，但代价是对障碍物附近奖励球的系统性忽略，验证了障碍物并非"越远越好"这一直觉判断。
+（1）在奖励塑形设计上，线性势函数配合最近球模式在拾取奖励球任务中训练效率最高——相比于所有球叠加势能，最近球模式将多目标导航自然分解为阶段性子目标，避免了球间势能抵消导致的引导信号减弱。对于障碍物处理，稀疏碰撞惩罚（0.5）在得分与避障之间取得了最优平衡，稠密塑形虽大幅降低撞墙次数，但代价是对障碍物附近奖励球的系统性忽略，验证了障碍物并非"越远越好"这一直觉判断。
 
 （2）在网络架构选择上，针对本文视野覆盖充分且观测向量已编码对手动态状态的环境特征，MLP 的单帧观测已包含足够的决策信息，GRU 的时序建模能力未转化为实际优势。这一发现表明，部分可观测环境中时序网络的收益取决于任务对历史信息的依赖程度，不能一概而论；但受限于实验周期，本文未对 GRU 的超参数进行全面搜索，其上限性能仍需进一步验证。
 
-（3）在多智能体博弈训练上，平均策略博弈方法在均奖励和策略稳定性维度上均领先于 IPPO
-和对手池博弈，
-证明了与平均策略对抗的训练方式能够产出更强泛化能力的策略。
-对手池博弈表现受其训练曲线高波动性影响，PFSP 的聚焦采样机制在多人策略循环严重时可能损害泛化稳定性。
+（3）在多智能体博弈训练上，平均策略博弈方法在三种继续训练方法中取得最高均奖励，
+证明了与平均策略对抗的训练方式相较 IPPO 和对手池博弈更适合本文的对手池评估分布。但初始策略对照的均奖励与平均策略博弈差异不显著，表明当前博弈训练阶段更多体现为不同继续训练机制之间的相对比较，尚不能证明其相对课程学习初始策略带来了稳定增益。这一结果可能源于本文环境中的主动近战对抗收益风险近似对称，而资源收集与击杀敌人提供了更稳定的得分通道；因此，在博弈机制和训练预算均有限的情况下，避免主动对抗、优先稳定得分可能成为强竞争策略。对手池博弈表现受其训练曲线高波动性影响，PFSP 的聚焦采样机制在多人策略循环严重时可能损害泛化稳定性。
 
-综上所述，本文提供了一套从环境构建到博弈训练、再到多维度量化评估的完整实验方案；在非对称多人一般和博弈场景下对三类训练方法进行了具备统计显著性的实证对比；并揭示了策略稳定性与平均表现之间的正相关关系，为博弈训练方法的评估引入了稳定性这一补充分析维度提供了实践经验。
+本文的主要贡献在于：提供了一套从环境构建到博弈训练、再到多维度量化评估的完整实验方案；在非对称多人一般和博弈场景下对三类训练方法进行了具备统计检验基础和效应量分析的实证比较；并通过初始策略对照揭示了课程学习基础策略、博弈训练机制、环境对抗强度和评估指标之间的关系，为后续改进博弈训练目标与泛化评估方式提供了实践经验。
 
 本课题在以下方面仍有改进空间：
 
@@ -1585,7 +1589,7 @@ IPPO 与平均策略博弈的差异同样显著（$p=0.002$，$d=-0.80$），效
 
 （2）\textbf{博弈模块的深入探讨}：由于将游戏设计成了纯对抗型的混战非对称对抗环境，主流用于智能体博弈训练的方法不完全适用，当前工作侧重于实验验证，且均经过一定的简化，未来可改变游戏设计，改为对称对抗环境，从两人零和博弈开始逐步深入探讨强化学习与博弈论的结合，验证并感受主流智能体博弈方法。
 
-（3）\textbf{更丰富的策略多样性机制}：当前游戏博弈性不高，考虑到时间因素，游戏偏简单，未来可以引入远程攻击和翻滚等角色技能，以及长线运营、协作任务等更复杂的游戏元素。
+（3）\textbf{更丰富的策略多样性机制}：当前游戏博弈性不高，考虑到时间因素，游戏设计偏简单，主要战斗方式为近战攻击。当智能体能够攻击对手时，往往也处在对手可反击范围内，主动对抗的收益风险不够分明，导致稳定收集资源可能比主动战斗更优。未来可以引入远程攻击、翻滚、技能冷却、控制效果、地形争夺和更高价值的对抗目标，使主动博弈产生更明确的战略收益，并减少“完全避战也能高分”的策略空间。
 
 （4）\textbf{扩展到更大规模场景}：当前实验限于 4 人混战，未来可扩展为支持任意人数、可配置分组的多人混战模式，方便进行更大规模的多智能体博弈实验。
 
@@ -1698,7 +1702,7 @@ IPPO 与平均策略博弈的差异同样显著（$p=0.002$，$d=-0.80$），效
     \midrule
     \multicolumn{6}{p{0.85\textwidth}}{%
       \small 注：无有效掩码方案将缺失槽位填0，有有效掩码方案为每个槽位增加valid标志位。
-      有效掩码总得分提高 9.9\%，其中智能体3改善最显著（48.3\%），智能体2次之（3.5\%）。} \\
+      有效掩码总得分提高 9.9\%，其中智能体3改善幅度最大（48.3\%），智能体2次之（3.5\%）。} \\
     \bottomrule
   \end{tabular}
 \end{table}
@@ -1716,7 +1720,7 @@ IPPO 与平均策略博弈的差异同样显著（$p=0.002$，$d=-0.80$），效
     \midrule
     \multicolumn{6}{p{0.85\textwidth}}{%
       \small 注：最近球方案仅对视野内距离最近的奖励球计算势能，所有球方案对视野内全部奖励球叠加势能。
-      最近球方案总平均比所有球方案高出约 67\%，且各智能体均显著优于所有球方案。
+      最近球方案总平均比所有球方案高出约 67\%，且各智能体均明显优于所有球方案。
       两种方案均不改变最优策略，但多球势能叠加在球间中点区域形成势能抵消，减弱引导密度。} \\
     \bottomrule
   \end{tabular}
@@ -1768,7 +1772,7 @@ IPPO 与平均策略博弈的差异同样显著（$p=0.002$，$d=-0.80$），效
     \midrule
     \multicolumn{6}{p{0.85\textwidth}}{%
       \small 注：惩罚力度 0.5 在拾取奖励球得分与撞墙抑制之间取得最佳平衡（撞墙减少 29\%，得分基本持平）。
-      5.0 惩罚显著减少撞墙但导致过度保守。} \\
+      5.0 惩罚大幅减少撞墙但导致过度保守。} \\
     \bottomrule
   \end{tabular}
 
@@ -1810,7 +1814,7 @@ IPPO 与平均策略博弈的差异同样显著（$p=0.002$，$d=-0.80$），效
     \midrule
     \multicolumn{7}{p{0.85\textwidth}}{%
       \small 注：四种网络架构在 S1 拾取奖励球课程环境中各训练 50 万步。
-      拾取奖励球任务相对简单，各架构得分接近，未拉开显著差距；Segmented MLP 得分最高（940.6），
+      拾取奖励球任务相对简单，各架构得分接近，未拉开明显差距；Segmented MLP 得分最高（940.6），
       GRU-MLP 隐藏层 128 维度次之（905.0）。} \\
     \bottomrule
   \end{tabular}

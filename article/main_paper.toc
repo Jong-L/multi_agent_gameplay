@@ -31,21 +31,21 @@
 \contentsline {subsection}{\numberline {4.5}网络架构对比}{22}{subsection.4.5}%
 \contentsline {subsubsection}{\numberline {4.5.1}固定参数对比}{23}{subsubsection.4.5.1}%
 \contentsline {subsubsection}{\numberline {4.5.2}超参数搜索}{24}{subsubsection.4.5.2}%
-\contentsline {subsubsection}{\numberline {4.5.3}讨论}{26}{subsubsection.4.5.3}%
-\contentsline {section}{\numberline {5}多智能体博弈方法对比}{27}{section.5}%
+\contentsline {subsubsection}{\numberline {4.5.3}讨论}{27}{subsubsection.4.5.3}%
+\contentsline {section}{\numberline {5}多智能体博弈方法对比}{28}{section.5}%
 \contentsline {subsection}{\numberline {5.1}对手池初始化}{28}{subsection.5.1}%
 \contentsline {subsection}{\numberline {5.2}待评估智能体的训练}{29}{subsection.5.2}%
-\contentsline {subsection}{\numberline {5.3}实验结果与讨论}{30}{subsection.5.3}%
-\contentsline {subsubsection}{\numberline {5.3.1}评估设置}{30}{subsubsection.5.3.1}%
+\contentsline {subsection}{\numberline {5.3}实验结果与讨论}{31}{subsection.5.3}%
+\contentsline {subsubsection}{\numberline {5.3.1}评估设置}{31}{subsubsection.5.3.1}%
 \contentsline {subsubsection}{\numberline {5.3.2}总体表现对比}{31}{subsubsection.5.3.2}%
-\contentsline {subsubsection}{\numberline {5.3.3}统计显著性检验}{31}{subsubsection.5.3.3}%
-\contentsline {subsubsection}{\numberline {5.3.4}策略稳定性分析}{33}{subsubsection.5.3.4}%
-\contentsline {subsubsection}{\numberline {5.3.5}实验结论}{34}{subsubsection.5.3.5}%
-\contentsline {section}{结\hskip 1em\relax \hskip 1em\relax 论}{34}{Item.43}%
-\contentsline {section}{参考文献}{36}{Item.43}%
+\contentsline {subsubsection}{\numberline {5.3.3}统计显著性检验}{33}{subsubsection.5.3.3}%
+\contentsline {subsubsection}{\numberline {5.3.4}策略稳定性分析}{34}{subsubsection.5.3.4}%
+\contentsline {subsubsection}{\numberline {5.3.5}实验结论}{35}{subsubsection.5.3.5}%
+\contentsline {section}{结\hskip 1em\relax \hskip 1em\relax 论}{36}{Item.44}%
+\contentsline {section}{参考文献}{38}{Item.44}%
 \renewcommand {\cftsecpresnum }{附录}
 \renewcommand {\cftsecaftersnum }{\hspace {0.5em}}
 \setlength {\cftsecnumwidth }{6em}
-\contentsline {section}{\numberline {A}补充图表}{39}{appendix.A}%
-\contentsline {section}{致\hskip 1em\relax \hskip 1em\relax 谢}{45}{table.caption.38}%
+\contentsline {section}{\numberline {A}补充图表}{41}{appendix.A}%
+\contentsline {section}{致\hskip 1em\relax \hskip 1em\relax 谢}{47}{table.caption.38}%
 \contentsfinish 

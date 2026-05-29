@@ -41,7 +41,7 @@ _MODEL_LABELS_MAP = {
     "Direct":   "IPPO",
     "Pool":     "对手池博弈",
     "Average":  "平均策略博弈",
-    "Untrained": "未训练模型",
+    "Untrained": "初始策略",
 }
 
 _DEFAULT_STATS = "logs/ippo_pool_eval_stats.json"

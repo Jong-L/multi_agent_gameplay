@@ -965,12 +965,6 @@ def plot_architecture_comparison(study: optuna.Study, output_dir: str,
                     fontsize=9, color=color_map.get(k, BLUE),
                     fontweight='bold', va='center')
 
-    # ── Trial 数量标注 ──
-    for i, k in enumerate(present):
-        n = len(groups[k])
-        ax.text(i + 1, ax.get_ylim()[0] - 0.04 * (ax.get_ylim()[1] - ax.get_ylim()[0]),
-                f'n={n}', ha='center', fontsize=8, color=GRAY)
-
     ax.set_xticks(range(1, len(present) + 1))
     ax.set_xticklabels(bp_labels, fontsize=11)
     ax.set_ylabel('最近 100 回合平均奖励', fontsize=13)
