@@ -60,10 +60,10 @@ class PoolEvaluateArgs(IppoPoolArgs):
         "saved_models/ippo_direct_agent0.pt",
         "saved_models/agent0_extra_pool_step8089600_agent0.pt",
         "saved_models/agent0_vs_average_opponents_step8089600_agent0.pt",
-        "__random__",
+        "saved_models/ippo_bootstrap_agent0.pt",
     )
-    """待评估的模型路径. '__random__' 表示随机动作基线."""
-    eval_model_labels: Optional[tuple[str, ...]] = ("Direct", "Pool", "Average", "Random")
+    """待评估的模型路径."""
+    eval_model_labels: Optional[tuple[str, ...]] = ("Direct", "Pool", "Average", "Untrained")
     opponent_checkpoint_dir: str = "saved_models/ippo_pool_checkpoints"
     """对手池检查点目录"""
     opponent_keep_per_agent: int = 20
@@ -297,107 +297,6 @@ def _build_policy_groups(
             raise RuntimeError(f"Missing policies for agent indices: {missing}")
         policies.append(group_agents)  # type: ignore[arg-type]
     return policies
-
-
-# ═══════════════════════════════════════════════════════════════════════
-#  Random baseline evaluation (agent_0 takes random actions)
-# ═══════════════════════════════════════════════════════════════════════
-
-def _evaluate_random_baseline(
-    model_label: str,
-    opponent_groups: list[list[PoolEntry]],
-    eval_args: PoolEvaluateArgs,
-    envs: Any,
-    n_actions: int,
-    seg: Any,
-    device: torch.device,
-) -> list[dict[str, Any]]:
-    """Run evaluation with agent_0 taking uniformly random actions.
-
-    Opponent policies (agent_1/2/3) are loaded from opponent_groups as usual.
-    This provides a pure random baseline — any trained model should beat it.
-    """
-    n_groups = len(opponent_groups)
-    n_agents = len(eval_args.agent_configs)
-
-    # Build policies for opponents only
-    policies: list[list[Any]] = []
-    for group in opponent_groups:
-        group_agents: list[Any] = [None for _ in _agent_ids(eval_args)]
-        for entry in group:
-            group_agents[entry.agent_id] = _build_eval_agent(
-                entry.checkpoint_path, entry.agent_id, eval_args, n_actions, seg, device,
-            )
-        policies.append(group_agents)
-
-    # Init RNN states for opponents
-    rnn_states: list[list[Optional[Any]]] = []
-    for group in policies:
-        rnn_states.append([
-            group[agent_idx].get_initial_state(1, device)
-            if group[agent_idx] is not None and group[agent_idx].is_recurrent else None
-            for agent_idx in range(n_agents)
-        ])
-
-    obs_raw, _ = envs.reset(seed=eval_args.seed)
-    next_obs = np.asarray(obs_raw, dtype=np.float32)
-    episode_rewards = np.zeros((n_groups, n_agents), dtype=np.float64)
-    episode_counts = np.zeros(n_groups, dtype=np.int64)
-    rows: list[dict[str, Any]] = []
-
-    main_id = int(eval_args.main_agent_id)
-    while np.any(episode_counts < eval_args.pool_eval_episodes_per_group):
-        obs_t = torch.tensor(next_obs, dtype=torch.float32, device=device)
-        obs_by_env = obs_t.view(n_groups, n_agents, -1)
-        actions_by_env = np.zeros((n_groups, n_agents), dtype=np.int64)
-
-        for group_idx in range(n_groups):
-            for agent_idx in range(n_agents):
-                if agent_idx == main_id:
-                    # Random baseline: uniform random
-                    actions_by_env[group_idx, agent_idx] = np.random.randint(0, n_actions)
-                elif policies[group_idx][agent_idx] is not None:
-                    action, next_state = _select_action(
-                        policies[group_idx][agent_idx],
-                        obs_by_env[group_idx, agent_idx].unsqueeze(0),
-                        rnn_states[group_idx][agent_idx],
-                        eval_args.eval_deterministic,
-                    )
-                    actions_by_env[group_idx, agent_idx] = action
-                    rnn_states[group_idx][agent_idx] = next_state
-                else:
-                    actions_by_env[group_idx, agent_idx] = np.random.randint(0, n_actions)
-
-        next_obs, rewards, terms, truncs, _ = envs.step(actions_by_env.reshape(-1))
-        next_obs = np.asarray(next_obs, dtype=np.float32)
-        rewards_by_env = np.asarray(rewards, dtype=np.float32).reshape(n_groups, n_agents)
-        dones_by_env = np.logical_or(terms, truncs).reshape(n_groups, n_agents)
-        episode_rewards += rewards_by_env
-
-        for group_idx in range(n_groups):
-            if episode_counts[group_idx] >= eval_args.pool_eval_episodes_per_group:
-                continue
-            if np.any(dones_by_env[group_idx]):
-                episode = int(episode_counts[group_idx])
-                for agent_idx in range(n_agents):
-                    rows.append({
-                        "model_label": model_label,
-                        "group_id": group_idx,
-                        "episode": episode,
-                        "agent_id": eval_args.agent_configs[agent_idx].agent_id,
-                        "reward": float(episode_rewards[group_idx, agent_idx]),
-                    })
-                episode_counts[group_idx] += 1
-                episode_rewards[group_idx, :] = 0.0
-                rnn_states[group_idx] = [
-                    policies[group_idx][agent_idx].get_initial_state(1, device)
-                    if policies[group_idx][agent_idx] is not None
-                       and policies[group_idx][agent_idx].is_recurrent
-                    else None
-                    for agent_idx in range(n_agents)
-                ]
-
-    return rows
 
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -692,21 +591,13 @@ def run_pool_evaluation(args: PoolEvaluateArgs) -> None:
         rows: list[dict[str, Any]] = []
         for model_label, model_path in zip(model_labels, eval_args.eval_model_paths):
             print(f"[Eval] {model_label}: {model_path}")
-            if model_path == "__random__":
-                rows.extend(
-                    _evaluate_random_baseline(
-                        model_label, opponent_groups, eval_args, envs,
-                        n_actions, seg, device,
-                    )
-                )
-            else:
-                policies = _build_policy_groups(
-                    model_path, int(eval_args.main_agent_id), opponent_groups,
-                    eval_args, n_actions, seg, device,
-                )
-                rows.extend(
-                    _evaluate_policy_groups(model_label, policies, eval_args, envs, device)
-                )
+            policies = _build_policy_groups(
+                model_path, int(eval_args.main_agent_id), opponent_groups,
+                eval_args, n_actions, seg, device,
+            )
+            rows.extend(
+                _evaluate_policy_groups(model_label, policies, eval_args, envs, device)
+            )
 
         # Phase 2: compute statistics
         model_stats = _compute_model_stats(

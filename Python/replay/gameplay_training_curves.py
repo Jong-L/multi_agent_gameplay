@@ -99,8 +99,8 @@ def main():
             linewidth=2.0, alpha=0.18,
         )
 
-        # 统计信息（仅用 ≤9M 步的数据，与截断范围一致）
-        stable_mask = (x >= x.max() * 0.6) & (x <= 9_000_000)
+        # 统计信息（仅用 ≤8M 步的数据，与截断范围一致）
+        stable_mask = (x >= x.max() * 0.6) & (x <= 8_000_000)
         if stable_mask.sum() > 1:
             stable_mean = y[stable_mask].mean()
             stable_std = y[stable_mask].std(ddof=1)
@@ -108,8 +108,8 @@ def main():
             stable_mean, stable_std = 0, 0
         stats_lines.append(f"{label}: 均值={stable_mean:.0f} ± {stable_std:.0f}")
 
-    # ── 截断 x 轴至 9M ──
-    ax.set_xlim(0, 9_000_000)
+    # ── 截断 x 轴至 8M ──
+    ax.set_xlim(0, 8_000_000)
 
     # ── 轴标签与标题 ──
     ax.set_xlabel("训练步数 (百万步)", fontsize=12)
@@ -117,7 +117,7 @@ def main():
     ax.set_title("多智能体博弈训练曲线：三种训练方法对比", fontsize=14, fontweight="bold")
 
     # 横轴刻度：转换为百万步
-    x_ticks_raw = np.arange(0, 10_000_000, 1_000_000)
+    x_ticks_raw = np.arange(0, 9_000_000, 1_000_000)
     ax.set_xticks(x_ticks_raw)
     ax.set_xticklabels([f"{t/1e6:.0f}" for t in x_ticks_raw])
 

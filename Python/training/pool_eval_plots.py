@@ -41,7 +41,7 @@ _MODEL_LABELS_MAP = {
     "Direct":   "IPPO",
     "Pool":     "对手池博弈",
     "Average":  "平均策略博弈",
-    "Random":   "随机动作",
+    "Untrained": "未训练模型",
 }
 
 _DEFAULT_STATS = "logs/ippo_pool_eval_stats.json"
@@ -80,7 +80,7 @@ def plot_reward_comparison(stats: dict, output_dir: str, prefix: str) -> None:
     errors_lower = rewards - ci_lower
     errors_upper = ci_upper - rewards
 
-    fig, ax = plt.subplots(figsize=(6, 4.5))
+    fig, ax = plt.subplots(figsize=(7, 5))
     x = np.arange(len(labels))
     colors = DEFAULT_PALETTE[:len(labels)]
     bars = ax.bar(x, rewards, yerr=[errors_lower, errors_upper],
@@ -98,9 +98,8 @@ def plot_reward_comparison(stats: dict, output_dir: str, prefix: str) -> None:
                  fontsize=13, fontweight="bold")
     ax.grid(axis="y", alpha=0.3, linestyle="--")
 
-    # 显著性标注（排除随机基线，否则括号会在顶部挤作一团）
+    # 显著性标注
     pairwise = stats.get("pairwise_comparisons", [])
-    pairwise = [p for p in pairwise if "Random" not in p["models"]]
     _add_significance_brackets(ax, pairwise, rewards)
 
     fig.tight_layout()
@@ -124,9 +123,10 @@ def plot_per_group_reward(stats: dict, output_dir: str, prefix: str) -> None:
         for g in range(n_groups):
             data[i, g] = m["per_group_mean_rewards"].get(str(g), 0)
 
-    fig, ax = plt.subplots(figsize=(max(8, n_groups * 0.5), 4.5))
+    # 增加宽度和高度，避免柱子挤在一起
+    fig, ax = plt.subplots(figsize=(max(10, n_groups * 0.65), 5.5))
     x = np.arange(n_groups)
-    width = 0.7 / n_models
+    width = 0.65 / n_models
     colors = DEFAULT_PALETTE[:n_models]
 
     for i in range(n_models):
@@ -138,11 +138,14 @@ def plot_per_group_reward(stats: dict, output_dir: str, prefix: str) -> None:
     ax.set_ylabel("平均回合奖励", fontsize=12)
     ax.set_title("各对手组平均奖励对比", fontsize=13, fontweight="bold")
     ax.set_xticks(x)
-    ax.set_xticklabels([str(g) for g in range(n_groups)], fontsize=8)
-    ax.legend(fontsize=10, edgecolor="#cccccc")
+    # 每隔一组显示标签，避免重叠
+    tick_labels = [str(g) if g % 2 == 0 else "" for g in range(n_groups)]
+    ax.set_xticklabels(tick_labels, fontsize=8.5)
+    ax.legend(fontsize=9.5, edgecolor="#cccccc", ncol=n_models)
     ax.grid(axis="y", alpha=0.3, linestyle="--")
+    ax.margins(x=0.015)
 
-    fig.tight_layout()
+    fig.tight_layout(pad=1.2)
     out_path = str(pathlib.Path(output_dir) / f"{prefix}_pergroup.png")
     save_figure(fig, out_path)
 
@@ -154,8 +157,6 @@ def plot_per_group_reward(stats: dict, output_dir: str, prefix: str) -> None:
 def plot_effect_sizes(stats: dict, output_dir: str, prefix: str) -> None:
     setup_style()
     pairwise = stats.get("pairwise_comparisons", [])
-    # Exclude Random baseline comparisons (d > 8 dwarfs everything else)
-    pairwise = [p for p in pairwise if "Random" not in p["models"]]
     if not pairwise:
         print("[Plot] 无训练方法间配对比较数据。")
         return
@@ -164,16 +165,18 @@ def plot_effect_sizes(stats: dict, output_dir: str, prefix: str) -> None:
     d_values = np.array([p["cohens_d_reward"] for p in pairwise])
     colors = [DEFAULT_PALETTE[0] if d >= 0 else DEFAULT_PALETTE[2] for d in d_values]
 
-    fig, ax = plt.subplots(figsize=(6, 3.5))
+    # 加宽画布，给多行中文标签和负向标注留足间距
+    fig, ax = plt.subplots(figsize=(9, 4.5))
     bars = ax.barh(range(len(labels)), d_values, color=colors, edgecolor="white", height=0.5)
 
     # 数值 + 显著性标记
     for i, (d, p) in enumerate(zip(d_values, pairwise)):
         sig = "**" if p["significant_01"] else ("*" if p["significant_05"] else "")
         text = f"d={d:.2f}{sig}"
-        x_pos = d + 0.08 if d >= 0 else d - 0.08
+        offset =0.01
+        x_pos = d + offset if d >= 0 else d - offset
         ha = "left" if d >= 0 else "right"
-        ax.text(x_pos, i, text, fontsize=11, va="center", ha=ha,
+        ax.text(x_pos, i, text, fontsize=9, va="center", ha=ha,
                 fontweight="bold", color="#333333")
 
     ax.set_yticks(range(len(labels)))
@@ -190,7 +193,7 @@ def plot_effect_sizes(stats: dict, output_dir: str, prefix: str) -> None:
     ax.axvline(x=0, color="#444444", linewidth=1.0)
     ax.grid(axis="x", alpha=0.3, linestyle="--")
 
-    fig.tight_layout()
+    fig.tight_layout(pad=1.5, rect=[0.22, 0.02, 1, 1])
     out_path = str(pathlib.Path(output_dir) / f"{prefix}_effectsize.png")
     save_figure(fig, out_path)
 

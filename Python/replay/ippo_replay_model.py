@@ -55,10 +55,10 @@ class ReplayConfig:
     def __post_init__(self):
         if self.model_paths is None:
             self.model_paths = [
-                "saved_models/agent0_extra_pool_step102400_agent0.pt",
-                "saved_models/ippo_bootstrap_agent1.pt",
-                "saved_models/ippo_bootstrap_agent2.pt",
-                "saved_models/ippo_bootstrap_agent3.pt"
+                "saved_models/agent0_vs_average_opponents_step8089600_agent0.pt",
+                "saved_models/ippo_pool_checkpoints/round8_agent3_step16027648_agent3.pt",
+                "saved_models/ippo_pool_checkpoints/round8_agent2_step15523840_agent2.pt",
+                "saved_models/ippo_pool_checkpoints/round8_agent1_step15020032_agent1.pt"
             ]
 
     env_path: Optional[str] = "godot-game\\build-multiagent\\game.exe"
@@ -67,7 +67,7 @@ class ReplayConfig:
     config_path: str = "godot-game/configs/game_config.tres"
     """game_config.tres 路径, 用于读取观测维度配置。"""
 
-    speedup: int = 1
+    speedup: int = 2
     """物理引擎加速倍数 (1=正常速度)。"""
 
     show_window: bool = True
