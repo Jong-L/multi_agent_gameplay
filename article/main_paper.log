@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.26 (TeX Live 2024) (preloaded format=pdflatex 2025.5.5)  30 MAY 2026 00:58
+This is pdfTeX, Version 3.141592653-2.6-1.40.26 (TeX Live 2024) (preloaded format=pdflatex 2025.5.5)  31 MAY 2026 17:10
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -1221,13 +1221,17 @@ File: imgs/param_importances.png Graphic file (type png)
 Package pdftex.def Info: imgs/param_importances.png  used on input line 1143.
 (pdftex.def)             Requested size: 225.34383pt x 137.78387pt.
  [25 <./imgs/parallel_coordinate.png> <./imgs/param_importances.png>]
+Overfull \hbox (28.69356pt too wide) in paragraph at lines 1188--1204
+ [][] 
+ []
+
 <imgs/optuna_round2_compare.png, id=1173, 564.9105pt x 384.2355pt>
 File: imgs/optuna_round2_compare.png Graphic file (type png)
 <use imgs/optuna_round2_compare.png>
-Package pdftex.def Info: imgs/optuna_round2_compare.png  used on input line 1209.
+Package pdftex.def Info: imgs/optuna_round2_compare.png  used on input line 1208.
 (pdftex.def)             Requested size: 375.57782pt x 255.45476pt.
- [26] [27 <./imgs/optuna_round2_compare.png>]
-Underfull \hbox (badness 1917) in paragraph at lines 1235--1236
+[26] [27 <./imgs/optuna_round2_compare.png>]
+Underfull \hbox (badness 1917) in paragraph at lines 1234--1235
 []\C70/rm/m/n/12/67 , \C70/rm/m/n/12/7a ‡ \C70/rm/m/n/12/62 @ \C70/rm/m/n/12/67 	 \C70/rm/m/n/12/53 Z \C70/rm/m/n/12/5f ^^H \C70/rm/m/n/12/5b û \C70/rm/m/n/12/9a å \C70/rm/m/n/12/91 « \C70/rm/m/n/12/75 ( \C70/rm/m/n/12/7b ,\OT1/minntx/m/n/12 4\C70/rm/m/n/12/7a ‡ \C70/rm/m/n/12/76 Ñ \C70/rm/m/n/12/5b û \C70/rm/m/n/12/9a å \C70/rm/m/n/12/7e ” \C70/rm/m/n/12/8b ∫|\C70/rm/m/n/12/ff ^^Z| \C70/rm/m/n/12/7b V \C70/rm/m/n/12/75 e \C70/rm/m/n/12/7f Q \C70/rm/m/n/12/7e ‹ \C70/rm/m/n/12/91 « \C70/rm/m/n/12/75 (\OT1/minntx/m/n/12 MLP\C70/rm/m/n/12/67 ∂ Ñ|\C70/rm/m/n/12/ff ^^L| \C70/rm/m/n/12/8d Ö \C70/rm/m/n/12/53 ¬ \C70/rm/m/n/12/65 p \C70/rm/m/n/12/91 « \C70/rm/m/n/12/75 (
  []
 
@@ -1237,10 +1241,10 @@ pdfTeX warning: pdflatex.exe (file ./imgs/gameplay_evaluate.drawio.pdf): PDF inc
 <imgs/gameplay_evaluate.drawio.pdf, id=1199, 984.5583pt x 623.44919pt>
 File: imgs/gameplay_evaluate.drawio.pdf Graphic file (type pdf)
 <use imgs/gameplay_evaluate.drawio.pdf>
-Package pdftex.def Info: imgs/gameplay_evaluate.drawio.pdf  used on input line 1247.
+Package pdftex.def Info: imgs/gameplay_evaluate.drawio.pdf  used on input line 1246.
 (pdftex.def)             Requested size: 375.57782pt x 237.8264pt.
 
-Underfull \hbox (badness 2318) in paragraph at lines 1260--1262
+Underfull \hbox (badness 2318) in paragraph at lines 1259--1261
 []\C70/rm/b/n/12/8f n \C70/rm/b/n/12/63 b \C70/rm/b/n/12/8b ≠ \C70/rm/b/n/12/7e √|\C70/rm/m/n/12/ff ^^Z| \C70/rm/m/n/12/4f ù \C70/rm/m/n/12/6b ! \C70/rm/m/n/12/89 „ \C70/rm/m/n/12/51 ª \C70/rm/m/n/12/4e  ^^@ * \C70/rm/m/n/12/66 z \C70/rm/m/n/12/80 ˝ \C70/rm/m/n/12/4f S|\C70/rm/m/n/12/30 ^^A| \C70/rm/m/n/12/51 ª \C70/rm/m/n/12/7e ” \C70/rm/m/n/12/51 v \C70/rm/m/n/12/4f Y \C70/rm/m/n/12/4e 	 \C70/rm/m/n/12/65 π|\C70/rm/m/n/12/ff ^^L| \C70/rm/m/n/12/91 Õ \C70/rm/m/n/12/59 ^^M \C70/rm/m/n/12/4e 
  \C70/rm/m/n/12/8f  « \C70/rm/m/n/12/7a |\C70/rm/m/n/12/ff ^^L| \C70/rm/m/n/12/83 ∑ \C70/rm/m/n/12/5f ó
  []
@@ -1249,87 +1253,105 @@ Underfull \hbox (badness 2318) in paragraph at lines 1260--1262
 <imgs/gameplay_training_curves.png, id=1633, 639.1077pt x 385.9218pt>
 File: imgs/gameplay_training_curves.png Graphic file (type png)
 <use imgs/gameplay_training_curves.png>
-Package pdftex.def Info: imgs/gameplay_training_curves.png  used on input line 1295.
+Package pdftex.def Info: imgs/gameplay_training_curves.png  used on input line 1294.
 (pdftex.def)             Requested size: 422.52057pt x 255.13904pt.
  [30]
 <imgs/eval_compare_reward.png, id=1643, 492.6405pt x 348.3414pt>
 File: imgs/eval_compare_reward.png Graphic file (type png)
 <use imgs/eval_compare_reward.png>
-Package pdftex.def Info: imgs/eval_compare_reward.png  used on input line 1335.
+Package pdftex.def Info: imgs/eval_compare_reward.png  used on input line 1334.
 (pdftex.def)             Requested size: 375.57782pt x 265.5714pt.
  [31 <./imgs/gameplay_training_curves.png>]
 <imgs/eval_compare_effectsize.png, id=1655, 483.9681pt x 295.3434pt>
 File: imgs/eval_compare_effectsize.png Graphic file (type png)
 <use imgs/eval_compare_effectsize.png>
-Package pdftex.def Info: imgs/eval_compare_effectsize.png  used on input line 1389.
+Package pdftex.def Info: imgs/eval_compare_effectsize.png  used on input line 1388.
 (pdftex.def)             Requested size: 375.57782pt x 229.20872pt.
  [32 <./imgs/eval_compare_reward.png>] [33 <./imgs/eval_compare_effectsize.png>]
 <imgs/eval_compare_pergroup.png, id=1671, 928.6695pt x 386.8854pt>
 File: imgs/eval_compare_pergroup.png Graphic file (type png)
 <use imgs/eval_compare_pergroup.png>
-Package pdftex.def Info: imgs/eval_compare_pergroup.png  used on input line 1431.
+Package pdftex.def Info: imgs/eval_compare_pergroup.png  used on input line 1430.
 (pdftex.def)             Requested size: 399.05278pt x 166.24532pt.
  [34 <./imgs/eval_compare_pergroup.png>]
 
 Package hyperref Warning: Token not allowed in a PDF string (Unicode):
 (hyperref)                \hskip 12.0pt
-(hyperref)                replaced by space on input line 1483.
+(hyperref)                replaced by space on input line 1482.
 
 
 Package hyperref Warning: Token not allowed in a PDF string (Unicode):
 (hyperref)                \hskip 12.0pt
-(hyperref)                replaced by space on input line 1483.
+(hyperref)                replaced by space on input line 1482.
 
 [35] [36] [37] (./main_paper.bbl [38
 
 ] [39]) [40]
-Overfull \hbox (11.56477pt too wide) in paragraph at lines 1589--1589
+Overfull \hbox (11.56477pt too wide) in paragraph at lines 1587--1587
 []|\OT1/minntx/m/n/12 PLAYER 
  []
 
 
-Overfull \hbox (8.51678pt too wide) in paragraph at lines 1606--1606
+Overfull \hbox (8.51678pt too wide) in paragraph at lines 1604--1604
 []|\OT1/minntx/m/n/12 ENEMY 
  []
 
 [41
 
 ]
-Overfull \hbox (34.2696pt too wide) in paragraph at lines 1737--1752
+Underfull \hbox (badness 6608) in paragraph at lines 1634--1634
+[]|\C70/rm/m/n/12/6c Ë|\C70/rm/m/n/12/ff ^^Z| \C70/rm/m/n/12/65 ‡ \C70/rm/m/n/12/67 	 \C70/rm/m/n/12/65 H \C70/rm/m/n/12/63 © \C70/rm/m/n/12/78 ^^A \C70/rm/m/n/12/65 π \C70/rm/m/n/12/68 H \C70/rm/m/n/12/5c ^^F \C70/rm/m/n/12/7f : \C70/rm/m/n/12/59 1 \C70/rm/m/n/12/69 ˝ \C70/rm/m/n/12/4f M \C70/rm/m/n/12/58 k\OT1/minntx/m/n/12 0|\C70/rm/m/n/12/ff ^^L| \C70/rm/m/n/12/67 	 	 \C70/rm/m/n/12/65 H \C70/rm/m/n/12/63 © \C70/rm/m/n/12/78 ^^A \C70/rm/m/n/12/65 π \C70/rm/m/n/12/68 H \C70/rm/m/n/12/4e : \C70/rm/m/n/12/6b œ \C70/rm/m/n/12/4e * \C70/rm/m/n/12/69 ˝ \C70/rm/m/n/12/4f M \C70/rm/m/n/12/58 û
+ []
+
+
+Underfull \hbox (badness 1571) in paragraph at lines 1634--1634
+\C70/rm/m/n/12/52 †\OT1/minntx/m/n/12 valid\C70/rm/m/n/12/68 ^^G \C70/rm/m/n/12/5f ◊ \C70/rm/m/n/12/4f M|\C70/rm/m/n/12/30 ^^B| \C70/rm/m/n/12/67 	 \C70/rm/m/n/12/65 H \C70/rm/m/n/12/63 © \C70/rm/m/n/12/78 ^^A \C70/rm/m/n/12/60 ; \C70/rm/m/n/12/5f ó \C70/rm/m/n/12/52 ^^F \C70/rm/m/n/12/63 – \C70/rm/m/n/12/9a ÿ \OT1/minntx/m/n/12 9.9%|\C70/rm/m/n/12/ff ^^L| \C70/rm/m/n/12/51 v \C70/rm/m/n/12/4e - \C70/rm/m/n/12/66 z \C70/rm/m/n/12/80 ˝ \C70/rm/m/n/12/4f S\OT1/minntx/m/n/12 3\C70/rm/m/n/12/65 9 \C70/rm/m/n/12/55 Ñ \C70/rm/m/n/12/5e E ¶ \C70/rm/m/n/12/67 ^^@ \C70/rm/m/n/12/59 '
+ []
+
+
+Overfull \hbox (33.86961pt too wide) in paragraph at lines 1730--1744
  [][] 
  []
 
-(d:/texlive/2024/texmf-dist/tex/latex/newtx/ot1ntxtt.fd)
-LaTeX Font Info:    Trying to load font information for OMS+ntxtlf on input line 1828.
-LaTeX Font Info:    No file OMSntxtlf.fd. on input line 1828.
 
+Overfull \hbox (17.86963pt too wide) in paragraph at lines 1750--1760
+ [][] 
+ []
+
+LaTeX Font Info:    Trying to load font information for OMS+ntxtlf on input line 1817.
+LaTeX Font Info:    No file OMSntxtlf.fd. on input line 1817.
 
 LaTeX Font Warning: Font shape `OMS/ntxtlf/m/n' undefined
 (Font)              using `OMS/cmsy/m/n' instead
-(Font)              for symbol `textbraceleft' on input line 1828.
+(Font)              for symbol `textbraceleft' on input line 1817.
 
 
-Overfull \hbox (13.1004pt too wide) in paragraph at lines 1828--1829
-[]|\OT1/minntx/m/n/10.95 mlp[]s1[]agent[]\OMS/ntxtlf/m/n/10.95 f\OT1/minntx/m/n/10.95 id\OMS/ntxtlf/m/n/10.95 g\OT1/minntx/m/n/10.95 .pt|  
+Overfull \hbox (21.99625pt too wide) in paragraph at lines 1817--1818
+[]|\OT1/minntx/m/n/12 mlp[]s1[]agent[]\OMS/ntxtlf/m/n/12 f\OT1/minntx/m/n/12 id\OMS/ntxtlf/m/n/12 g\OT1/minntx/m/n/12 .pt|  
  []
 
 
-Overfull \hbox (13.1004pt too wide) in paragraph at lines 1829--1830
-[]|\OT1/minntx/m/n/10.95 mlp[]s2[]agent[]\OMS/ntxtlf/m/n/10.95 f\OT1/minntx/m/n/10.95 id\OMS/ntxtlf/m/n/10.95 g\OT1/minntx/m/n/10.95 .pt|  
+Overfull \hbox (21.99625pt too wide) in paragraph at lines 1818--1819
+[]|\OT1/minntx/m/n/12 mlp[]s2[]agent[]\OMS/ntxtlf/m/n/12 f\OT1/minntx/m/n/12 id\OMS/ntxtlf/m/n/12 g\OT1/minntx/m/n/12 .pt|  
  []
 
 
-Overfull \hbox (13.1004pt too wide) in paragraph at lines 1830--1831
-[]|\OT1/minntx/m/n/10.95 mlp[]s3[]agent[]\OMS/ntxtlf/m/n/10.95 f\OT1/minntx/m/n/10.95 id\OMS/ntxtlf/m/n/10.95 g\OT1/minntx/m/n/10.95 .pt|  
+Overfull \hbox (21.99625pt too wide) in paragraph at lines 1819--1820
+[]|\OT1/minntx/m/n/12 mlp[]s3[]agent[]\OMS/ntxtlf/m/n/12 f\OT1/minntx/m/n/12 id\OMS/ntxtlf/m/n/12 g\OT1/minntx/m/n/12 .pt|  
  []
 
 
-Overfull \hbox (13.1004pt too wide) in paragraph at lines 1831--1832
-[]|\OT1/minntx/m/n/10.95 mlp[]s4[]agent[]\OMS/ntxtlf/m/n/10.95 f\OT1/minntx/m/n/10.95 id\OMS/ntxtlf/m/n/10.95 g\OT1/minntx/m/n/10.95 .pt|  
+Overfull \hbox (21.99625pt too wide) in paragraph at lines 1820--1821
+[]|\OT1/minntx/m/n/12 mlp[]s4[]agent[]\OMS/ntxtlf/m/n/12 f\OT1/minntx/m/n/12 id\OMS/ntxtlf/m/n/12 g\OT1/minntx/m/n/12 .pt|  
  []
 
 
-Overfull \hbox (6.53355pt too wide) in paragraph at lines 1846--1864
+Overfull \hbox (6.33624pt too wide) in paragraph at lines 1821--1822
+[]|\OT1/minntx/m/n/12 ppo[]agent[]\OMS/ntxtlf/m/n/12 f\OT1/minntx/m/n/12 id\OMS/ntxtlf/m/n/12 g\OT1/minntx/m/n/12 .pt|  
+ []
+
+
+Overfull \hbox (6.53355pt too wide) in paragraph at lines 1835--1853
  [][] 
  []
 
@@ -1337,12 +1359,12 @@ Overfull \hbox (6.53355pt too wide) in paragraph at lines 1846--1864
 
 Package hyperref Warning: Token not allowed in a PDF string (Unicode):
 (hyperref)                \hskip 12.0pt
-(hyperref)                replaced by space on input line 1878.
+(hyperref)                replaced by space on input line 1867.
 
 
 Package hyperref Warning: Token not allowed in a PDF string (Unicode):
 (hyperref)                \hskip 12.0pt
-(hyperref)                replaced by space on input line 1878.
+(hyperref)                replaced by space on input line 1867.
 
 [47
 
@@ -1357,17 +1379,17 @@ LaTeX Font Warning: Some font shapes were not available, defaults substituted.
 
  ) 
 Here is how much of TeX's memory you used:
- 27923 strings out of 474116
- 475737 string characters out of 5747718
- 2003190 words of memory out of 5000000
- 48777 multiletter control sequences out of 15000+600000
- 818711 words of font info for 813 fonts, out of 8000000 for 9000
+ 27688 strings out of 474116
+ 471729 string characters out of 5747718
+ 2002190 words of memory out of 5000000
+ 48633 multiletter control sequences out of 15000+600000
+ 778245 words of font info for 693 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
  80i,14n,93p,1567b,816s stack positions out of 10000i,1000n,20000p,200000b,200000s
-<c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><d:/texlive/2024/texmf-dist/fonts/type1/public/newtx/NewTXBMI.pfb><d:/texlive/2024/texmf-dist/fonts/type1/public/newtx/NewTXMI.pfb><d:/texlive/2024/texmf-dist/fonts/type1/public/newtx/NewTXMI7.pfb><d:/texlive/2024/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb><d:/texlive/2024/texmf-dist/fonts/type1/public/newtx/txexs.pfb><d:/texlive/2024/texmf-dist/fonts/type1/public/newtx/txmiaX.pfb><d:/texlive/2024/texmf-dist/fonts/type1/public/newtx/txsym.pfb><d:/texlive/2024/texmf-dist/fonts/type1/public/newtx/txsys.pfb><d:/texlive/2024/texmf-dist/fonts/type1/public/txfonts/txtt.pfb><d:/texlive/2024/texmf-dist/fonts/type1/public/newtx/ztmb.pfb><d:/texlive/2024/texmf-dist/fonts/type1/public/newtx/ztmr.pfb><d:/texlive/2024/texmf-dist/fonts/type1/public/newtx/ztmri.pfb>
-Output written on main_paper.pdf (52 pages, 34809331 bytes).
+<c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simsun.ttc><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><c:/Windows/Fonts/simhei.ttf><d:/texlive/2024/texmf-dist/fonts/type1/public/newtx/NewTXBMI.pfb><d:/texlive/2024/texmf-dist/fonts/type1/public/newtx/NewTXMI.pfb><d:/texlive/2024/texmf-dist/fonts/type1/public/newtx/NewTXMI7.pfb><d:/texlive/2024/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb><d:/texlive/2024/texmf-dist/fonts/type1/public/newtx/txexs.pfb><d:/texlive/2024/texmf-dist/fonts/type1/public/newtx/txmiaX.pfb><d:/texlive/2024/texmf-dist/fonts/type1/public/newtx/txsym.pfb><d:/texlive/2024/texmf-dist/fonts/type1/public/newtx/txsys.pfb><d:/texlive/2024/texmf-dist/fonts/type1/public/newtx/ztmb.pfb><d:/texlive/2024/texmf-dist/fonts/type1/public/newtx/ztmr.pfb><d:/texlive/2024/texmf-dist/fonts/type1/public/newtx/ztmri.pfb>
+Output written on main_paper.pdf (52 pages, 34803062 bytes).
 PDF statistics:
- 2492 PDF objects out of 2984 (max. 8388607)
+ 2487 PDF objects out of 2487 (max. 8388607)
  246 named destinations out of 1000 (max. 500000)
  855 words of extra memory for PDF output out of 10000 (max. 10000000)
 

@@ -749,7 +749,7 @@ Godot RL Agents 插件\cite{beeching2021godotrlagents}提供了一个标准化�
 
 \begin{table}[htbp]
   \centering
-  \caption{\zihao{5} 各智能体奖励配置}
+  \caption{\zihao{5} 智能体奖励配置}
   \label{tab:reward_config}
   \begin{tabular}{lrrrr}
     \toprule
@@ -1184,7 +1184,6 @@ GRU-MLP 在仅 17 个 trial 的搜索后最佳值仅 192.2、均值 43.4，未�
   \centering
   \caption{\zihao{5} 第二轮搜索中各架构最优 trial 的超参数}
   \label{tab:optuna_round2_best}
-  \small
   \setlength{\tabcolsep}{4pt}
   \begin{tabular}{lccc}
     \toprule
@@ -1258,7 +1257,7 @@ GRU-MLP 在仅 17 个 trial 的搜索后最佳值仅 192.2、均值 43.4，未�
   各自获得初始策略 $\pi_0^{(0)}, \pi_1^{(0)}, \pi_2^{(0)}, \pi_3^{(0)}$。
   \item \textbf{冻结对手}：从智能体 1、2、3 的检查点中选择策略并冻结，仅训练智能体 0 的策略 $T_1$ 步，期间每隔一定步数保存检查点，获得更新后的策略 $\pi_0^{(1)}$。
   \item \textbf{轮换训练}：依次解冻下一个智能体、冻结其余三方，
-  重复上述过程，获得 $\pi_1^{(1)}, \pi_2^{(1)}, \pi_3^{(1)}$。
+  重复上述过程，得到 $\pi_1^{(1)}, \pi_2^{(1)}, \pi_3^{(1)}$。
   \item \textbf{多轮迭代}：重复步骤 2-3 共 $K$ 轮，每轮各智能体独立进化 $T_k$ 步。最后选取每个智能体最近20个检查点，作为对手池。
 \end{enumerate}
 在该初始化方法下，每轮训练中被训练的智能体面对的是稳定的对手策略分布，绕过了非平稳的 MARL 问题同时让每个智能体在不同时间有效地面对了不同的敌人，期间保存的检查点的策略也就各不相同，风格各异，适合作为对手池。
@@ -1286,7 +1285,7 @@ GRU-MLP 在仅 17 个 trial 的搜索后最佳值仅 192.2、均值 43.4，未�
   \bar{\boldsymbol{p}}_j(o_t) = \frac{1}{N}\sum_{k=1}^{N} \pi_j^{(k)}(\cdot|o_t)
   \label{eq:avg_strategy}
 \end{equation}
-再从 $\bar{\boldsymbol{p}}_j(o_t)$ 中采样执行动作。主智能体 0 的初始策略 $\pi_0^{(0)}$ 与上述方式构建的平均对手策略进行对抗训练，累计训练 $T_e$ 步后保存策略 $\pi_0^{\text{Fictitious}}$。采用该方法训练$T_e$步后保存智能体0的策略$\pi_0^{Fictitious}$。
+再从 $\bar{\boldsymbol{p}}_j(o_t)$ 中采样执行动作。主智能体 0 的初始策略 $\pi_0^{(0)}$ 与上述方式构建的平均对手策略进行对抗训练，累计训练 $T_e$ 步后保存策略 $\pi_0^{\text{Fictitious}}$。
 
 三种方法的训练过程如\autoref{fig:gameplay_training_curves}所示。由于初始策略相同，三种方法拥有相似的起点曲线，在训练前中期，三种方法都表现出了很大的波动性，到了后期三种方法逐渐拉开差距。平均策略博弈在约 4 百万步后进入持续上升阶段，并在后期保持最高奖励水平；IPPO 的奖励在中后期同样呈现上升趋势，但整体低于平均策略博弈；对手池博弈的奖励波动幅度较大，且在整个训练过程中一直保持这种波动性。需要注意的是，8 百万步处的 IPPO 和平均策略博弈曲线仍未完全呈现平台期，因此该检查点反映的是固定训练预算下的比较结果，不能排除更长训练后两者继续提升的可能性。
 
@@ -1574,7 +1573,6 @@ IPPO 也显著优于对手池博弈（$\Delta=+156.1$，$p=1.39\times10^{-8}$，
   \bottomrule
   \endfoot
 
-  \small
   \multirow{8}{1.2cm}{SELF（自身）}
     & 1. 自身 x 坐标 & $[-1,1]$ & 相对竞技场中心归一化 \\
     & 2. 自身 y 坐标 & $[-1,1]$ & 相对竞技场中心归一化 \\
@@ -1622,9 +1620,9 @@ IPPO 也显著优于对手池博弈（$\Delta=+156.1$，$p=1.39\times10^{-8}$，
 % --- 附录表：有效位掩码对比 ---
 \begin{table}[htbp]
   \centering
-  \caption{\zihao{5} 有效位掩码对比：每回合总得分均值，5个并行环境均值，100 万步}
+  \caption{\zihao{5} 有效位掩码对比：每回合总得分均值，5个并行环境均值，训练100 万步}
   \label{tab:appendix_valid_mask}
-  \begin{tabular}{lcccc|c}
+  \begin{tabular}{lccccc}
     \toprule
     方案 & 智能体0 & 智能体1 & 智能体2 & 智能体3 & 总平均 \\
     \midrule
@@ -1632,17 +1630,16 @@ IPPO 也显著优于对手池博弈（$\Delta=+156.1$，$p=1.39\times10^{-8}$，
     有有效掩码 & 77.6 & 73.3 & 68.2 & 60.8 & 279.8 \\
     \midrule
     \multicolumn{6}{p{0.85\textwidth}}{%
-      \small 注：无有效掩码方案将缺失槽位填0，有有效掩码方案为每个槽位增加valid标志位。
+      注：无有效掩码方案将缺失槽位填0，有有效掩码方案为每个槽位增加valid标志位。
       有效掩码总得分提高 9.9\%，其中智能体3改善幅度最大（48.3\%），智能体2次之（3.5\%）。} \\
-    \bottomrule
   \end{tabular}
 \end{table}
 
 \begin{table}[htbp]
   \centering
-  \caption{\zihao{5} 最近球与所有球势能方案每回合球收集奖励均值对比，10个并行环境均值，100 万步}
+  \caption{\zihao{5} 最近球与所有球势能方案每回合球收集奖励均值对比，10个并行环境均值，训练100 万步}
   \label{tab:appendix_nearest_vs_all}
-  \begin{tabular}{lcccc|c}
+  \begin{tabular}{lccccc}
     \toprule
     方案 & 智能体0 & 智能体1 & 智能体2 & 智能体3 & 总平均 \\
     \midrule
@@ -1650,18 +1647,17 @@ IPPO 也显著优于对手池博弈（$\Delta=+156.1$，$p=1.39\times10^{-8}$，
     所有球  & 31.2 & 26.1 & 28.7 & 28.8 & 114.8 \\
     \midrule
     \multicolumn{6}{p{0.85\textwidth}}{%
-      \small 注：最近球方案仅对视野内距离最近的奖励球计算势能，所有球方案对视野内全部奖励球叠加势能。
+      注：最近球方案仅对视野内距离最近的奖励球计算势能，所有球方案对视野内全部奖励球叠加势能。
       最近球方案总平均比所有球方案高出约 67\%，且各智能体均明显优于所有球方案。
       两种方案均不改变最优策略，但多球势能叠加在球间中点区域形成势能抵消，减弱引导密度。} \\
-    \bottomrule
   \end{tabular}
 \end{table}
 
 \begin{table}[htbp]
   \centering
-  \caption{\zihao{5} 不同奖励塑形方案每回合球收集奖励均值对比，v3，含所有方案，5次独立运行均值，100 万步}
+  \caption{\zihao{5} 不同奖励塑形方案每回合球收集奖励均值对比，v3，含所有方案，5次独立运行均值，训练100 万步}
   \label{tab:appendix_potential_v3}
-  \begin{tabular}{lcccc|c}
+  \begin{tabular}{lccccc}
     \toprule
     方案 & 智能体0 & 智能体1 & 智能体2 & 智能体3 & 总平均 \\
     \midrule
@@ -1672,7 +1668,7 @@ IPPO 也显著优于对手池博弈（$\Delta=+156.1$，$p=1.39\times10^{-8}$，
     稀疏         & 56.6  & 55.2  & 61.2 & 61.1 & 234.0 \\
     \midrule
     \multicolumn{6}{p{0.85\textwidth}}{%
-      \small 注：五种方案在相同单智能体环境下训练 100 万步，5 次独立运行取均值。
+      注：五种方案在相同单智能体环境下训练 100 万步，5 次独立运行取均值。
       线性函数为 $\Phi(s)=-\frac{R_{\mathrm{ball}}}{r_{\mathrm{vision}}}d+R_{\mathrm{ball}}$，
       指数函数为 $\Phi(s)=R_{\mathrm{ball}}e^{-d/r_{\mathrm{vision}}}$，
       反比例函数为 $\Phi(s)=R_{\mathrm{ball}}\frac{r_{\mathrm{vision}}}{d+r_{\mathrm{vision}}}$，
@@ -1680,7 +1676,6 @@ IPPO 也显著优于对手池博弈（$\Delta=+156.1$，$p=1.39\times10^{-8}$，
       稀疏方案仅通过捡球得分学习，不使用任何奖励塑形。
       距离奖励方案得分最高，不过线性势函数与反比例势函数表现均与之接近，且势函数满足 PBRS 最优策略不变性，
       线性势函数被选为最终方案。} \\
-    \bottomrule
   \end{tabular}
 \end{table}
 
@@ -1693,18 +1688,17 @@ IPPO 也显著优于对手池博弈（$\Delta=+156.1$，$p=1.39\times10^{-8}$，
   {\zihao{5}(a) 稀疏惩罚力度对比}
   \vspace{4pt}
 
-  \begin{tabular}{lcccc|c}
+  \begin{tabular}{lccccc}
     \toprule
-    惩罚值 & 智能体0 & 智能体1 & 智能体2 & 智能体3 & 撞墙次数 \\
+    惩罚值 & 智能体0 & 智能体1 & 智能体2 & 智能体3 & 合计撞墙次数 \\
     \midrule
     0.05 & 73.9 & 65.3 & 66.5 & 49.1 & 161.5 \\
     0.5  & 58.8 & 60.8 & 52.3 & 37.6 & 114.8 \\
     5.0  & 20.8 & 22.6 & 22.3 & -21.8 & 16.7 \\
     \midrule
     \multicolumn{6}{p{0.85\textwidth}}{%
-      \small 注：惩罚力度 0.5 在拾取奖励球得分与撞墙抑制之间取得最佳平衡（撞墙减少 29\%，得分基本持平）。
+      注：惩罚力度 0.5 在拾取奖励球得分与撞墙抑制之间取得最佳平衡（撞墙减少 29\%，得分基本持平）。
       5.0 惩罚大幅减少撞墙但导致过度保守。} \\
-    \bottomrule
   \end{tabular}
 
   \vspace{12pt}
@@ -1712,9 +1706,9 @@ IPPO 也显著优于对手池博弈（$\Delta=+156.1$，$p=1.39\times10^{-8}$，
   {\zihao{5}(b) 障碍物塑形方案对比}
   \vspace{4pt}
 
-  \begin{tabular}{lcccc|c}
+  \begin{tabular}{lccccc}
     \toprule
-    方案 & 智能体0 & 智能体1 & 智能体2 & 智能体3 & 撞墙次数 \\
+    方案 & 智能体0 & 智能体1 & 智能体2 & 智能体3 & 合计撞墙次数 \\
     \midrule
     稀疏惩罚 (0.5) & 58.8 & 60.8 & 52.3 & 37.6 & 114.8 \\
     线性势函数     & 59.9 & 54.7 & 51.0 & 37.8 & 52.6  \\
@@ -1722,19 +1716,18 @@ IPPO 也显著优于对手池博弈（$\Delta=+156.1$，$p=1.39\times10^{-8}$，
     距离惩罚       & 57.0 & 47.6 & 49.0 & 31.6 & 44.7  \\
     \midrule
     \multicolumn{6}{p{0.85\textwidth}}{%
-      \small 注：稀疏惩罚采用 0.5 碰撞惩罚无奖励塑形。线性势函数 $\Phi(s)=\frac{R_{\mathrm{wall}}}{r_{\mathrm{vision}}}d_{\min}-R_{\mathrm{wall}}$，
+      注：稀疏惩罚采用 0.5 碰撞惩罚无奖励塑形。线性势函数 $\Phi(s)=\frac{R_{\mathrm{wall}}}{r_{\mathrm{vision}}}d_{\min}-R_{\mathrm{wall}}$，
       反比例势函数 $\Phi(s)=-\frac{1}{d_{\min}+\epsilon}$，距离惩罚每步给予 $-\frac{1}{d_{\min}+\epsilon}$。
-      距离惩罚撞墙最少但得分也最低；线性势函数综合表现最佳且满足PBRS最优策略不变性。} \\
-    \bottomrule
+      距离惩罚撞墙最少但得分也最低。} \\
   \end{tabular}
 \end{table}
 
 % --- 附录表：S1网络架构对比 ---
 \begin{table}[htbp]
   \centering
-  \caption{\zihao{5} 拾取奖励球任务（S1）网络架构对比（单智能体，5哥并行环境均值，100 万步）}
+  \caption{\zihao{5} 拾取奖励球任务（S1）网络架构对比（单智能体，5个并行环境均值，训练100 万步）}
   \label{tab:appendix_s1_network}
-  \begin{tabular}{lcccc|cc}
+  \begin{tabular}{lcccccc}
     \toprule
     网络架构 & 智能体0 & 智能体1 & 智能体2 & 智能体3 & 总得分 & 拾取奖励球得分 \\
     \midrule
@@ -1744,17 +1737,15 @@ IPPO 也显著优于对手池博弈（$\Delta=+156.1$，$p=1.39\times10^{-8}$，
     GRU-MLP（隐藏层128）& 238.1 & 207.3 & 222.3 & 237.2 & 905.0 & 898.2 \\
     \midrule
     \multicolumn{7}{p{0.85\textwidth}}{%
-      \small 注：四种网络架构在 S1 拾取奖励球课程环境中各训练 50 万步。
+      注：四种网络架构在 S1 拾取奖励球课程环境中各训练 50 万步。
       拾取奖励球任务相对简单，各架构得分接近，未拉开明显差距；Segmented MLP 得分最高（940.6），
       GRU-MLP 隐藏层 128 维度次之（905.0）。} \\
-    \bottomrule
   \end{tabular}
 \end{table}
 \begin{table}[htbp]
   \centering
-  \caption{\zihao{5} Sarl 战斗任务网络架构对比（单智能体，5哥并行环境均值）}
+  \caption{\zihao{5} Sarl 战斗任务网络架构对比（单智能体，5个并行环境均值）}
   \label{tab:network_sarl_detail}
-  \small
   \setlength{\tabcolsep}{3.5pt}
   \begin{tabular}{lccccccc}
     \toprule
@@ -1773,14 +1764,13 @@ IPPO 也显著优于对手池博弈（$\Delta=+156.1$，$p=1.39\times10^{-8}$，
   \centering
   \caption{\zihao{5} 第二轮 Optuna 超参数搜索空间（架构联合搜索）}
   \label{tab:appendix_optuna_round2_space}
-  \small
   \begin{tabularx}{\textwidth}{lX}
     \toprule
     参数 & 搜索范围或候选值 \\
     \midrule
     \multicolumn{2}{c}{\textbf{共享参数（所有架构）}} \\
     \midrule
-    网络架构类型 & \texttt{mlp}, \texttt{segmented\_mlp}, \texttt{gru\_mlp} \\
+    网络架构类型 & mlp, segmented\_mlp, gru\_mlp \\
     学习率 & $[1\times10^{-5},\,1\times10^{-3}]$，对数均匀采样 \\
     GAE 参数 $\lambda$ & $[0.90,\,0.99]$，均匀采样 \\
     Rollout 步数 & $\{64, 128, 256, 512\}$ \\
@@ -1810,7 +1800,7 @@ IPPO 也显著优于对手池博弈（$\Delta=+156.1$，$p=1.39\times10^{-8}$，
     GRU 后接 MLP 隐藏层 & $\{64\text{-}32,\;128\text{-}64,\;128\text{-}64\text{-}32\}$ \\
     \bottomrule
   \end{tabularx}
-  \begin{minipage}{\linewidth}\small\raggedright
+  \begin{minipage}{\linewidth}\raggedright
   \end{minipage}
 \end{table}
 
@@ -1819,7 +1809,6 @@ IPPO 也显著优于对手池博弈（$\Delta=+156.1$，$p=1.39\times10^{-8}$，
   \centering
   \caption{\zihao{5} 课程学习阶段配置表}
   \label{tab:appendix_curriculum}
-  \small
   \setlength{\tabcolsep}{3.5pt}
   \begin{tabular}{l >{\raggedright\arraybackslash}p{3.2cm} >{\raggedright\arraybackslash}p{3.5cm} r r >{\raggedright\arraybackslash}p{2.8cm}}
     \toprule
@@ -1834,7 +1823,7 @@ IPPO 也显著优于对手池博弈（$\Delta=+156.1$，$p=1.39\times10^{-8}$，
   \end{tabular}
   \vspace{6pt}
 
-  {\small 注：每个阶段 4 个智能体（agent\_0$\sim$agent\_3）独立训练。每阶段加载上一阶段模型，采用 MLP 网络 + Optuna 搜索后的超参数。
+  {注：每个阶段 4 个智能体（agent\_0$\sim$agent\_3）独立训练。每阶段加载上一阶段模型，采用 MLP 网络 + Optuna 搜索后的超参数。
   累计训练步数 500 万步。}
 \end{table}
 
@@ -1855,7 +1844,7 @@ IPPO 也显著优于对手池博弈（$\Delta=+156.1$，$p=1.39\times10^{-8}$，
     平均策略博弈训练 & 智能体 0 与对手池平均策略对抗训练 & 800 万 \\
     \bottomrule
   \end{tabular}
-  \begin{minipage}{\linewidth}\small\raggedright
+  \begin{minipage}{\linewidth}\raggedright
   注：课程学习阶段的训练步数见附录表~\ref{tab:appendix_curriculum}。
   对手池迭代博弈中，每轮依次解冻训练一个智能体并冻结其余三方，每轮每个智能体训练 50 万步，
   共 8 轮 $\times$ 4 智能体 $\times$ 50 万 = 1600 万步（累计）。
