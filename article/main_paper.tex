@@ -835,7 +835,7 @@ $d$ 为智能体到球的距离。
   (b) Segmented MLP~通过 5 个独立 MLP 分别编码 SELF/PLAYER/BALL/ENEMY/LiDAR 分段，
   输出拼接后进入共享 MLP trunk；
   (c) GRU-MLP~将时序相关分段（SELF、PLAYER、ENEMY、LiDAR 共 134 维）送入 GRU 循环层建模时序依赖，
-  非时序的 BALL 分段经独立 MLP 编码后与 GRU 输出拼接，共同进入共享 MLP trunk。}
+  非时序的 BALL 分段经独立 MLP 编码后与 GRU 输出拼接，共同进入共享 MLP trunk}
   \label{fig:network_architecture}
 \end{figure}
 
@@ -867,7 +867,7 @@ $d$ 为智能体到球的距离。
   \end{subfigure}
   \caption{\zihao{5} 有效掩码消融实验结果。
   蓝色为未启用有效掩码，橙色为启用有效掩码。
-  曲线为 5 个并行环境运行均值。}
+  曲线为 5 个并行环境运行均值}
   \label{fig:valid_mask_comparison}
 \end{figure}
 
@@ -907,7 +907,7 @@ $d$ 为智能体到球的距离。
     \caption{\zihao{5} 所有智能体平均拾取奖励球得分与回合数关系}
     \label{fig:total_ball_score_shaping_comparison}
   \end{subfigure}
-  \caption{\zihao{5} 不同奖励塑形方案对拾取奖励球得分的影响。曲线为 5 个并行环境运行均值。}
+  \caption{\zihao{5} 不同奖励塑形方案对拾取奖励球得分的影响。曲线为 5 个并行环境运行均值}
   \label{fig:ball_score_shaping_comparison}
 \end{figure}
 
@@ -971,7 +971,7 @@ $d$ 为智能体到球的距离。
   \end{subfigure}
   \caption{\zihao{5} 不同撞墙惩罚力度（0.05、0.5、5.0）下智能体行为对比。
   曲线为 5 个并行环境运行均值。
-  横轴为训练回合数（Episode），纵轴分别为撞墙次数（次/回合）和拾球奖励得分。}
+  横轴为训练回合数（Episode），纵轴分别为撞墙次数（次/回合）和拾球奖励得分}
   \label{fig:wall_penalty_comparison}
 \end{figure}
 
@@ -1031,7 +1031,7 @@ $d$ 为智能体到球的距离。
     \label{fig:wall_shaping_total_score}
   \end{subfigure}
   \caption{\zihao{5} 不同障碍物塑形方案下智能体行为对比。
-  曲线为 5个并行环境均值。}
+  曲线为 5个并行环境均值}
   \label{fig:wall_shaping_comparison}
 \end{figure}
 
@@ -1061,7 +1061,7 @@ $d$ 为智能体到球的距离。
     \label{fig:network_sarl}
   \end{subfigure}
   \caption{\zihao{5} 不同网络架构在两种任务场景下的总得分对比。
-  曲线为 4 个并行环境运行均值。}
+  曲线为 4 个并行环境运行均值}
   \label{fig:network_architecture_comparison}
 \end{figure}
 
@@ -1075,7 +1075,7 @@ $d$ 为智能体到球的距离。
   \centering
   \includegraphics[width=0.4\linewidth]{imgs/game_snapshot_0.png}
   \caption{\zihao{5} 竞技场俯视图。土色矩形区域为资源密集区，
-  虚线圆为智能体视野范围示意。智能体位于中央位置时可观测到核心区域的大部分动态信息。}
+  虚线圆为智能体视野范围示意。智能体位于中央位置时可观测到核心区域的大部分动态信息}
   \label{fig:game_arena_view}
 \end{figure}
 
@@ -1146,7 +1146,7 @@ $d$ 为智能体到球的距离。
   \end{subfigure}
   \caption{\zihao{5} 第一轮 Optuna 超参数搜索结果可视化。
   \subref{fig:parallel_coordinate} 展示各 trial 的超参数取值与对应奖励的分布关系，颜色越接近金色表示奖励越高；
-  \subref{fig:param_importances} 展示各参数对最终奖励的影响权重。}
+  \subref{fig:param_importances} 展示各参数对最终奖励的影响权重}
   \label{fig:parallel_coordinate_and_importances}
 \end{figure}
 
@@ -1208,7 +1208,7 @@ GRU-MLP 在仅 17 个 trial 的搜索后最佳值仅 192.2、均值 43.4，未�
   \includegraphics[width=0.8\linewidth]{imgs/optuna_round2_compare.png}
   \caption{\zihao{5} 第二轮 Optuna 搜索中三种网络架构的奖励分布对比。
   每个点为一个 trial，横轴为网络架构类型，纵轴为最近 100 回合平均奖励。
-  箱线图展示四分位分布，μ 标注为各组均值。}
+  箱线图展示四分位分布，μ 标注为各组均值}
   \label{fig:optuna_round2_compare}
 \end{figure}
 
@@ -1244,7 +1244,7 @@ GRU-MLP 在仅 17 个 trial 的搜索后最佳值仅 192.2、均值 43.4，未�
 \begin{figure}[htbp!]
   \centering
   \includegraphics[width=0.8\linewidth]{imgs/gameplay_evaluate.drawio.pdf}
-  \caption{\zihao{5} 评估流程。阶段一：通过五阶段课程学习训练四个智能体的基础模型。阶段二：将四个智能体同时放入环境进行 IPPO 同步训练，使各智能体感知对手存在。阶段三：采用轮换冻结方式，每次仅训练一个智能体且冻结其余三方，多轮迭代后收集最近检查点构建对手池。阶段四：分别使用 IPPO 独立训练、对手池博弈和平均策略博弈三种方法训练智能体 0，得到三个待评估模型。阶段五：将三个模型分别与对手池中的策略进行对抗，通过胜率矩阵、历史对战表现评分和行为分析量化对比三种训练方法的泛化性能。}
+  \caption{\zihao{5} 评估流程。阶段一：通过五阶段课程学习训练四个智能体的基础模型。阶段二：将四个智能体同时放入环境进行 IPPO 同步训练，使各智能体感知对手存在。阶段三：采用轮换冻结方式，每次仅训练一个智能体且冻结其余三方，多轮迭代后收集最近检查点构建对手池。阶段四：分别使用 IPPO 独立训练、对手池博弈和平均策略博弈三种方法训练智能体 0，得到三个待评估模型。阶段五：将三个模型分别与对手池中的策略进行对抗，通过胜率矩阵、历史对战表现评分和行为分析量化对比三种训练方法的泛化性能}
   \label{fig:gameplay_evaluate}
 \end{figure}
 
@@ -1287,7 +1287,7 @@ GRU-MLP 在仅 17 个 trial 的搜索后最佳值仅 192.2、均值 43.4，未�
 \end{equation}
 再从 $\bar{\boldsymbol{p}}_j(o_t)$ 中采样执行动作。主智能体 0 的初始策略 $\pi_0^{(0)}$ 与上述方式构建的平均对手策略进行对抗训练，累计训练 $T_e$ 步后保存策略 $\pi_0^{\text{Fictitious}}$。
 
-三种方法的训练过程如\autoref{fig:gameplay_training_curves}所示。由于初始策略相同，三种方法拥有相似的起点曲线，在训练前中期，三种方法都表现出了很大的波动性，到了后期三种方法逐渐拉开差距。平均策略博弈在约 4 百万步后进入持续上升阶段，并在后期保持最高奖励水平；IPPO 的奖励在中后期同样呈现上升趋势，但整体低于平均策略博弈；对手池博弈的奖励波动幅度较大，且在整个训练过程中一直保持这种波动性。需要注意的是，8 百万步处的 IPPO 和平均策略博弈曲线仍未完全呈现平台期，因此该检查点反映的是固定训练预算下的比较结果，不能排除更长训练后两者继续提升的可能性。
+三种方法的训练过程如\autoref{fig:gameplay_training_curves}所示,具体训练步数见\autoref{tab:appendix_gameplay_params}。由于初始策略相同，三种方法拥有相似的起点曲线，在训练前中期，三种方法都表现出了很大的波动性，到了后期三种方法逐渐拉开差距。平均策略博弈在约 4 百万步后进入持续上升阶段，并在后期保持最高奖励水平；IPPO 的奖励在中后期同样呈现上升趋势，但整体低于平均策略博弈；对手池博弈的奖励波动幅度较大，且在整个训练过程中一直保持这种波动性。需要注意的是，8 百万步处的 IPPO 和平均策略博弈曲线仍未完全呈现平台期，因此该检查点反映的是固定训练预算下的比较结果，不能排除更长训练后两者继续提升的可能性。
 
 \begin{figure}[htbp!]
   \centering
@@ -1315,7 +1315,7 @@ GRU-MLP 在仅 17 个 trial 的搜索后最佳值仅 192.2、均值 43.4，未�
 \begin{table}[htbp]
   \centering
   \caption{\zihao{5} 评估结果总览。均奖励为智能体 0 在 100 局中的回合累计奖励均值，
-    置信区间为 95\% Bootstrap CI（10000 次组级别重采样）。加粗表示三种博弈训练方法中的最优结果。}
+    置信区间为 95\% Bootstrap CI（10000 次组级别重采样）。加粗表示三种博弈训练方法中的最优结果}
   \label{tab:eval_overall}
   \begin{tabular}{lccc}
     \toprule
@@ -1333,7 +1333,7 @@ GRU-MLP 在仅 17 个 trial 的搜索后最佳值仅 192.2、均值 43.4，未�
   \centering
   \includegraphics[width=0.8\linewidth]{imgs/eval_compare_reward.png}
   \caption{\zihao{5} 智能体 0 在四种策略下的平均回合奖励对比。误差线为 95\% Bootstrap
-    置信区间。}
+    置信区间}
   \label{fig:eval_reward}
 \end{figure}
 
@@ -1367,7 +1367,7 @@ GRU-MLP 在仅 17 个 trial 的搜索后最佳值仅 192.2、均值 43.4，未�
   \centering
   \caption{\zihao{5} 四种策略的配对统计比较。
     配对 t 检验（自由度 = 19）在组级别进行。
-    * $p<0.05$，** $p<0.01$。}
+    * $p<0.05$，** $p<0.01$}
   \label{tab:eval_pairwise}
   \begin{tabular}{lccc}
     \toprule
@@ -1387,7 +1387,7 @@ GRU-MLP 在仅 17 个 trial 的搜索后最佳值仅 192.2、均值 43.4，未�
   \centering
   \includegraphics[width=0.8\linewidth]{imgs/eval_compare_effectsize.png}
   \caption{\zihao{5} 四种策略间的配对效应量（Cohen's d）。正值表示前者优于后者。
-    虚线标记了小（0.2）、中（0.5）、大（0.8）效应量参考线。}
+    虚线标记了小（0.2）、中（0.5）、大（0.8）效应量参考线}
   \label{fig:eval_effectsize}
 \end{figure}
 
@@ -1412,7 +1412,7 @@ IPPO 也显著优于对手池博弈（$\Delta=+156.1$，$p=1.39\times10^{-8}$，
   \centering
   \caption{\zihao{5} 策略稳定性比较。CI 宽度 $=$ 95\% Bootstrap CI 上下界之差；
     逐组 $\sigma$ $=$ 20 个对手组均奖励的标准差。
-    全部基于 10000 次 Bootstrap 重采样。}
+    全部基于 10000 次 Bootstrap 重采样}
   \label{tab:eval_stability}
   \begin{tabular}{lcccc}
     \toprule
@@ -1429,7 +1429,7 @@ IPPO 也显著优于对手池博弈（$\Delta=+156.1$，$p=1.39\times10^{-8}$，
   \centering
   \includegraphics[width=0.85\linewidth]{imgs/eval_compare_pergroup.png}
   \caption{\zihao{5} 四种策略在 20 组对手上的逐组均奖励对比。柱子越整齐说明面对
-    不同风格对手时表现越一致。初始策略对照表示未经过本章博弈训练的起始模型。}
+    不同风格对手时表现越一致。初始策略对照表示未经过本章博弈训练的起始模型}
   \label{fig:eval_pergroup}
 \end{figure}
 
@@ -1557,7 +1557,7 @@ IPPO 也显著优于对手池博弈（$\Delta=+156.1$，$p=1.39\times10^{-8}$，
 \setlength{\LTleft}{\fill}
 \setlength{\LTright}{\fill}
 \begin{longtable}{l >{\raggedright\arraybackslash}p{2.5cm}>{\raggedright\arraybackslash}p{2.2cm}p{5.5cm}}
-  \caption{\zihao{5} 观测空间逐维编码详表。实体不在视野内时对应信息全部填 0，末尾 valid 位为 0 以区分有效信息与零填充。}
+  \caption{\zihao{5} 观测空间逐维编码详表。实体不在视野内时对应信息全部填 0，末尾 valid 位为 0 以区分有效信息与零填充}
   \label{tab:appendix_observation} \\
   \toprule
   分段 & 各维序号与内容 & 取值范围 & 编码说明 \\
@@ -1631,7 +1631,7 @@ IPPO 也显著优于对手池博弈（$\Delta=+156.1$，$p=1.39\times10^{-8}$，
     \midrule
     \multicolumn{6}{p{0.85\textwidth}}{%
       注：无有效掩码方案将缺失槽位填0，有有效掩码方案为每个槽位增加valid标志位。
-      有效掩码总得分提高 9.9\%，其中智能体3改善幅度最大（48.3\%），智能体2次之（3.5\%）。} \\
+      有效掩码总得分提高 9.9\%，其中智能体3改善幅度最大（48.3\%），智能体2次之（3.5\%）} \\
   \end{tabular}
 \end{table}
 
@@ -1649,7 +1649,7 @@ IPPO 也显著优于对手池博弈（$\Delta=+156.1$，$p=1.39\times10^{-8}$，
     \multicolumn{6}{p{0.85\textwidth}}{%
       注：最近球方案仅对视野内距离最近的奖励球计算势能，所有球方案对视野内全部奖励球叠加势能。
       最近球方案总平均比所有球方案高出约 67\%，且各智能体均明显优于所有球方案。
-      两种方案均不改变最优策略，但多球势能叠加在球间中点区域形成势能抵消，减弱引导密度。} \\
+      两种方案均不改变最优策略，但多球势能叠加在球间中点区域形成势能抵消，减弱引导密度} \\
   \end{tabular}
 \end{table}
 
@@ -1675,7 +1675,7 @@ IPPO 也显著优于对手池博弈（$\Delta=+156.1$，$p=1.39\times10^{-8}$，
       距离奖励为 $\Delta R = d_t - d_{t-1}$（靠近加分、远离减分），
       稀疏方案仅通过捡球得分学习，不使用任何奖励塑形。
       距离奖励方案得分最高，不过线性势函数与反比例势函数表现均与之接近，且势函数满足 PBRS 最优策略不变性，
-      线性势函数被选为最终方案。} \\
+      线性势函数被选为最终方案} \\
   \end{tabular}
 \end{table}
 
@@ -1698,7 +1698,7 @@ IPPO 也显著优于对手池博弈（$\Delta=+156.1$，$p=1.39\times10^{-8}$，
     \midrule
     \multicolumn{6}{p{0.85\textwidth}}{%
       注：惩罚力度 0.5 在拾取奖励球得分与撞墙抑制之间取得最佳平衡（撞墙减少 29\%，得分基本持平）。
-      5.0 惩罚大幅减少撞墙但导致过度保守。} \\
+      5.0 惩罚大幅减少撞墙但导致过度保守} \\
   \end{tabular}
 
   \vspace{12pt}
@@ -1718,7 +1718,7 @@ IPPO 也显著优于对手池博弈（$\Delta=+156.1$，$p=1.39\times10^{-8}$，
     \multicolumn{6}{p{0.85\textwidth}}{%
       注：稀疏惩罚采用 0.5 碰撞惩罚无奖励塑形。线性势函数 $\Phi(s)=\frac{R_{\mathrm{wall}}}{r_{\mathrm{vision}}}d_{\min}-R_{\mathrm{wall}}$，
       反比例势函数 $\Phi(s)=-\frac{1}{d_{\min}+\epsilon}$，距离惩罚每步给予 $-\frac{1}{d_{\min}+\epsilon}$。
-      距离惩罚撞墙最少但得分也最低。} \\
+      距离惩罚撞墙最少但得分也最低} \\
   \end{tabular}
 \end{table}
 
@@ -1739,7 +1739,7 @@ IPPO 也显著优于对手池博弈（$\Delta=+156.1$，$p=1.39\times10^{-8}$，
     \multicolumn{7}{p{0.85\textwidth}}{%
       注：四种网络架构在 S1 拾取奖励球课程环境中各训练 50 万步。
       拾取奖励球任务相对简单，各架构得分接近，未拉开明显差距；Segmented MLP 得分最高（940.6），
-      GRU-MLP 隐藏层 128 维度次之（905.0）。} \\
+      GRU-MLP 隐藏层 128 维度次之（905.0）} \\
   \end{tabular}
 \end{table}
 \begin{table}[htbp]
@@ -1816,7 +1816,7 @@ IPPO 也显著优于对手池博弈（$\Delta=+156.1$，$p=1.39\times10^{-8}$，
     \midrule
     S1 & s1-no-wall-for-ball        & 仅拾取奖励球       & 50万   & 50万   & mlp\_s1\_agent\_\{id\}.pt \\
     S2 & s2-wall-and-ball          & 障碍物      & 100万  & 150万  & mlp\_s2\_agent\_\{id\}.pt \\
-    S3 & s3-enemy-only            & 敌人（无奖励球），智能体围在中心区域内        & 200万  & 350万  & mlp\_s3\_agent\_\{id\}.pt \\
+    S3 & s3-enemy-and-ball            & 敌人，智能体围在中心区域内        & 200万  & 350万  & mlp\_s3\_agent\_\{id\}.pt \\
     S4 & s4-enemy-and-wall-and-ball & 障碍物      & 100万  & 450万  & mlp\_s4\_agent\_\{id\}.pt \\
     Main & godot-game              & 更改出生点  & 50万   & 500万  & ppo\_agent\_\{id\}.pt \\
     \bottomrule
@@ -1824,7 +1824,7 @@ IPPO 也显著优于对手池博弈（$\Delta=+156.1$，$p=1.39\times10^{-8}$，
   \vspace{6pt}
 
   {注：每个阶段 4 个智能体（agent\_0$\sim$agent\_3）独立训练。每阶段加载上一阶段模型，采用 MLP 网络 + Optuna 搜索后的超参数。
-  累计训练步数 500 万步。}
+  累计训练步数 500 万步}
 \end{table}
 
 % --- 附录表：第5章博弈训练参数 ---
@@ -1848,13 +1848,13 @@ IPPO 也显著优于对手池博弈（$\Delta=+156.1$，$p=1.39\times10^{-8}$，
   注：课程学习阶段的训练步数见附录表~\ref{tab:appendix_curriculum}。
   对手池迭代博弈中，每轮依次解冻训练一个智能体并冻结其余三方，每轮每个智能体训练 50 万步，
   共 8 轮 $\times$ 4 智能体 $\times$ 50 万 = 1600 万步（累计）。
-  三种评估方法的训练步数均控制在 800 万步以公平比较。
+  三种评估方法的训练步数均控制在 800 万步以公平比较
   \end{minipage}
   \par
 \end{table}
-% ----------------------------------------------------------
+%--------------------------------------------------------
 % 致谢
-% ----------------------------------------------------------
+%--------------------------------------------------------
 \acknowledgment{
 感谢大家。
 

@@ -1154,13 +1154,20 @@ def _evaluate_policy_groups(
     """
     n_groups = len(policies)  # 智能体组的数量（即并行评估的episode数）
     n_agents = len(args.agent_configs)  # 每组中智能体的数量
+    info_keys = [
+        "attack_launched", "damage_dealt_to_player", "damage_dealt_to_enemy",
+        "damage_taken", "kill_enemy", "kill_player",
+        "ball_A_collected", "ball_B_collected", "died", "wall_collision",
+        "game_score",
+    ]  # step_reward 是瞬态值不累积
     
     # 重置环境，获取初始观测值
     obs_raw, _ = envs.reset(seed=args.seed)
     next_obs = np.asarray(obs_raw, dtype=np.float32)  # 转换为numpy数组并指定数据类型
     
-    # 初始化奖励累加器和episode计数器
+    # 初始化奖励/行为累加器和episode计数器
     episode_rewards = np.zeros((n_groups, n_agents), dtype=np.float64)  # 记录每组每个智能体的累计奖励
+    episode_info = np.zeros((n_groups, n_agents, len(info_keys)), dtype=np.float64)  # 行为统计累加
     episode_counts = np.zeros(n_groups, dtype=np.int64)  # 记录每组已完成的episode数量
     
     # 初始化RNN隐藏状态（如果智能体使用循环神经网络）
@@ -1197,13 +1204,23 @@ def _evaluate_policy_groups(
                 rnn_states[group_idx][agent_idx] = next_state  # 更新RNN状态
 
         # 执行动作并获取环境反馈
-        next_obs, rewards, terms, truncs, _ = envs.step(actions_by_env.reshape(-1))
+        next_obs, rewards, terms, truncs, infos = envs.step(actions_by_env.reshape(-1))
         next_obs = np.asarray(next_obs, dtype=np.float32)  # 转换新观测值
         
         # 处理奖励和终止信号
         rewards_by_env = np.asarray(rewards, dtype=np.float32).reshape(n_groups, n_agents)
         dones_by_env = np.logical_or(terms, truncs).reshape(n_groups, n_agents)  # 合并终止和截断信号
         episode_rewards += rewards_by_env  # 累加奖励
+
+        # 累加本步行为统计
+        if infos:
+            for g in range(n_groups):
+                for a in range(n_agents):
+                    flat_idx = g * n_agents + a
+                    if flat_idx < len(infos) and isinstance(infos[flat_idx], dict):
+                        info = infos[flat_idx]
+                        for k_i, key in enumerate(info_keys):
+                            episode_info[g, a, k_i] += float(info.get(key, 0.0))
 
         # 检查每个组是否有episode结束
         for group_idx in range(n_groups):
@@ -1217,19 +1234,21 @@ def _evaluate_policy_groups(
                 
                 # 为该组中每个智能体记录结果
                 for agent_idx in range(n_agents):
-                    rows.append(
-                        {
-                            "model_label": model_label,  # 模型标签
-                            "group_id": group_idx,  # 组ID
-                            "episode": episode,  # episode编号
-                            "agent_id": args.agent_configs[agent_idx].agent_id,  # 智能体ID
-                            "reward": float(episode_rewards[group_idx, agent_idx]),  # 累计奖励
-                        }
-                    )
+                    row_dict = {
+                        "model_label": model_label,  # 模型标签
+                        "group_id": group_idx,  # 组ID
+                        "episode": episode,  # episode编号
+                        "agent_id": args.agent_configs[agent_idx].agent_id,  # 智能体ID
+                        "reward": float(episode_rewards[group_idx, agent_idx]),  # 累计奖励
+                    }
+                    for k_i, key in enumerate(info_keys):
+                        row_dict[key] = float(episode_info[group_idx, agent_idx, k_i])
+                    rows.append(row_dict)
                 
-                # 更新计数器并重置该组的奖励和RNN状态
+                # 更新计数器并重置该组的奖励/行为和RNN状态
                 episode_counts[group_idx] += 1
                 episode_rewards[group_idx, :] = 0.0  # 重置奖励累加器
+                episode_info[group_idx, :, :] = 0.0   # 重置行为累加器
                 # 重置RNN状态以开始新的episode
                 rnn_states[group_idx] = [
                     agent.get_initial_state(1, device) if agent.is_recurrent else None

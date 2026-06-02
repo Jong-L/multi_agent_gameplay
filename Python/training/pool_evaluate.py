@@ -7,9 +7,10 @@ All statistics (bootstrap CI, paired t-test, Cohen's d) are computed on
 agent_0's per-group mean rewards.
 
 Output:
-  - CSV with per-episode rows (model_label, group_id, episode, agent_id, reward)
-  - JSON with per-model statistics, pairwise comparisons, per-group breakdown
-  - Terminal summary table
+  - CSV with per-episode rows (model_label, group_id, episode, agent_id, reward,
+    + behavior event counts: attack_launched, kill_enemy, kill_player, etc.)
+  - JSON with per-model statistics, pairwise comparisons, per-group breakdown, behavior stats
+  - Terminal summary table (reward + behavior)
 """
 from __future__ import annotations
 
@@ -74,6 +75,8 @@ class PoolEvaluateArgs(IppoPoolArgs):
     """评估组数"""
     pool_eval_episodes_per_group: int = 5
     """每组评估 episode 数"""
+    num_runs: int = 10
+    """重复评估次数（每次独立打开/关闭游戏，结果汇总平均）"""
     run_name: Optional[str] = "pool_evaluate"
     """运行名称"""
     pool_eval_output_path: Optional[str] = "logs/ippo_pool_eval.csv"
@@ -135,6 +138,7 @@ def _parse_args() -> PoolEvaluateArgs:
     parser.add_argument("--allow-fewer-opponents", action="store_true")
     parser.add_argument("--eval-groups", type=int, default=args.pool_eval_groups)
     parser.add_argument("--episodes-per-group", type=int, default=args.pool_eval_episodes_per_group)
+    parser.add_argument("--num-runs", type=int, default=args.num_runs)
     parser.add_argument("--output-path", default=args.pool_eval_output_path)
     parser.add_argument("--stats-json-path", default=args.stats_json_path)
     parser.add_argument("--bootstrap-samples", type=int, default=args.bootstrap_samples)
@@ -157,6 +161,7 @@ def _parse_args() -> PoolEvaluateArgs:
     args.strict_opponent_count = not bool(parsed.allow_fewer_opponents)
     args.pool_eval_groups = int(parsed.eval_groups)
     args.pool_eval_episodes_per_group = int(parsed.episodes_per_group)
+    args.num_runs = int(parsed.num_runs)
     args.pool_eval_output_path = parsed.output_path
     args.stats_json_path = parsed.stats_json_path
     args.bootstrap_samples = int(parsed.bootstrap_samples)
@@ -178,7 +183,6 @@ def _parse_args() -> PoolEvaluateArgs:
 # ═══════════════════════════════════════════════════════════════════════
 #  Model label helpers
 # ═══════════════════════════════════════════════════════════════════════
-
 def _make_model_labels(
     model_paths: tuple[str, ...],
     labels: Optional[tuple[str, ...]],
@@ -431,6 +435,43 @@ def _cohens_d(x: np.ndarray, y: np.ndarray) -> float:
 
 
 # ═══════════════════════════════════════════════════════════════════════
+#  Behavior statistics (per-episode event counts)
+# ═══════════════════════════════════════════════════════════════════════
+
+BEHAVIOR_FIELDS = [
+    "attack_launched", "damage_dealt_to_player", "damage_dealt_to_enemy",
+    "damage_taken", "kill_enemy", "kill_player",
+    "ball_A_collected", "ball_B_collected", "died", "wall_collision",
+    "game_score",
+]
+
+
+def _compute_behavior_stats(
+    rows: list[dict[str, Any]],
+    model_labels: list[str],
+    main_agent_id: int,
+) -> list[dict[str, Any]]:
+    """Compute per-model behavior statistics for agent_0."""
+    results = []
+    for label in model_labels:
+        main_rows = [
+            r for r in rows
+            if r["model_label"] == label and int(r["agent_id"]) == main_agent_id
+        ]
+        n_eps = len(main_rows)
+        stats: dict[str, Any] = {"model_label": label, "n_episodes": n_eps}
+        for field in BEHAVIOR_FIELDS:
+            vals = np.array([float(r.get(field, 0.0)) for r in main_rows])
+            stats[field] = {
+                "mean": float(vals.mean()),
+                "std": float(vals.std(ddof=0)),
+                "total": float(vals.sum()),
+            }
+        results.append(stats)
+    return results
+
+
+# ═══════════════════════════════════════════════════════════════════════
 #  Output: CSV
 # ═══════════════════════════════════════════════════════════════════════
 
@@ -440,7 +481,14 @@ def _write_csv(path: Optional[str], rows: list[dict[str, Any]]) -> None:
     output_path = pathlib.Path(path)
     if output_path.parent:
         output_path.parent.mkdir(parents=True, exist_ok=True)
-    fieldnames = ["model_label", "group_id", "episode", "agent_id", "reward"]
+    bare = ["run_id", "model_label", "group_id", "episode", "agent_id", "reward"]
+    info_fields = [
+        "attack_launched", "damage_dealt_to_player", "damage_dealt_to_enemy",
+        "damage_taken", "kill_enemy", "kill_player",
+        "ball_A_collected", "ball_B_collected", "died", "wall_collision",
+        "game_score",
+    ]
+    fieldnames = bare + info_fields
     with output_path.open("w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames, extrasaction="ignore")
         writer.writeheader()
@@ -452,13 +500,16 @@ def _save_stats_json(
     path: Optional[str],
     model_stats: list[dict[str, Any]],
     pairwise: list[dict[str, Any]],
+    behavior_stats: Optional[list[dict[str, Any]]] = None,
 ) -> None:
     if path is None:
         return
     output_path = pathlib.Path(path)
     if output_path.parent:
         output_path.parent.mkdir(parents=True, exist_ok=True)
-    payload = {"models": model_stats, "pairwise_comparisons": pairwise}
+    payload: dict[str, Any] = {"models": model_stats, "pairwise_comparisons": pairwise}
+    if behavior_stats is not None:
+        payload["behavior"] = behavior_stats
     with output_path.open("w", encoding="utf-8") as f:
         json.dump(payload, f, indent=2, ensure_ascii=False, default=str)
     print(f"[Eval] Stats JSON saved to {output_path}")
@@ -472,6 +523,7 @@ def _print_summary(
     model_stats: list[dict[str, Any]],
     pairwise: list[dict[str, Any]],
     model_labels: list[str],
+    behavior_stats: Optional[list[dict[str, Any]]] = None,
 ) -> None:
     SEP = "=" * 72
     SUB = "-" * 72
@@ -497,7 +549,7 @@ def _print_summary(
     # ---- Pairwise ----
     if len(pairwise) > 0:
         print(f"\n{SEP}")
-        print("[Pairwise Comparison]  (paired t-test on per-group mean rewards, n=20)")
+        print(f"[Pairwise Comparison]  (paired t-test on per-group mean rewards, n={model_stats[0]['n_groups']})")
         print(f"{SEP}")
         header = f"{'Pair':<16} {'Δ Reward [95% CI]':>28} {'p':>10} {'Cohen d':>10} {'Sig':>6}"
         print(header)
@@ -533,6 +585,36 @@ def _print_summary(
             rw = stat["per_group_mean_rewards"].get(str(g), 0.0)
             row_str += f" {rw:>10.1f}"
         print(row_str)
+
+    # ---- Behavior stats (agent_0 only) ----
+    if behavior_stats is not None and len(behavior_stats) > 0:
+        print(f"\n{SEP}")
+        print("[Behavior Statistics]  (agent_0 per-episode mean)")
+        print(f"{SEP}")
+
+        short_names = {
+            "attack_launched": "Attack",
+            "damage_dealt_to_player": "Dmg→Player",
+            "damage_dealt_to_enemy": "Dmg→Enemy",
+            "damage_taken": "DmgTaken",
+            "kill_enemy": "KillEnemy",
+            "kill_player": "KillPlayer",
+            "ball_A_collected": "BallA",
+            "ball_B_collected": "BallB",
+            "died": "Died",
+            "wall_collision": "WallHit",
+            "game_score": "GameScore",
+        }
+
+        for field in BEHAVIOR_FIELDS:
+            name = short_names.get(field, field)
+            print(f"\n  [{name}]")
+            header = f"  {'Model':<10} {'Mean':>10} {'Std':>10} {'Total':>10}"
+            print(header)
+            print(f"  {SUB[:46]}")
+            for bs in behavior_stats:
+                v = bs[field]
+                print(f"  {bs['model_label']:<10} {v['mean']:10.2f} {v['std']:10.2f} {v['total']:10.1f}")
 
     # ---- Interpretation ----
     print(f"\n{SEP}")
@@ -575,46 +657,82 @@ def run_pool_evaluation(args: PoolEvaluateArgs) -> None:
     eval_args.load_mode = "weights"
     model_labels = _make_model_labels(eval_args.eval_model_paths, eval_args.eval_model_labels)
 
-    writer, device, envs, seg, _ = init_training_setup(eval_args)
-    try:
-        _configure_runtime_args(eval_args, envs, seg)
-        n_actions = int(envs.single_action_space.n)
-        pool = _build_recent_opponent_pool(eval_args)
-        opponent_ids = [
-            aid for aid in _agent_ids(eval_args) if aid != int(eval_args.main_agent_id)
-        ]
-        opponent_groups = _sample_opponent_groups(
-            pool, opponent_ids, int(eval_args.pool_eval_groups), int(eval_args.seed),
-        )
+    num_runs = int(eval_args.num_runs)
+    all_rows: list[dict[str, Any]] = []
+    run_rewards: list[float] = []
 
-        # Phase 1: run all evaluations
-        rows: list[dict[str, Any]] = []
-        for model_label, model_path in zip(model_labels, eval_args.eval_model_paths):
-            print(f"[Eval] {model_label}: {model_path}")
-            policies = _build_policy_groups(
-                model_path, int(eval_args.main_agent_id), opponent_groups,
-                eval_args, n_actions, seg, device,
+    SEP = "=" * 60
+    for run_idx in range(num_runs):
+        print(f"\n{SEP}")
+        print(f"[Eval] Run {run_idx + 1}/{num_runs}")
+        print(SEP)
+
+        # --- Fresh env for each run: open Godot → evaluate → close ---
+        writer, device, envs, seg, _ = init_training_setup(eval_args)
+        try:
+            _configure_runtime_args(eval_args, envs, seg)
+            n_actions = int(envs.single_action_space.n)
+            pool = _build_recent_opponent_pool(eval_args)
+            opponent_ids = [
+                aid for aid in _agent_ids(eval_args) if aid != int(eval_args.main_agent_id)
+            ]
+            opponent_groups = _sample_opponent_groups(
+                pool, opponent_ids, int(eval_args.pool_eval_groups), int(eval_args.seed),
             )
-            rows.extend(
-                _evaluate_policy_groups(model_label, policies, eval_args, envs, device)
-            )
 
-        # Phase 2: compute statistics
-        model_stats = _compute_model_stats(
-            rows, model_labels, int(eval_args.main_agent_id), int(eval_args.bootstrap_samples),
-        )
-        pairwise = _compute_pairwise(rows, model_labels, int(eval_args.main_agent_id))
+            run_rows: list[dict[str, Any]] = []
+            for model_label, model_path in zip(model_labels, eval_args.eval_model_paths):
+                print(f"  [Eval] {model_label}: {model_path}")
+                policies = _build_policy_groups(
+                    model_path, int(eval_args.main_agent_id), opponent_groups,
+                    eval_args, n_actions, seg, device,
+                )
+                run_rows.extend(
+                    _evaluate_policy_groups(model_label, policies, eval_args, envs, device)
+                )
 
-        # Phase 3: save outputs
-        _write_csv(eval_args.pool_eval_output_path, rows)
-        _save_stats_json(eval_args.stats_json_path, model_stats, pairwise)
+            # Tag rows with run_id
+            for row in run_rows:
+                row["run_id"] = run_idx
 
-        # Phase 4: print summary
-        _print_summary(model_stats, pairwise, model_labels)
+            # Per-run quick summary (agent_0 only)
+            main_rows = [r for r in run_rows if int(r["agent_id"]) == eval_args.main_agent_id]
+            mean_rw = float(np.mean([r["reward"] for r in main_rows]))
+            run_rewards.append(mean_rw)
+            print(f"  [Run {run_idx + 1}/{num_runs}] Agent_0 mean reward: {mean_rw:8.1f}  "
+                  f"(cumulative avg: {np.mean(run_rewards):.1f})")
 
-    finally:
-        envs.close()
-        writer.close()
+            all_rows.extend(run_rows)
+        finally:
+            envs.close()
+            writer.close()
+
+    # --- Inter-run variability summary ---
+    print(f"\n{SEP}")
+    print("[Inter-Run Variability]  (agent_0 mean reward per run)")
+    print(SEP)
+    print(f"  Runs: {num_runs}")
+    print(f"  Mean: {np.mean(run_rewards):.1f}  |  Std: {np.std(run_rewards):.1f}  "
+          f"|  Min: {np.min(run_rewards):.1f}  |  Max: {np.max(run_rewards):.1f}")
+
+    # Phase 2: compute statistics on pooled data
+    model_stats = _compute_model_stats(
+        all_rows, model_labels, int(eval_args.main_agent_id), int(eval_args.bootstrap_samples),
+    )
+    pairwise = _compute_pairwise(all_rows, model_labels, int(eval_args.main_agent_id))
+    behavior_stats = _compute_behavior_stats(
+        all_rows, model_labels, int(eval_args.main_agent_id),
+    )
+
+    # Phase 3: save outputs
+    _write_csv(eval_args.pool_eval_output_path, all_rows)
+    _save_stats_json(eval_args.stats_json_path, model_stats, pairwise, behavior_stats)
+
+    # Phase 4: print summary
+    _print_summary(model_stats, pairwise, model_labels, behavior_stats)
+
+    print(f"\n[Eval] Completed {num_runs} runs, {len(all_rows)} total episodes "
+          f"({len(all_rows) // num_runs} per run).")
 
 
 def main() -> None:
