@@ -19,8 +19,8 @@ data_analyze/
 godot-game/build*/
 godot-game/optuna-env/
 
-# Curriculum environments (exclude large zip files)
-curriculum_envs/*.zip
+# Curriculum environments
+curriculum_envs/
 
 # Python cache files
 __pycache__/
