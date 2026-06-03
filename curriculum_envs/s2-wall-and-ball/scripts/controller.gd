@@ -109,3 +109,13 @@ func set_action(action) -> void:
 			#print(move_action)
 	_player.pending_action = move_action as Player.Action
 	_prev_action = move_action
+
+func get_info() -> Dictionary:
+	if play_scene==null or play_scene.reward_manager==null:
+		return {}
+	
+	var pid = _player.player_id if _player is Player else 0
+	var info =play_scene.reward_manager.get_step_info(pid)
+	play_scene.reward_manager.clear_step_info(pid)
+	
+	return info

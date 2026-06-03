@@ -53,6 +53,7 @@ var _skip_ball_potential_shaping_once: Dictionary = {}
 var _prev_ball_potentials: Dictionary = {}
 var _prev_wall_potentials: Dictionary = {}
 var _prev_ball_distances: Dictionary = {}  # {player_id: 上帧最近球距离}
+var _step_info:Dictionary={} #执行动作时的额外信息
 
 # ── 配置路由 ──
 # 根据玩家ID获取对应的奖励配置
@@ -94,10 +95,13 @@ func _physics_process(delta: float) -> void:
 		for player in _play_scene.players:
 			on_player_moved(player)
 			idle_penalty(player)
+			var pid:int =player.player_id
+			if _step_info.has(pid):
+				_step_info[pid]["step_reward"] = player.ai_controller.reward
 		# circle 结束：快照并发射信号（此时 ai_controller.reward 包含本 circle 全部奖励）
 		if game_config and game_config.enable_info_window:
 			_snapshot_circle_rewards()
-
+		
 
 #全局信号连接
 func _connect_signals() -> void:
@@ -125,6 +129,7 @@ func setup(play_scene: PlayScene) -> void:
 	# 从 Sync 节点获取 gamma
 	_init_shaping_gamma()
 	_init_potentials()
+	_init_step_info()
 	# 根据配置决定是否创建 RewardLogger
 	if game_config and game_config.reward_logger_enabled:
 		_reward_logger = RewardLogger.new()
@@ -154,6 +159,35 @@ func _disconnect_skill_signals() -> void:
 		if is_instance_valid(player) and player.skill_controller != null and player.skill_controller.skill_activated.is_connected(_on_player_skill_activated):
 			player.skill_controller.skill_activated.disconnect(_on_player_skill_activated)
 
+func _init_step_info()->void:
+	_step_info.clear()
+	
+	for i in range(4):
+		_step_info[i] = {
+			"attack_launched": 0,#发动攻击
+			"damage_dealt_to_player": 0,#造成伤害次数
+			"damage_dealt_to_enemy": 0,
+			"damage_taken": 0,#受到伤害次数
+			"kill_enemy": 0,
+			"kill_player": 0,
+			"ball_A_collected": 0,
+			"ball_B_collected": 0,
+			"died": 0,
+			"wall_collision": 0,#次数
+			"step_reward": 0.0,
+			"game_score":0.0#局内分数
+		}
+
+func get_step_info(player_id: int) -> Dictionary:
+	return _step_info.get(player_id, {}).duplicate()
+	
+func clear_step_info(player_id:int)->void:
+	if _step_info.has(player_id):
+		for key in _step_info[player_id]:
+			if key == "step_reward" or key == "game_score":
+				_step_info[player_id][key] = 0.0
+			else:
+				_step_info[player_id][key] = 0
 #事件奖励，更新上次正奖励时间
 func add_reward(player_id: int, value: float, source: String = "") -> void:
 	if _play_scene == null:
@@ -184,6 +218,27 @@ func add_reward(player_id: int, value: float, source: String = "") -> void:
 	# 记录到纯净奖励日志（排除塑形奖励）
 	if _reward_logger != null:
 		_reward_logger.log_reward(player_id, source, value, _game_time)
+	
+	if _step_info.has(player_id):
+		_step_info[player_id]["game_score"]+=value
+		match source:
+			"attack":           _step_info[player_id]["attack_launched"] += 1
+			"kill_enemy":       _step_info[player_id]["kill_enemy"] += 1
+			"kill_player":      _step_info[player_id]["kill_player"] += 1
+			"bear_damage":      _step_info[player_id]["damage_taken"] +=1
+			"cause_damage_to_enemy":
+					_step_info[player_id]["damage_dealt_to_enemy"] += 1
+			"cause_damage_to_player":
+				_step_info[player_id]["damage_dealt_to_player"] += 1
+			"collect_ball_A":
+					_step_info[player_id]["ball_A_collected"] += 1
+			"collect_ball_B":
+				_step_info[player_id]["ball_B_collected"] += 1
+			"died":             _step_info[player_id]["died"] += 1
+			"wall_collision":   _step_info[player_id]["wall_collision"] += 1
+			"starvation":       pass  # 饥饿不需要统计
+			
+
 
 ## ── 事件处理 ──
 
@@ -252,7 +307,7 @@ func _on_player_skill_activated(entity: Entity, _skill: Skill) -> void:
 #移动惩罚
 func on_player_moved(player: Player) -> void:
 	if player.is_moving:
-		#print(_cfg(player.player_id).run)
+		#add_reward(player.player_id, _cfg(player.player_id).run, "run")
 		player.ai_controller.reward+=_cfg(player.player_id).run
 
 #待机惩罚（中心区域待机豁免）
@@ -261,7 +316,6 @@ func idle_penalty(player:Player)->void:
 		return
 		
 	if not player.is_moving:
-		#print(_cfg(player.player_id).idle)
 		player.ai_controller.reward+=_cfg(player.player_id).idle
 
 func _reset_ball_shaping_after_ball_removed(removed_ball: RewardBall) -> void:
@@ -381,7 +435,6 @@ func _init_potentials() -> void:
 			continue
 
 		_prev_ball_potentials[pid] = _calculate_ball_shaping_potential(player, cfg)
-
 
 # 奖励球重生后立即重新计算势能基线，避免下一帧塑形奖励出现虚假正向跳跃
 # 仅在势能塑形模式（LINEAR / EXPONENTIAL / INVERSE）下生效
@@ -811,6 +864,7 @@ func reset() -> void:
 	_prev_circle_pure.clear()
 	_prev_circle_ball.clear()
 	_prev_circle_wall.clear()
+	_init_step_info() 
 
 ## ── 调试窗口接口 ──
 

@@ -99,7 +99,7 @@ def plot_reward_comparison(stats: dict, output_dir: str, prefix: str) -> None:
     ax.set_xticks(x)
     ax.set_xticklabels(labels, fontsize=12)
     ax.set_ylabel("平均回合奖励", fontsize=13)
-    ax.set_title("智能体 0 平均回合奖励对比\n（95% Bootstrap 置信区间，20 组对手，每组 5 局）",
+    ax.set_title("智能体 0 平均回合奖励对比\n（95% Bootstrap 置信区间，20 组对手）",
                  fontsize=13, fontweight="bold")
     ax.grid(axis="y", alpha=0.3, linestyle="--")
 
@@ -659,7 +659,7 @@ def plot_per_group_behavior(
         if idx == 0:
             ax.legend(fontsize=8.5, edgecolor="#cccccc", ncol=len(model_labels_raw))
 
-    fig.suptitle("各对手组行为事件曲线（智能体 0，每组 5 局均值）",
+    fig.suptitle("各对手组行为事件曲线（智能体 0）",
                  fontsize=13, fontweight="bold", y=1.01)
     fig.tight_layout(pad=2.0)
     out_path = str(pathlib.Path(output_dir) / f"{prefix}_pergroup_behavior.png")

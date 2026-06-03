@@ -8,11 +8,11 @@ class_name RewardBallManager
 ## A类球：4个玩家各3个=12个，出生点所在角的子区域内生成，不重生
 ## B类球：巡逻区域内最多5个，5秒后重生（位置由 Manager 决定）
 
-const BALL_A_PER_PLAYER: int = 0
-const BALL_B_MAX_COUNT: int = 1
+const BALL_A_PER_PLAYER: int = 3
+const BALL_B_MAX_COUNT: int = 5
 const BALL_A_REWARD: float = 1.0
 const BALL_B_REWARD: float = 1.5
-const BALL_B_RESPAWN_DELAY: float = 15.0  #B类球重生时间
+const BALL_B_RESPAWN_DELAY: float = 6.0
 const BALL_A_SPAWN_MARGIN: float = 10.0   ## A类球距子区域边缘的最小距离
 const BALL_A_MIN_DECO_DIST: float = 20.0   ## A类球与障碍物的最小距离
 const BALL_A_EXTENT_RATIO: float = 0.2    ## A类球子区域占竞技场尺寸的比例

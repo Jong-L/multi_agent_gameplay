@@ -8,7 +8,7 @@ class_name RewardBallManager
 ## A类球：4个玩家各3个=12个，出生点所在角的子区域内生成，不重生
 ## B类球：巡逻区域内最多5个，5秒后重生（位置由 Manager 决定）
 
-const BALL_A_PER_PLAYER: int = 0
+const BALL_A_PER_PLAYER: int = 3
 const BALL_B_MAX_COUNT: int = 5
 const BALL_A_REWARD: float = 1.0
 const BALL_B_REWARD: float = 1.5

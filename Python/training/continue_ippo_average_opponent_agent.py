@@ -62,17 +62,21 @@ from continue_ippo_pool_agent import (
 class ContinueAverageOpponentAgentArgs(IppoPoolArgs):
     """Config for final-only training against average opponent policies."""
 
+    env_path: Optional[str] = "curriculum_envs\\s5-player-only\\build-multiagent\\game.exe"
+    n_parallel: int = 1
     main_agent_id: int = 0
-    main_checkpoint_path: str = "saved_models/ippo_bootstrap_agent0.pt"
+    main_checkpoint_path: str = "saved_models\\curriculum\\ppo_agent_0.pt"
+    """训练的模型路径"""
     load_mode: str = "weights"
     opponent_checkpoint_dir: str = "saved_models/ippo_pool_checkpoints"
     opponent_keep_per_agent: int = 20
+    opponent_action_mode: str = "sample"  # "argmax" or "sample"
     strict_opponent_count: bool = True
     phase_name: str = "agent0_vs_average_opponents"
-    save_model_path: Optional[str] = "saved_models/ippo_average_opponent_agent0_final"
+    save_model_path: Optional[str] = "saved_models\\curriculum\\s5_average_opponent_agent0"
     pool_checkpoint_dir: Optional[str] = "saved_models/ippo_average_opponent_checkpoints"
-    pool_final_timesteps: int = 10_000_000
-    run_name: Optional[str] = "ippo_average_opponent_agent0"
+    pool_final_timesteps: int = 5000_000
+    run_name: Optional[str] = "ippo_average_opponent_curriculum_agent0"
     ppo_model_paths: list[Optional[str]] = None
 
     def __post_init__(self) -> None:
@@ -92,19 +96,26 @@ class AverageOpponentEnsemble:
     def size(self) -> int:
         return len(self.policies)
 
-    def act_argmax_average_prob(self, obs: torch.Tensor) -> torch.Tensor:
-        if not self.policies:
-            raise RuntimeError(f"Average opponent agent_{self.agent_id} has no policies.")
-
+    def _compute_average_probs(self, obs: torch.Tensor) -> torch.Tensor:
         prob_sum: Optional[torch.Tensor] = None
         for policy in self.policies:
             features, _ = policy._forward_features(obs)
             logits = policy.actor(features)
             probs = torch.softmax(logits, dim=-1)
             prob_sum = probs if prob_sum is None else prob_sum + probs
+        return prob_sum / float(len(self.policies))
 
-        avg_probs = prob_sum / float(len(self.policies))
+    def act_argmax_average_prob(self, obs: torch.Tensor) -> torch.Tensor:
+        if not self.policies:
+            raise RuntimeError(f"Average opponent agent_{self.agent_id} has no policies.")
+        avg_probs = self._compute_average_probs(obs)
         return torch.argmax(avg_probs, dim=-1)
+
+    def act_sample_average_prob(self, obs: torch.Tensor) -> torch.Tensor:
+        if not self.policies:
+            raise RuntimeError(f"Average opponent agent_{self.agent_id} has no policies.")
+        avg_probs = self._compute_average_probs(obs)
+        return torch.multinomial(avg_probs, num_samples=1).squeeze(-1)
 
 
 def _parse_args() -> ContinueAverageOpponentAgentArgs:
@@ -115,6 +126,7 @@ def _parse_args() -> ContinueAverageOpponentAgentArgs:
     parser.add_argument("--load-mode", choices=["resume", "checkpoint", "weights"], default=args.load_mode)
     parser.add_argument("--opponent-checkpoint-dir", default=args.opponent_checkpoint_dir)
     parser.add_argument("--opponent-keep-per-agent", type=int, default=args.opponent_keep_per_agent)
+    parser.add_argument("--opponent-action-mode", choices=["argmax", "sample"], default=args.opponent_action_mode)
     parser.add_argument("--allow-fewer-opponents", action="store_true")
     parser.add_argument("--timesteps", type=int, default=args.pool_final_timesteps)
     parser.add_argument("--save-model-path", default=args.save_model_path)
@@ -140,6 +152,7 @@ def _parse_args() -> ContinueAverageOpponentAgentArgs:
     args.load_mode = parsed.load_mode
     args.opponent_checkpoint_dir = parsed.opponent_checkpoint_dir
     args.opponent_keep_per_agent = int(parsed.opponent_keep_per_agent)
+    args.opponent_action_mode = parsed.opponent_action_mode
     args.strict_opponent_count = not bool(parsed.allow_fewer_opponents)
     args.pool_final_timesteps = int(parsed.timesteps)
     args.save_model_path = parsed.save_model_path
@@ -260,6 +273,7 @@ def collect_parallel_rollout_average_opponents(
     reward_normalizers,
     rnn_states: list[Optional[torch.Tensor]],
     step_increment: int,
+    opponent_action_mode: str = "argmax",
 ) -> tuple[list[RolloutData], int, list[Optional[torch.Tensor]], list[list[float]]]:
     """Collect rollout data while non-main agents use averaged frozen policies."""
     n_agents = len(agents_cfg)
@@ -325,7 +339,10 @@ def collect_parallel_rollout_average_opponents(
                 actions_by_env[:, i] = action.cpu().numpy().astype(np.int64)
             elif i in average_opponents:
                 with torch.no_grad():
-                    action = average_opponents[i].act_argmax_average_prob(obs_i)
+                    if opponent_action_mode == "sample":
+                        action = average_opponents[i].act_sample_average_prob(obs_i)
+                    else:
+                        action = average_opponents[i].act_argmax_average_prob(obs_i)
                 buffers[i]["actions"][step] = action
                 actions_by_env[:, i] = action.cpu().numpy().astype(np.int64)
             else:
@@ -428,7 +445,7 @@ def _save_main_snapshot(
         ctx.args,
         extra={
             **train_state,
-            "opponent_mode": "average_action_probability_argmax",
+            "opponent_mode": f"average_action_probability_{ctx.args.opponent_action_mode}",
             "average_opponent_rows": _average_opponent_rows(average_opponents),
         },
     )
@@ -474,6 +491,7 @@ def train_average_opponent_phase(
                 ctx.reward_normalizers,
                 rnn_states,
                 step_increment,
+                opponent_action_mode=args.opponent_action_mode,
             )
         )
         ctx.next_obs = torch.stack([r.next_obs for r in rollouts], dim=1).reshape(args.num_envs, -1)
@@ -555,7 +573,7 @@ def run_continue_average_opponent_agent(args: ContinueAverageOpponentAgentArgs) 
         final_state["continued_from"] = str(pathlib.Path(args.main_checkpoint_path))
         final_state["load_mode"] = args.load_mode
         final_state["extra_phase_timesteps"] = int(args.pool_final_timesteps)
-        final_state["opponent_mode"] = "average_action_probability_argmax"
+        final_state["opponent_mode"] = f"average_action_probability_{args.opponent_action_mode}"
         final_state["average_opponent_rows"] = _average_opponent_rows(average_opponents)
         save_selected_agents(
             ctx.args.save_model_path,
