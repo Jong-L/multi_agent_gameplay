@@ -57,17 +57,33 @@ from continue_ippo_pool_agent import (
     load_main_agent_checkpoint,
 )
 
+# Per-episode info keys tracked from Godot environment (see controller.gd get_info())
+_EPISODE_INFO_KEYS: list[str] = [
+    "attack_launched",
+    "damage_dealt_to_player",
+    "damage_dealt_to_enemy",
+    "damage_taken",
+    "kill_enemy",
+    "kill_player",
+    "ball_A_collected",
+    "ball_B_collected",
+    "died",
+    "wall_collision",
+    "game_score",
+]
+
 
 @dataclass
 class ContinueAverageOpponentAgentArgs(IppoPoolArgs):
     """Config for final-only training against average opponent policies."""
 
     env_path: Optional[str] = "curriculum_envs\\s5-player-only\\build-multiagent\\game.exe"
-    n_parallel: int = 1
     main_agent_id: int = 0
-    main_checkpoint_path: str = "saved_models\\curriculum\\ppo_agent_0.pt"
+    # n_parallel: int = 1
+    # show_window: bool = True
+    main_checkpoint_path: str = "saved_models/curriculum/s5_average_opponent_agent0_agent0.pt"
     """训练的模型路径"""
-    load_mode: str = "weights"
+    load_mode: str = "weights"# "resume", "checkpoint", or "weights"
     opponent_checkpoint_dir: str = "saved_models/ippo_pool_checkpoints"
     opponent_keep_per_agent: int = 20
     opponent_action_mode: str = "sample"  # "argmax" or "sample"
@@ -75,8 +91,8 @@ class ContinueAverageOpponentAgentArgs(IppoPoolArgs):
     phase_name: str = "agent0_vs_average_opponents"
     save_model_path: Optional[str] = "saved_models\\curriculum\\s5_average_opponent_agent0"
     pool_checkpoint_dir: Optional[str] = "saved_models/ippo_average_opponent_checkpoints"
-    pool_final_timesteps: int = 5000_000
-    run_name: Optional[str] = "ippo_average_opponent_curriculum_agent0"
+    pool_final_timesteps: int = 2000_0000
+    run_name: Optional[str] = "average_opponent_with_enemy"
     ppo_model_paths: list[Optional[str]] = None
 
     def __post_init__(self) -> None:
@@ -274,11 +290,16 @@ def collect_parallel_rollout_average_opponents(
     rnn_states: list[Optional[torch.Tensor]],
     step_increment: int,
     opponent_action_mode: str = "argmax",
-) -> tuple[list[RolloutData], int, list[Optional[torch.Tensor]], list[list[float]]]:
-    """Collect rollout data while non-main agents use averaged frozen policies."""
+) -> tuple[list[RolloutData], int, list[Optional[torch.Tensor]], list[list[float]], list[list[dict[str, float]]]]:
+    """Collect rollout data while non-main agents use averaged frozen policies.
+
+    Returns (rollouts, global_step, rnn_states, new_episode_returns, new_episode_stats)
+    where new_episode_stats[i] is a list of per-episode info dicts for agent i.
+    """
     n_agents = len(agents_cfg)
     total_slots = envs.num_envs
     n_game_envs = total_slots // n_agents
+    n_info_keys = len(_EPISODE_INFO_KEYS)
     obs_shape = envs.single_observation_space.shape
     obs_dim = obs_shape[0]
 
@@ -306,6 +327,10 @@ def collect_parallel_rollout_average_opponents(
     next_obs_all = next_obs_all.clone()
     next_done_all = next_done_all.clone()
     new_episode_returns: list[list[float]] = [[] for _ in range(n_agents)]
+    new_episode_stats: list[list[dict[str, float]]] = [[] for _ in range(n_agents)]
+
+    # Per-agent, per-env accumulators for episode info (reset on done)
+    accum_info: np.ndarray = np.zeros((n_agents, n_game_envs, n_info_keys), dtype=np.float64)
 
     for step in range(rollout_steps):
         global_step += step_increment
@@ -355,7 +380,7 @@ def collect_parallel_rollout_average_opponents(
                 buffers[i]["actions"][step] = torch.tensor(random_actions, device=device)
                 actions_by_env[:, i] = random_actions
 
-        next_obs_raw, rewards_raw, terminations, truncations, _ = envs.step(
+        next_obs_raw, rewards_raw, terminations, truncations, infos = envs.step(
             actions_by_env.reshape(-1)
         )
         dones_raw = np.logical_or(terminations, truncations)
@@ -367,6 +392,16 @@ def collect_parallel_rollout_average_opponents(
 
         next_obs_all = torch.tensor(np.asarray(next_obs_raw, dtype=np.float32), device=device)
         next_done_all = torch.tensor(dones_raw, dtype=torch.float32, device=device)
+
+        # Accumulate per-step info from Godot environment
+        if infos:
+            for env_i in range(n_game_envs):
+                for agent_i in range(n_agents):
+                    flat_idx = env_i * n_agents + agent_i
+                    if flat_idx < len(infos) and isinstance(infos[flat_idx], dict):
+                        info = infos[flat_idx]
+                        for k_i, key in enumerate(_EPISODE_INFO_KEYS):
+                            accum_info[agent_i, env_i, k_i] += float(info.get(key, 0.0))
 
         for i in range(n_agents):
             reward_i = rewards_by_env[:, i]
@@ -390,6 +425,13 @@ def collect_parallel_rollout_average_opponents(
                         episode_returns[i].append(ep_ret)
                         new_episode_returns[i].append(ep_ret)
                         accum_rewards[i, env_i] = 0.0
+
+                        # Record per-episode info stats and reset accumulators
+                        ep_stats: dict[str, float] = {}
+                        for k_i, key in enumerate(_EPISODE_INFO_KEYS):
+                            ep_stats[key] = float(accum_info[i, env_i, k_i])
+                        new_episode_stats[i].append(ep_stats)
+                        accum_info[i, env_i, :] = 0.0
 
     rollouts = []
     next_obs_by_env = next_obs_all.view(n_game_envs, n_agents, obs_dim)
@@ -417,7 +459,7 @@ def collect_parallel_rollout_average_opponents(
             next_rnn_state=rnn_states[i],
         ))
 
-    return rollouts, global_step, rnn_states, new_episode_returns
+    return rollouts, global_step, rnn_states, new_episode_returns, new_episode_stats
 
 
 def _save_main_snapshot(
@@ -475,7 +517,7 @@ def train_average_opponent_phase(
             cfg = args.agent_configs[main_agent_id]
             ctx.optimizers[main_agent_id].param_groups[0]["lr"] = progress * cfg.learning_rate
 
-        rollouts, ctx.global_step, rnn_states, new_episode_returns = (
+        rollouts, ctx.global_step, rnn_states, new_episode_returns, new_episode_stats = (
             collect_parallel_rollout_average_opponents(
                 args.agent_configs,
                 ctx.agents,
@@ -524,6 +566,19 @@ def train_average_opponent_phase(
             num_updates=phase_updates,
             new_episode_returns=new_episode_returns,
         )
+
+        # Log per-episode game statistics to TensorBoard (only for training agents)
+        for i in range(n_agents):
+            if args.agent_configs[i].train and new_episode_stats[i]:
+                tag = f"agent_{i}/episode"
+                # Compute means across completed episodes in this update
+                mean_stats: dict[str, float] = {}
+                for key in _EPISODE_INFO_KEYS:
+                    vals = [s[key] for s in new_episode_stats[i]]
+                    mean_stats[key] = float(np.mean(vals))
+                for key, val in mean_stats.items():
+                    ctx.writer.add_scalar(f"{tag}/{key}", val, ctx.global_step)
+
         ctx.start_update += 1
 
         if ctx.global_step - last_snapshot_step >= args.pool_save_interval:
