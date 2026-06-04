@@ -35,6 +35,8 @@ from godot_env_wrapper import (
 from custom_ppo_dataclass import NetworkType, AgentConfig, IppoArgs
 from ppo_networks import SegmentedObsHelper
 from custom_ippo import IPPOAgent
+from custom_ippo_pool import _load_agent_state
+from continue_ippo_pool_agent import find_recent_pool_checkpoints
 
 # Per-episode info keys tracked from Godot environment (see controller.gd get_info())
 _EPISODE_INFO_KEYS: list[str] = [
@@ -72,22 +74,22 @@ class ReplayConfig:
     def __post_init__(self):
         if self.model_paths is None:
             self.model_paths = [
-                "saved_models/agent0_vs_average_opponents_step8089600_agent0.pt",
+                "saved_models\\curriculum\\s5_average_opponent_agent0_agent0.pt",
                 "saved_models/ippo_pool_checkpoints/round8_agent3_step16027648_agent3.pt",
                 "saved_models/ippo_pool_checkpoints/round8_agent2_step15523840_agent2.pt",
                 "saved_models/ippo_pool_checkpoints/round8_agent1_step15020032_agent1.pt"
             ]
 
-    env_path: Optional[str] = "godot-game\\build-multiagent\\game.exe"
+    env_path: Optional[str] = "curriculum_envs\\s5-player-only\\build-multiagent\\game.exe"
     """Godot 可执行文件路径 (None 连接编辑器)。"""
 
     config_path: str = "godot-game/configs/game_config.tres"
     """game_config.tres 路径, 用于读取观测维度配置。"""
 
-    speedup: int = 2
+    speedup: int = 30
     """物理引擎加速倍数 (1=正常速度)。"""
 
-    show_window: bool = True
+    show_window: bool = False
     """显示游戏窗口。"""
 
     deterministic: bool = True
@@ -105,8 +107,26 @@ class ReplayConfig:
     agent_ids: Optional[str] = None
     """指定使用的 agent ID, 逗号分隔 (如 "0,1"). None=全部使用训练策略。"""
 
-    stats_csv_path: str = "replay_stats.csv"
+    stats_csv_path: str = "replay_stats-1.csv"
     """每回合行为统计输出 CSV 文件路径。"""
+
+    use_average_opponent_pool: bool = True
+    """True 时, 非 main_agent_id 的 agent 使用对手池 checkpoint 的平均策略回放。"""
+
+    main_agent_id: int = 0
+    """开启 use_average_opponent_pool 时, 保持普通模型推理的主控 agent。"""
+
+    opponent_checkpoint_dir: str = "saved_models/ippo_pool_checkpoints"
+    """对手池 checkpoint 目录, 用于构建平均对手策略。"""
+
+    opponent_keep_per_agent: int = 20
+    """每个对手 agent 取最近多少个 checkpoint 参与行为平均。"""
+
+    opponent_action_mode: str = "sample"
+    """平均对手动作模式: 'argmax' 使用平均概率最大动作, 'sample' 按平均概率采样。"""
+
+    strict_opponent_count: bool = True
+    """True 时要求每个对手 agent 都找到 opponent_keep_per_agent 个 checkpoint。"""
 
 
 # ╔══════════════════════════════════════════════════════════╗
@@ -198,6 +218,115 @@ def load_agent_checkpoints_from_paths(
     return result
 
 
+@dataclass
+class AverageOpponentEnsemble:
+    """Frozen checkpoint policies for one replay opponent."""
+
+    agent_id: int
+    checkpoint_paths: list[pathlib.Path]
+    policies: list[IPPOAgent]
+
+    @property
+    def size(self) -> int:
+        return len(self.policies)
+
+    def _compute_average_probs(self, obs: torch.Tensor) -> torch.Tensor:
+        prob_sum: Optional[torch.Tensor] = None
+        for policy in self.policies:
+            features, _ = policy._forward_features(obs)
+            logits = policy.actor(features)
+            probs = torch.softmax(logits, dim=-1)
+            prob_sum = probs if prob_sum is None else prob_sum + probs
+        return prob_sum / float(len(self.policies))
+
+    def act(self, obs: torch.Tensor, action_mode: str) -> torch.Tensor:
+        if not self.policies:
+            raise RuntimeError(f"Average opponent agent_{self.agent_id} has no policies.")
+
+        avg_probs = self._compute_average_probs(obs)
+        if action_mode == "sample":
+            return torch.multinomial(avg_probs, num_samples=1).squeeze(-1)
+        if action_mode == "argmax":
+            return torch.argmax(avg_probs, dim=-1)
+        raise ValueError(f"Unsupported opponent_action_mode={action_mode!r}; expected 'argmax' or 'sample'.")
+
+
+def _freeze_policy(policy: IPPOAgent) -> IPPOAgent:
+    policy.eval()
+    for param in policy.parameters():
+        param.requires_grad_(False)
+    return policy
+
+
+def build_average_opponent_ensembles(
+    replay_cfg: ReplayConfig,
+    agent_configs: list[AgentConfig],
+    seg: ObsSegmentDims,
+    n_actions: int,
+    device: torch.device,
+) -> dict[int, AverageOpponentEnsemble]:
+    """Build behavioral-average opponent policies from recent pool checkpoints."""
+    if replay_cfg.opponent_action_mode not in {"argmax", "sample"}:
+        raise ValueError(
+            f"opponent_action_mode must be 'argmax' or 'sample', got {replay_cfg.opponent_action_mode!r}"
+        )
+
+    cfg_by_id = {cfg.agent_id: cfg for cfg in agent_configs}
+    if replay_cfg.main_agent_id not in cfg_by_id:
+        raise ValueError(
+            f"main_agent_id={replay_cfg.main_agent_id} is not in checkpoint agent ids: {sorted(cfg_by_id)}"
+        )
+
+    opponent_ids = [agent_id for agent_id in cfg_by_id if agent_id != replay_cfg.main_agent_id]
+    if not opponent_ids:
+        raise RuntimeError("No non-main agents are available for average-opponent replay.")
+
+    paths_by_agent: dict[int, list[pathlib.Path]] = {}
+    for agent_id in opponent_ids:
+        paths = find_recent_pool_checkpoints(
+            replay_cfg.opponent_checkpoint_dir,
+            agent_id,
+            int(replay_cfg.opponent_keep_per_agent),
+        )
+        if replay_cfg.strict_opponent_count and len(paths) != int(replay_cfg.opponent_keep_per_agent):
+            raise RuntimeError(
+                f"Expected {replay_cfg.opponent_keep_per_agent} checkpoints for agent_{agent_id}, "
+                f"found {len(paths)} under {replay_cfg.opponent_checkpoint_dir}. "
+                "Set strict_opponent_count=False to replay with the available complete slots."
+            )
+        paths_by_agent[agent_id] = paths
+
+    complete_slot_count = min(len(paths) for paths in paths_by_agent.values())
+    if complete_slot_count <= 0:
+        raise RuntimeError("No complete average-opponent checkpoint slots were found.")
+
+    ensembles: dict[int, AverageOpponentEnsemble] = {}
+    for agent_id in opponent_ids:
+        paths = paths_by_agent[agent_id][-complete_slot_count:]
+        policies: list[IPPOAgent] = []
+        for path in paths:
+            policy = IPPOAgent(n_actions, seg, cfg_by_id[agent_id]).to(device)
+            _load_agent_state(str(path), agent_id, policy, device)
+            if policy.is_recurrent:
+                raise ValueError(
+                    "Average-opponent replay only supports MLP/segmented-MLP opponents. "
+                    f"Recurrent checkpoint rejected: {path}"
+                )
+            policies.append(_freeze_policy(policy))
+
+        ensembles[agent_id] = AverageOpponentEnsemble(
+            agent_id=agent_id,
+            checkpoint_paths=paths,
+            policies=policies,
+        )
+        print(
+            f"[Average Opponent] agent_{agent_id}: loaded {len(paths)} policies "
+            f"from {paths[0].name} -> {paths[-1].name}"
+        )
+
+    return ensembles
+
+
 def build_replay_args_and_agents(checkpoint_data: dict) -> tuple[IppoArgs, list[AgentConfig]]:
     """从 checkpoint 数据重建 IppoArgs 和 agent_configs。
 
@@ -279,7 +408,7 @@ def main():
           f"ball={seg.ball_dim} enemy={seg.enemy_dim} map={seg.map_dim}")
 
     # ── 3. 重建所有 agent 网络 ──
-    agents: list[IPPOAgent] = []
+    agents: list[Optional[IPPOAgent]] = []
     rnn_states: list[Optional[torch.Tensor]] = []
 
     for cfg in agent_configs:
@@ -306,6 +435,8 @@ def main():
             print(f"[Agent {aid}] network_type={cfg.network_type}, "
                   f"params={agent.num_params():,}, recurrent=False")
 
+    average_opponents: dict[int, AverageOpponentEnsemble] = {}
+
     # ── 4. 初始化环境 ──
     print("初始化 Godot 环境...")
     envs = GodotDiscreteEnvWrapper(
@@ -327,6 +458,20 @@ def main():
         agent_configs = agent_configs[:num_envs]
         active_ids = {cfg.agent_id for cfg in agent_configs}
         n_agents = num_envs
+
+    if replay_cfg.use_average_opponent_pool:
+        average_opponents = build_average_opponent_ensembles(
+            replay_cfg,
+            agent_configs,
+            seg,
+            n_actions,
+            device,
+        )
+        print(
+            f"[Average Opponent] enabled: main_agent_id={replay_cfg.main_agent_id}, "
+            f"action_mode={replay_cfg.opponent_action_mode}, "
+            f"ensemble_size={next(iter(average_opponents.values())).size}"
+        )
 
     # ── 5. 推理回放循环 ──
     print("开始回放... 按 Ctrl+C 停止。")
@@ -362,6 +507,14 @@ def main():
                 for i in range(n_agents):
                     agent = agents[i]
                     aid = agent_configs[i].agent_id
+
+                    if aid in average_opponents:
+                        action = average_opponents[aid].act(
+                            obs_t[i].unsqueeze(0),
+                            replay_cfg.opponent_action_mode,
+                        )
+                        actions.append(int(action.item()))
+                        continue
 
                     if agent is None or aid not in active_ids:
                         # 未加载模型的 agent: 随机动作

@@ -333,7 +333,7 @@ class IppoArgs:
     """轮回结束后额外长训练的主 agent"""
     pool_final_timesteps: int = 4_000_000
     """轮回结束后对 pool_final_agent_id 的额外训练步数"""
-    pool_save_interval: int = 300_000
+    pool_save_interval: int = 500_000
     """全局步数间隔：每隔多少步把当前四智能体快照加入对手池"""
     pool_checkpoint_dir: Optional[str] = "saved_models/ippo_pool_checkpoints"
     """对手池 checkpoint 文件目录。None 则使用 {experiment_dir}/pool_checkpoints"""

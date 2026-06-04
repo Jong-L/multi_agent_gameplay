@@ -1,5 +1,5 @@
 \contentsline {section}{摘\hskip 1em\relax \hskip 1em\relax 要}{II}{Doc-Start}%
-\contentsline {section}{ABSTRACT}{III}{Doc-Start}%
+\contentsline {section}{ABSTRACT}{IV}{Doc-Start}%
 \contentsline {section}{\numberline {1}绪论}{1}{section.1}%
 \contentsline {subsection}{\numberline {1.1}研究背景与意义}{1}{subsection.1.1}%
 \contentsline {subsection}{\numberline {1.2}国内外研究现状}{2}{subsection.1.2}%
@@ -36,16 +36,20 @@
 \contentsline {subsection}{\numberline {5.1}对手池初始化}{28}{subsection.5.1}%
 \contentsline {subsection}{\numberline {5.2}待评估智能体的训练}{29}{subsection.5.2}%
 \contentsline {subsection}{\numberline {5.3}实验结果与讨论}{30}{subsection.5.3}%
-\contentsline {subsubsection}{\numberline {5.3.1}评估设置}{30}{subsubsection.5.3.1}%
-\contentsline {subsubsection}{\numberline {5.3.2}总体表现对比}{31}{subsubsection.5.3.2}%
-\contentsline {subsubsection}{\numberline {5.3.3}统计显著性检验}{32}{subsubsection.5.3.3}%
+\contentsline {subsubsection}{\numberline {5.3.1}评估设置与分析方法}{30}{subsubsection.5.3.1}%
+\contentsline {subsubsection}{\numberline {5.3.2}总体表现对比}{32}{subsubsection.5.3.2}%
+\contentsline {subsubsection}{\numberline {5.3.3}统计显著性检验}{33}{subsubsection.5.3.3}%
 \contentsline {subsubsection}{\numberline {5.3.4}策略稳定性分析}{34}{subsubsection.5.3.4}%
-\contentsline {subsubsection}{\numberline {5.3.5}实验结论}{35}{subsubsection.5.3.5}%
-\contentsline {section}{结\hskip 1em\relax \hskip 1em\relax 论}{36}{Item.44}%
-\contentsline {section}{参考文献}{38}{Item.44}%
+\contentsline {subsubsection}{\numberline {5.3.5}行为策略画像}{35}{subsubsection.5.3.5}%
+\contentsline {subsubsection}{\numberline {5.3.6}战斗-收集权衡与奖励关联分析}{36}{subsubsection.5.3.6}%
+\contentsline {subsubsection}{\numberline {5.3.7}PvP 对抗的收益-风险分析}{38}{subsubsection.5.3.7}%
+\contentsline {subsubsection}{\numberline {5.3.8}因果验证：PvE 替代 PvP 的迁移实验}{39}{subsubsection.5.3.8}%
+\contentsline {subsubsection}{\numberline {5.3.9}实验结论}{41}{subsubsection.5.3.9}%
+\contentsline {section}{结\hskip 1em\relax \hskip 1em\relax 论}{42}{Item.58}%
+\contentsline {section}{参考文献}{45}{Item.58}%
 \renewcommand {\cftsecpresnum }{附录}
 \renewcommand {\cftsecaftersnum }{\hspace {0.5em}}
 \setlength {\cftsecnumwidth }{6em}
-\contentsline {section}{\numberline {A}补充图表}{41}{appendix.A}%
-\contentsline {section}{致\hskip 1em\relax \hskip 1em\relax 谢}{47}{table.caption.37}%
+\contentsline {section}{\numberline {A}补充图表}{48}{appendix.A}%
+\contentsline {section}{致\hskip 1em\relax \hskip 1em\relax 谢}{54}{table.caption.43}%
 \contentsfinish 

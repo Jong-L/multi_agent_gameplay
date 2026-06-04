@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import argparse
 import copy
+import csv
 import pathlib
 import random
 import time
@@ -80,7 +81,7 @@ class ContinueAverageOpponentAgentArgs(IppoPoolArgs):
 
     env_path: Optional[str] = "curriculum_envs\\s5-player-only\\build-multiagent\\game.exe"
     main_agent_id: int = 0
-    n_parallel: int = 8
+    # n_parallel: int = 8
     # show_window: bool = True
     main_checkpoint_path: str = "saved_models/curriculum/s5_average_opponent_agent0_agent0.pt"
     """训练的模型路径"""
@@ -89,11 +90,17 @@ class ContinueAverageOpponentAgentArgs(IppoPoolArgs):
     opponent_keep_per_agent: int = 20
     opponent_action_mode: str = "sample"  # "argmax" or "sample"
     strict_opponent_count: bool = True
-    phase_name: str = "agent0_vs_average_opponents"
-    save_model_path: Optional[str] = "saved_models\\curriculum\\s5_average_opponent_agent0_enemy_ball"
-    pool_checkpoint_dir: Optional[str] = "saved_models/ippo_average_opponent_checkpoints"
+    phase_name: str = "agent0_frozen_vs_average_opponents"
+    save_model_path: Optional[str] = "saved_models\\curriculum\\s5_average_opponent_agent0_enemy_ball_frozen_interaction"
+    pool_checkpoint_dir: Optional[str] = "saved_models/ippo_average_opponent_frozen_checkpoints"
     pool_final_timesteps: int = 2000_0000
-    run_name: Optional[str] = "average_opponent_with_enemy_test2"
+    run_name: Optional[str] = "average_opponent_with_enemy_frozen_agent0"
+    freeze_main_agent: bool = True
+    """Run the loaded main policy without PPO parameter updates."""
+    save_frozen_snapshots: bool = False
+    """If true, also save unchanged frozen-policy snapshots for provenance."""
+    behavior_csv_path: Optional[str] = None
+    """Per-update behavior summary CSV. None writes under the TensorBoard run dir."""
     ppo_model_paths: list[Optional[str]] = None
 
     def __post_init__(self) -> None:
@@ -151,6 +158,7 @@ def _parse_args() -> ContinueAverageOpponentAgentArgs:
     parser.add_argument("--pool-save-interval", type=int, default=args.pool_save_interval)
     parser.add_argument("--phase-name", default=args.phase_name)
     parser.add_argument("--run-name", default=args.run_name)
+    parser.add_argument("--behavior-csv-path", default=args.behavior_csv_path)
     parser.add_argument("--env-path", default=args.env_path)
     parser.add_argument("--config-path", default=args.config_path)
     parser.add_argument("--n-parallel", type=int, default=args.n_parallel)
@@ -161,6 +169,25 @@ def _parse_args() -> ContinueAverageOpponentAgentArgs:
     parser.add_argument("--count-steps-by", choices=["env_steps", "agent_steps"], default=args.count_steps_by)
     parser.add_argument("--port-offset", type=int, default=args.port_offset)
     parser.add_argument("--no-anneal-lr", action="store_true")
+    parser.add_argument(
+        "--freeze-main-agent",
+        dest="freeze_main_agent",
+        action="store_true",
+        default=args.freeze_main_agent,
+        help="Freeze agent_0 and only collect environment interaction statistics.",
+    )
+    parser.add_argument(
+        "--train-main-agent",
+        dest="freeze_main_agent",
+        action="store_false",
+        help="Restore the previous behavior: update agent_0 with PPO.",
+    )
+    parser.add_argument(
+        "--save-frozen-snapshots",
+        action="store_true",
+        default=args.save_frozen_snapshots,
+        help="Save checkpoints/final model even when the main agent is frozen.",
+    )
     parser.add_argument("--track", action="store_true")
     parsed = parser.parse_args()
 
@@ -177,6 +204,7 @@ def _parse_args() -> ContinueAverageOpponentAgentArgs:
     args.pool_save_interval = int(parsed.pool_save_interval)
     args.phase_name = parsed.phase_name
     args.run_name = parsed.run_name
+    args.behavior_csv_path = parsed.behavior_csv_path
     args.env_path = parsed.env_path
     args.config_path = parsed.config_path
     args.n_parallel = int(parsed.n_parallel)
@@ -187,6 +215,8 @@ def _parse_args() -> ContinueAverageOpponentAgentArgs:
     args.count_steps_by = parsed.count_steps_by
     args.port_offset = int(parsed.port_offset)
     args.anneal_lr = not parsed.no_anneal_lr
+    args.freeze_main_agent = bool(parsed.freeze_main_agent)
+    args.save_frozen_snapshots = bool(parsed.save_frozen_snapshots)
     args.track = bool(parsed.track)
     args.use_opponent_pool = False
     args.pool_final_agent_id = args.main_agent_id
@@ -275,6 +305,68 @@ def _average_opponent_rows(
     return rows
 
 
+def _behavior_csv_output_path(args: ContinueAverageOpponentAgentArgs, ctx: Any) -> pathlib.Path:
+    if args.behavior_csv_path:
+        return pathlib.Path(args.behavior_csv_path)
+    logdir_getter = getattr(ctx.writer, "get_logdir", None)
+    logdir = pathlib.Path(logdir_getter() if callable(logdir_getter) else ctx.writer.log_dir)
+    return logdir / "episode_behavior_summary.csv"
+
+
+def _write_behavior_summary_rows(
+    csv_path: pathlib.Path,
+    update: int,
+    global_step: int,
+    agent_id: int,
+    returns: list[float],
+    stats_rows: list[dict[str, float]],
+    frozen: bool,
+) -> None:
+    if not returns and not stats_rows:
+        return
+
+    csv_path.parent.mkdir(parents=True, exist_ok=True)
+    row: dict[str, Any] = {
+        "update": int(update),
+        "global_step": int(global_step),
+        "agent_id": int(agent_id),
+        "frozen": int(bool(frozen)),
+        "n_episodes": int(max(len(returns), len(stats_rows))),
+        "episodic_return": float(np.mean(returns)) if returns else "",
+    }
+    for key in _EPISODE_INFO_KEYS:
+        vals = [stats[key] for stats in stats_rows if key in stats]
+        row[key] = float(np.mean(vals)) if vals else ""
+    row["pvp_events"] = (
+        float(row["damage_dealt_to_player"]) + float(row["kill_player"])
+        if row["damage_dealt_to_player"] != "" and row["kill_player"] != ""
+        else ""
+    )
+    row["pve_events"] = (
+        float(row["damage_dealt_to_enemy"]) + float(row["kill_enemy"])
+        if row["damage_dealt_to_enemy"] != "" and row["kill_enemy"] != ""
+        else ""
+    )
+
+    fieldnames = [
+        "update",
+        "global_step",
+        "agent_id",
+        "frozen",
+        "n_episodes",
+        "episodic_return",
+        *_EPISODE_INFO_KEYS,
+        "pvp_events",
+        "pve_events",
+    ]
+    write_header = not csv_path.exists()
+    with csv_path.open("a", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        if write_header:
+            writer.writeheader()
+        writer.writerow(row)
+
+
 def collect_parallel_rollout_average_opponents(
     agents_cfg,
     agents: list[IPPOAgent],
@@ -292,6 +384,7 @@ def collect_parallel_rollout_average_opponents(
     rnn_states: list[Optional[torch.Tensor]],
     step_increment: int,
     opponent_action_mode: str = "argmax",
+    update_reward_normalizers: bool = True,
 ) -> tuple[list[RolloutData], int, list[Optional[torch.Tensor]], list[list[float]], list[list[dict[str, float]]]]:
     """Collect rollout data while non-main agents use averaged frozen policies.
 
@@ -403,7 +496,7 @@ def collect_parallel_rollout_average_opponents(
 
         for i in range(n_agents):
             reward_i = rewards_by_env[:, i]
-            if agents_cfg[i].train and reward_normalizers[i] is not None:
+            if update_reward_normalizers and agents_cfg[i].train and reward_normalizers[i] is not None:
                 reward_i_norm = reward_normalizers[i].normalize_array(reward_i)
                 reward_normalizers[i].update_array(reward_i)
             else:
@@ -497,6 +590,7 @@ def train_average_opponent_phase(
     main_agent_id: int,
     phase_timesteps: int,
     phase_name: str,
+    freeze_main_agent: bool = False,
 ) -> None:
     args = ctx.args
     n_agents = len(args.agent_configs)
@@ -512,9 +606,10 @@ def train_average_opponent_phase(
     rnn_states = [agent.get_initial_state(n_game_envs, ctx.device) for agent in ctx.agents]
     start_time = time.time()
     last_snapshot_step = ctx.global_step
+    behavior_csv_path = _behavior_csv_output_path(args, ctx)
 
     for local_update in range(1, phase_updates + 1):
-        if args.anneal_lr:
+        if args.anneal_lr and not freeze_main_agent:
             progress = 1.0 - (local_update - 1.0) / phase_updates
             cfg = args.agent_configs[main_agent_id]
             ctx.optimizers[main_agent_id].param_groups[0]["lr"] = progress * cfg.learning_rate
@@ -537,6 +632,7 @@ def train_average_opponent_phase(
                 rnn_states,
                 step_increment,
                 opponent_action_mode=args.opponent_action_mode,
+                update_reward_normalizers=not freeze_main_agent,
             )
         )
         ctx.next_obs = torch.stack([r.next_obs for r in rollouts], dim=1).reshape(args.num_envs, -1)
@@ -545,16 +641,17 @@ def train_average_opponent_phase(
 
         losses: list[Optional[dict]] = [None for _ in range(n_agents)]
         explained_vars = [0.0 for _ in range(n_agents)]
-        metrics = train_agent_update(
-            ctx.agents[main_agent_id],
-            ctx.optimizers[main_agent_id],
-            rollouts[main_agent_id],
-            args.agent_configs[main_agent_id],
-            args,
-            ctx.device,
-        )
-        losses[main_agent_id] = metrics
-        explained_vars[main_agent_id] = metrics.get("explained_var", 0.0)
+        if not freeze_main_agent:
+            metrics = train_agent_update(
+                ctx.agents[main_agent_id],
+                ctx.optimizers[main_agent_id],
+                rollouts[main_agent_id],
+                args.agent_configs[main_agent_id],
+                args,
+                ctx.device,
+            )
+            losses[main_agent_id] = metrics
+            explained_vars[main_agent_id] = metrics.get("explained_var", 0.0)
 
         log_ippo(
             ctx.writer,
@@ -581,14 +678,41 @@ def train_average_opponent_phase(
                     mean_stats[key] = float(np.mean(vals))
                 for key, val in mean_stats.items():
                     ctx.writer.add_scalar(f"{tag}/{key}", val, ctx.global_step)
+                _write_behavior_summary_rows(
+                    behavior_csv_path,
+                    local_update,
+                    ctx.global_step,
+                    i,
+                    new_episode_returns[i],
+                    new_episode_stats[i],
+                    frozen=freeze_main_agent and i == main_agent_id,
+                )
+
+        if freeze_main_agent and new_episode_stats[main_agent_id]:
+            mean_attack = float(np.mean([
+                s["attack_launched"] for s in new_episode_stats[main_agent_id]
+            ]))
+            mean_pvp_damage = float(np.mean([
+                s["damage_dealt_to_player"] for s in new_episode_stats[main_agent_id]
+            ]))
+            mean_return = float(np.mean(new_episode_returns[main_agent_id])) if new_episode_returns[main_agent_id] else float("nan")
+            print(
+                f"[Frozen Interaction {local_update:4d}/{phase_updates}] "
+                f"return={mean_return:.1f}  attack={mean_attack:.1f}  "
+                f"pvp_damage={mean_pvp_damage:.2f}  csv={behavior_csv_path}"
+            )
 
         ctx.start_update += 1
 
-        if ctx.global_step - last_snapshot_step >= args.pool_save_interval:
+        if (
+            (not freeze_main_agent or args.save_frozen_snapshots)
+            and ctx.global_step - last_snapshot_step >= args.pool_save_interval
+        ):
             _save_main_snapshot(ctx, main_agent_id, phase_name, average_opponents)
             last_snapshot_step = ctx.global_step
 
-    _save_main_snapshot(ctx, main_agent_id, f"{phase_name}_end", average_opponents)
+    if not freeze_main_agent or args.save_frozen_snapshots:
+        _save_main_snapshot(ctx, main_agent_id, f"{phase_name}_end", average_opponents)
 
 
 def run_continue_average_opponent_agent(args: ContinueAverageOpponentAgentArgs) -> None:
@@ -607,9 +731,21 @@ def run_continue_average_opponent_agent(args: ContinueAverageOpponentAgentArgs) 
     try:
         ctx = setup_training_context(setup_args)
         load_main_agent_checkpoint(args, ctx)
+        if args.freeze_main_agent:
+            _freeze_policy(ctx.agents[int(args.main_agent_id)])
+            ctx.writer.add_text(
+                "frozen_interaction",
+                (
+                    f"agent_{args.main_agent_id} parameters are frozen; "
+                    "rollouts are collected for behavior statistics only. "
+                    "PPO updates and reward-normalizer updates are skipped."
+                ),
+            )
         average_opponents = _build_average_opponent_ensembles(args, ctx)
         print(
-            f"[Average Opponent] train agent_{args.main_agent_id} for "
+            f"[Average Opponent] "
+            f"{'freeze/evaluate' if args.freeze_main_agent else 'train'} "
+            f"agent_{args.main_agent_id} for "
             f"{args.pool_final_timesteps} {args.count_steps_by}; "
             f"opponent ensemble size={next(iter(average_opponents.values())).size}"
         )
@@ -619,7 +755,16 @@ def run_continue_average_opponent_agent(args: ContinueAverageOpponentAgentArgs) 
             int(args.main_agent_id),
             int(args.pool_final_timesteps),
             args.phase_name,
+            freeze_main_agent=bool(args.freeze_main_agent),
         )
+
+        if args.freeze_main_agent and not args.save_frozen_snapshots:
+            print(
+                "[Frozen Interaction] finished; skipped final model save because "
+                "parameters were intentionally not updated. Pass "
+                "--save-frozen-snapshots to save provenance checkpoints."
+            )
+            return
 
         final_state = _build_train_state(
             ctx.global_step,
@@ -631,6 +776,7 @@ def run_continue_average_opponent_agent(args: ContinueAverageOpponentAgentArgs) 
         final_state["continued_from"] = str(pathlib.Path(args.main_checkpoint_path))
         final_state["load_mode"] = args.load_mode
         final_state["extra_phase_timesteps"] = int(args.pool_final_timesteps)
+        final_state["freeze_main_agent"] = bool(args.freeze_main_agent)
         final_state["opponent_mode"] = f"average_action_probability_{args.opponent_action_mode}"
         final_state["average_opponent_rows"] = _average_opponent_rows(average_opponents)
         save_selected_agents(
