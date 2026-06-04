@@ -70,6 +70,7 @@ _EPISODE_INFO_KEYS: list[str] = [
     "died",
     "wall_collision",
     "game_score",
+    "step_reward",  # 每步全部奖励（含塑形/移动/待机/中心），和 episodic_return 对齐
 ]
 
 
@@ -79,7 +80,7 @@ class ContinueAverageOpponentAgentArgs(IppoPoolArgs):
 
     env_path: Optional[str] = "curriculum_envs\\s5-player-only\\build-multiagent\\game.exe"
     main_agent_id: int = 0
-    # n_parallel: int = 1
+    n_parallel: int = 8
     # show_window: bool = True
     main_checkpoint_path: str = "saved_models/curriculum/s5_average_opponent_agent0_agent0.pt"
     """训练的模型路径"""
@@ -89,10 +90,10 @@ class ContinueAverageOpponentAgentArgs(IppoPoolArgs):
     opponent_action_mode: str = "sample"  # "argmax" or "sample"
     strict_opponent_count: bool = True
     phase_name: str = "agent0_vs_average_opponents"
-    save_model_path: Optional[str] = "saved_models\\curriculum\\s5_average_opponent_agent0"
+    save_model_path: Optional[str] = "saved_models\\curriculum\\s5_average_opponent_agent0_enemy_ball"
     pool_checkpoint_dir: Optional[str] = "saved_models/ippo_average_opponent_checkpoints"
     pool_final_timesteps: int = 2000_0000
-    run_name: Optional[str] = "average_opponent_with_enemy"
+    run_name: Optional[str] = "average_opponent_with_enemy_test2"
     ppo_model_paths: list[Optional[str]] = None
 
     def __post_init__(self) -> None:
@@ -286,6 +287,7 @@ def collect_parallel_rollout_average_opponents(
     global_step: int,
     episode_returns: list[deque],
     accum_rewards: np.ndarray,
+    accum_info: np.ndarray,
     reward_normalizers,
     rnn_states: list[Optional[torch.Tensor]],
     step_increment: int,
@@ -299,7 +301,6 @@ def collect_parallel_rollout_average_opponents(
     n_agents = len(agents_cfg)
     total_slots = envs.num_envs
     n_game_envs = total_slots // n_agents
-    n_info_keys = len(_EPISODE_INFO_KEYS)
     obs_shape = envs.single_observation_space.shape
     obs_dim = obs_shape[0]
 
@@ -328,9 +329,6 @@ def collect_parallel_rollout_average_opponents(
     next_done_all = next_done_all.clone()
     new_episode_returns: list[list[float]] = [[] for _ in range(n_agents)]
     new_episode_stats: list[list[dict[str, float]]] = [[] for _ in range(n_agents)]
-
-    # Per-agent, per-env accumulators for episode info (reset on done)
-    accum_info: np.ndarray = np.zeros((n_agents, n_game_envs, n_info_keys), dtype=np.float64)
 
     for step in range(rollout_steps):
         global_step += step_increment
@@ -507,6 +505,10 @@ def train_average_opponent_phase(
     args.agent_configs = _with_train_flags(args, train_ids={main_agent_id})
     phase_updates, step_increment = _phase_update_count(args, phase_timesteps)
     accum_rewards = np.zeros((n_agents, n_game_envs), dtype=np.float64)
+    accum_info = np.zeros(
+        (n_agents, n_game_envs, len(_EPISODE_INFO_KEYS)),
+        dtype=np.float64,
+    )
     rnn_states = [agent.get_initial_state(n_game_envs, ctx.device) for agent in ctx.agents]
     start_time = time.time()
     last_snapshot_step = ctx.global_step
@@ -530,6 +532,7 @@ def train_average_opponent_phase(
                 ctx.global_step,
                 ctx.episode_returns,
                 accum_rewards,
+                accum_info,
                 ctx.reward_normalizers,
                 rnn_states,
                 step_increment,

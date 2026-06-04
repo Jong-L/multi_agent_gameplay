@@ -9,11 +9,13 @@ IPPO 模型推理回放脚本
   - 多智能体: 从 checkpoint 的 agent_configs 重建每个 agent
   - GRU_MLP 自动维护每个 agent 的 RNN 隐藏态
   - --agent_ids 指定使用哪些 agent 的策略 (其余随机动作)
+  - 每回合结束后自动追加行为统计到 CSV 文件
 
 保存格式: save_ippo_model 将 4 个 agent 分别存为独立文件:
   {base}_agent0.pt, {base}_agent1.pt, {base}_agent2.pt, {base}_agent3.pt
 回放时 model_path 指向基础路径 (不含 _agentN 后缀), 自动加载全部 agent。
 """
+import csv
 import pathlib
 import sys
 from dataclasses import dataclass, fields as dataclass_fields
@@ -34,6 +36,21 @@ from custom_ppo_dataclass import NetworkType, AgentConfig, IppoArgs
 from ppo_networks import SegmentedObsHelper
 from custom_ippo import IPPOAgent
 
+# Per-episode info keys tracked from Godot environment (see controller.gd get_info())
+_EPISODE_INFO_KEYS: list[str] = [
+    "attack_launched",
+    "damage_dealt_to_player",
+    "damage_dealt_to_enemy",
+    "damage_taken",
+    "kill_enemy",
+    "kill_player",
+    "ball_A_collected",
+    "ball_B_collected",
+    "died",
+    "wall_collision",
+    "game_score",
+]
+
 
 # ╔══════════════════════════════════════════════════════════╗
 # ║                    配  置                                ║
@@ -51,7 +68,7 @@ class ReplayConfig:
     """分别指定 agent 模型文件路径列表。
     示例: ["saved_models/agent0.pt", "saved_models/agent1.pt", ...]
     设置后优先使用此字段, model_path 被忽略。"""
-        
+
     def __post_init__(self):
         if self.model_paths is None:
             self.model_paths = [
@@ -87,6 +104,9 @@ class ReplayConfig:
 
     agent_ids: Optional[str] = None
     """指定使用的 agent ID, 逗号分隔 (如 "0,1"). None=全部使用训练策略。"""
+
+    stats_csv_path: str = "replay_stats.csv"
+    """每回合行为统计输出 CSV 文件路径。"""
 
 
 # ╔══════════════════════════════════════════════════════════╗
@@ -234,6 +254,7 @@ def main():
     args, agent_configs = build_replay_args_and_agents(checkpoint_data)
     n_agents = len(agent_configs)
     n_actions = 6  # Godot 游戏离散动作空间固定为 6
+    n_info_keys = len(_EPISODE_INFO_KEYS)
 
     # 解析 --agent_ids
     active_ids: set[int] = set()
@@ -312,11 +333,26 @@ def main():
     next_obs, _ = envs.reset(seed=replay_cfg.seed)
     next_obs = np.array(next_obs, dtype=np.float32)
 
+    # CSV 输出
+    csv_path = pathlib.Path(replay_cfg.stats_csv_path)
+    csv_file = None
+    csv_writer = None
+
     episode_count = 0
     episode_rewards = np.zeros(n_agents, dtype=np.float64)
     step_count = 0
 
+    # Per-agent per-episode info accumulators
+    accum_info: np.ndarray = np.zeros((n_agents, n_info_keys), dtype=np.float64)
+
     try:
+        # 打开 CSV 文件并写入表头
+        csv_file = open(str(csv_path), "w", newline="", encoding="utf-8-sig")
+        csv_writer = csv.writer(csv_file)
+        header = ["episode", "agent_id", "steps", "reward"] + list(_EPISODE_INFO_KEYS)
+        csv_writer.writerow(header)
+        csv_file.flush()
+
         while True:
             actions = []
 
@@ -364,8 +400,26 @@ def main():
             episode_rewards += rewards_arr
             step_count += 1
 
+            # 累加每步行为统计 (来自 Godot get_info())
+            if infos:
+                for i in range(n_agents):
+                    if i < len(infos) and isinstance(infos[i], dict):
+                        info = infos[i]
+                        for k_i, key in enumerate(_EPISODE_INFO_KEYS):
+                            accum_info[i, k_i] += float(info.get(key, 0.0))
+
             if dones_arr.any():
                 episode_count += 1
+
+                # 写入本回合统计到 CSV (每个 agent 一行)
+                for i in range(n_agents):
+                    aid = agent_configs[i].agent_id
+                    row = [episode_count, aid, step_count, float(episode_rewards[i])]
+                    for k_i in range(n_info_keys):
+                        row.append(float(accum_info[i, k_i]))
+                    csv_writer.writerow(row)
+                csv_file.flush()
+
                 per_agent = " ".join(
                     f"agent_{agent_configs[i].agent_id}={episode_rewards[i]:+.1f}"
                     for i in range(n_agents)
@@ -377,6 +431,7 @@ def main():
                 )
                 step_count = 0
                 episode_rewards[:] = 0.0
+                accum_info[:, :] = 0.0  # 重置行为累加器
 
                 if 0 < replay_cfg.max_episodes <= episode_count:
                     print(f"[Done] 达到最大 episode 数 {replay_cfg.max_episodes}, 结束回放。")
@@ -391,6 +446,9 @@ def main():
     except KeyboardInterrupt:
         print("\n回放被用户中断。")
     finally:
+        if csv_file is not None:
+            csv_file.close()
+            print(f"[CSV] 统计数据已保存到 {csv_path.resolve()}")
         envs.close()
         print("环境已关闭。")
 

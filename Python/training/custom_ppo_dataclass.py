@@ -323,7 +323,7 @@ class IppoArgs:
     """每个 agent slot 的队列容量，对应 opponent_pool[agent_id][slot_index]"""
     pool_initial_keep_per_agent: int = 20
     """从初始 IPPO 中断点目录中为每个 agent 载入最近多少个 checkpoint"""
-    pool_phase_timesteps: int = 500_000
+    pool_phase_timesteps: int = 800_000
     """轮回对手池训练中，每个主 agent phase 的训练步数"""
     pool_rounds: int = 8
     """完整轮回次数；每轮按 pool_main_agent_order 依次训练"""
@@ -333,7 +333,7 @@ class IppoArgs:
     """轮回结束后额外长训练的主 agent"""
     pool_final_timesteps: int = 4_000_000
     """轮回结束后对 pool_final_agent_id 的额外训练步数"""
-    pool_save_interval: int = 100_000
+    pool_save_interval: int = 300_000
     """全局步数间隔：每隔多少步把当前四智能体快照加入对手池"""
     pool_checkpoint_dir: Optional[str] = "saved_models/ippo_pool_checkpoints"
     """对手池 checkpoint 文件目录。None 则使用 {experiment_dir}/pool_checkpoints"""
@@ -359,7 +359,7 @@ class IppoArgs:
     """ippo联合训练后的 checkpoint 目录，用于初始化对手池"""
     pool_log_every_n_updates: int = 10
     """每 N 个 update 打印一次对手池详细统计"""
-    pool_delete_replaced_checkpoints: bool = False
+    pool_delete_replaced_checkpoints: bool = True
     """队列挤出旧条目时是否删除对应 checkpoint 文件"""
     pool_bootstrap_checkpoint_timesteps: int = 1_000_000
     """IPPO 直接训练阶段：保存中断点的训练步数"""
