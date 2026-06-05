@@ -273,19 +273,13 @@
 \setcounter{page}{1}
 \begin{cnabstract}{强化学习，独立近端策略优化，博弈对抗，奖励塑形}
 
-强化学习通过试错与环境交互学习最优策略，已在游戏博弈、路径规划等复杂决策问题中取得突破性成果。智能体博弈场景涉及多个自学习智能体间的对抗与合作行为，同时引入了非平稳性——每个智能体的策略更新都会改变其他智能体面对的环境，使单智能体算法的 Markov 假设不再成立。集中式训练分布式执行（CTDE）范式虽在协作型任务中表现优良，但其对全局信息共享的依赖在对抗场景中难以满足。本文针对不共享信息的完全对抗型任务进行了方法探究与对比。
+智能体博弈场景涉及多个自学习智能体间的对抗与合作行为，同时引入了非平稳性——每个智能体的策略更新都会改变其他智能体面对的环境，使单智能体算法的 Markov 假设不再成立。集中式训练分布式执行范式虽在协作型任务中表现优良，但其对全局信息共享的依赖在对抗场景中难以满足。本文针对不共享信息的完全对抗型任务进行了方法探究与对比。
 
-首先基于 Godot 游戏引擎构建了 2D 俯视角四人混战竞技场博弈环境《Tiny Swords》，包含智能体、敌人、拾取可获得奖励的奖励球等游戏元素，设计了包含自身状态、对手信息、环境元素感知与 LiDAR 射线检测障碍物的 174 维分段式观测空间，并为四个智能体配置了差异化的奖励函数以诱导多样化策略风格。然后，针对奖励稀疏问题，基于势能奖励塑形理论设计了多层奖励系统，通过实验系统对比了势函数形式（线性、指数、反比例函数）、多目标引导模式（最近球与所有球叠加）以及障碍物处理策略（稀疏惩罚与稠密塑形）。在部分可观测条件下，进一步对比了 MLP、Segmented MLP 与 GRU-MLP 三种网络架构在拾取奖励球与战斗任务中的性能，并通过观测空间有效掩码消融实验验证了区分有效与无效信息的必要性。
+首先基于 Godot 游戏引擎构建了 2D 俯视角四人混战竞技场博弈环境《Tiny Swords》，包含智能体、敌人与拾取可获得奖励的奖励球等游戏元素，设计了包含自身状态、对手信息、环境感知与 LiDAR 射线检测的 174 维分段式观测空间，并为四个智能体配置了差异化的奖励函数以诱导多样化策略风格。针对奖励稀疏问题，基于势能奖励塑形理论设计了多层奖励系统，通过实验系统对比了势函数形式、多目标引导模式与障碍物处理策略。在部分可观测条件下，进一步对比了 MLP、Segmented MLP 与 GRU-MLP 三种网络架构，并通过有效掩码消融实验验证了区分有效与无效信息的必要性。
 
-在多智能体博弈阶段，本文以课程学习训练的四智能体模型为基础，
-通过轮换冻结迭代博弈构建对手池，随后对比了三种对抗训练方法：IPPO（基线）、基于联盟训练简化的对手池博弈（PFSP）、以及基于虚拟博弈思想的平均策略博弈方法。
-评估采用 1000 局的评估设计（20 组 $\times$ 50 局），并结合 11 维行为事件追踪对策略进行画像分析。
-实验结果表明，课程学习得到的初始策略（未经过博弈训练）以 598.5 的均奖励在所有方法中排名第一，显著优于平均策略博弈（573.2，$p=4.22\times10^{-4}$，Cohen's $d=-0.95$）、IPPO（534.4，$p=1.01\times10^{-9}$，$d=-2.47$）和对手池博弈（328.2，$p=6.21\times10^{-19}$，$d=-8.03$）。
-行为画像分析揭示了训练导致性能退化的机制：博弈训练系统性地降低了智能体的 PvE 攻击频率（初始策略 81.2 次/局 $\to$ 平均策略博弈 67.0 $\to$ IPPO 59.8），同时提升了资源收集行为，但在该环境以 PvE 击杀为主要得分来源的奖励结构下，战斗减少的损失远超资源收集的增益。此外，三种博弈训练方法均未能成功诱导出有效的 PvP 对抗行为——所有策略的 PvP 指标均处于极低水平。
-为验证该退化是否源于智能体 PvP 能力的缺失，本文设计了迁移实验：在纯博弈环境中训练出具备高效 PvP 能力（600+ 分）的智能体后，将其迁移至包含敌人的完整环境，观察到智能体自发将攻击目标从玩家重新分配至敌人（PvP 伤害下降 61\%，攻击总次数不变），在因果层面证实了 PvP 行为的缺失是环境奖励结构驱动的理性选择。
+在多智能体博弈阶段，本文以课程学习训练的四智能体模型为基础，通过轮换冻结迭代博弈构建对手池，随后对比了三种对抗训练方法：IPPO、对手池博弈（PFSP）与平均策略博弈。实验结果表明，课程学习得到的初始策略（未经过博弈训练）在所有方法中显著优于三种博弈训练方法。行为画像分析揭示了退化的机制：博弈训练降低了智能体的攻击频率，降低了智能体攻击非智能体角色的次数，且同时没有与其他智能体进行有效对抗，三种博弈训练方法均未能成功诱导出有效的 PvP 对抗行为。
 
-本文的评估结果表明，在该环境的近战对称对抗机制下，博弈训练可能偏离环境最优行为方向。迁移实验进一步在因果层面证实：即使智能体具备经过专门训练的高效 PvP 能力，在有 PvE 替代得分渠道时也会自发放弃 PvP。
-本文的工作为多智能体博弈环境中的非平稳性处理与策略泛化评估提供了一套从环境构建到博弈训练、再到多维度量化评估的完整实验方案与实证参考。
+为验证该退化是否源于智能体 PvP 能力的缺失，本文首先在纯博弈环境中训练出具备 PvP 能力的智能体后，将其迁移至包含其他游戏元素的完整环境，观察到智能体自发将攻击目标从玩家重新分配至敌人，在因果层面证实了 PvP 行为的缺失是环境奖励结构驱动的理性选择，而非智能体能力限制。本文的评估结果表明，在该环境的近战对称对抗机制下，课程学习阶段形成的 PvE 导向策略即为当前奖励结构下的实际优良策略，博弈训练则在有限训练预算内不同程度地偏离了这一方向。本文构建了一套覆盖环境设计、博弈训练与量化评估的实验方案，为对抗型多智能体场景中的非平稳性处理与策略泛化评估提供了实证参考。
 
 \end{cnabstract}
 
@@ -294,15 +288,13 @@
 % ----------------------------------------------------------
 \begin{enabstract}{Reinforcement Learning, Independent Proximal Policy Optimization, Game-Theoretic Adversarial Training, Reward Shaping}
 
-Reinforcement learning (RL) learns optimal policies through trial-and-error interaction with environments, and has seen breakthrough results in games, robotic navigation, and other complex sequential decision-making problems. Multi-agent reinforcement learning (MARL) extends this to settings where multiple learning agents interact --- cooperatively or adversarially. Its central difficulty is non-stationarity: when each agent updates its policy, the environment perceived by other agents shifts, breaking the Markov assumption that underlies single-agent algorithms. The centralized-training-decentralized-execution (CTDE) paradigm works well for cooperative tasks, but its dependence on shared global information is rarely feasible in adversarial settings. This thesis compares methods for fully adversarial tasks under strict information isolation.
+Multi-agent game scenarios involve adversarial and cooperative behaviors among multiple self-learning agents, while introducing non-stationarity --- each agent's policy update changes the environment perceived by other agents, breaking the Markov assumption underlying single-agent algorithms. Although the centralized-training-decentralized-execution (CTDE) paradigm performs well in cooperative tasks, its reliance on global information sharing is rarely feasible in adversarial settings. This thesis investigates and compares methods for fully adversarial tasks under strict information isolation.
 
-First, a 2D top-down four-player battle-royale arena called \textit{Tiny Swords} is built on the Godot game engine. The environment contains agents, NPC enemies, and collectible reward balls. A 174-dimensional segmented observation space captures self state, opponent information, environmental perception, and LiDAR-based obstacle detection. Four differentiated per-agent reward functions induce distinct strategic styles. To handle reward sparsity, a multi-layer reward system draws on potential-based reward shaping (PBRS). Experiments compare three potential-function forms (linear, exponential, inverse-proportional), two multi-target guidance modes (nearest-ball vs.\ all-ball superposition), and two obstacle-handling strategies (sparse penalty vs.\ dense shaping). Under partial observability, MLP, Segmented MLP, and GRU-MLP architectures are compared on ball-collection and combat tasks. Effective-mask ablation confirms the need to distinguish valid observations from padded zeros.
+First, a 2D top-down four-player battle-royale arena called \textit{Tiny Swords} is constructed on the Godot game engine, incorporating agents, NPC enemies, and collectible reward balls. A 174-dimensional segmented observation space is designed, comprising self state, opponent information, environmental perception, and LiDAR ray-casting detection. Four differentiated per-agent reward functions are configured to induce diverse strategic styles. To address reward sparsity, a multi-layer reward system is designed based on potential-based reward shaping, with experiments systematically comparing potential-function forms, multi-target guidance modes, and obstacle-handling strategies. Under partial observability, three network architectures --- MLP, Segmented MLP, and GRU-MLP --- are further compared, and an effective-mask ablation study confirms the necessity of distinguishing valid from invalid information.
 
-In the multi-agent phase, an opponent pool is built from curriculum-trained agents through iterative games with rotated agent freezing. Three continued-training approaches are then compared against this pool: IPPO (baseline), opponent-pool game training (a simplified league-training variant with PFSP-based prioritized sampling), and an average-strategy method drawn from fictitious play. Evaluation uses an expanded 1,000-episode design with 11-dimensional behavioral event tracking for strategy profiling.
+In the multi-agent game-theoretic phase, building upon the four-agent models trained via curriculum learning, an opponent pool is constructed through iterative games with alternating agent freezing. Three adversarial training methods are then compared: IPPO, opponent-pool game training (PFSP), and average-strategy game training. Experimental results show that the curriculum-learned initial policy (without any game-theoretic training) significantly outperforms all three game-training methods. Behavioral profiling reveals the degradation mechanism: game-theoretic training reduces the agents' attack frequency, decreases attacks against non-player characters, and fails to induce effective PvP adversarial behavior --- none of the three methods successfully elicited meaningful player-versus-player engagement.
 
-The key finding is that the initial curriculum-trained policy (without any game-theoretic training) achieves the highest mean reward of 598.5, significantly outperforming all three continued-training methods: average-strategy (573.2, $p=4.22\times10^{-4}$, Cohen's $d=-0.95$), IPPO (534.4, $p=1.01\times10^{-9}$, $d=-2.47$), and opponent-pool training (328.2, $p=6.21\times10^{-19}$, $d=-8.03$). Behavioral profiling reveals the mechanism behind this degradation: continued training systematically reduces PvE attack frequency (initial 81.2 $\to$ average-strategy 67.0 $\to$ IPPO 59.8 attacks per episode) while increasing resource collection, but under the environment's reward structure where enemy kills (30 points each) dominate score contributions, the loss from reduced combat far outweighs gains from added resource collection. Furthermore, none of the three training methods successfully induced meaningful PvP behavior --- PvP metrics remain at negligible levels across all four policies. To test whether this absence stems from an inability to learn PvP, a transfer experiment is conducted: an agent first trained in a pure-PvP environment (achieving 600+ score exclusively through player-vs-player attacks) is then transferred to the full environment with enemies and resource balls. The agent spontaneously reallocates its attack budget from players to enemies (PvP damage drops 61\% while total attacks remain stable), providing causal evidence that the abandonment of PvP is driven by the environment's reward structure rather than agent capability limitations.
-
-This thesis reveals that game-theoretic training may diverge from environment-optimal behavior under symmetric melee combat mechanics, as demonstrated by the systematic degradation observed across all three continued-training methods relative to the initial curriculum-trained policy. A transfer experiment further confirms that even agents with proven PvP capability voluntarily abandon PvP in favor of PvE when environmental alternatives are available. This work provides a complete experimental pipeline from environment construction through game-theoretic training to multi-dimensional quantitative evaluation, along with empirical baselines for handling non-stationarity and assessing policy generalization in adversarial multi-agent settings.
+To test whether this degradation stems from an inability to learn PvP, agents are first trained to acquire PvP capability in a pure-combat environment, then transferred to the full environment containing other game elements. The transferred agents spontaneously reallocate their attack targets from players to enemies, suggesting that the absence of PvP behavior reflects a rational choice driven by the environment's reward structure rather than a limitation of agent capability. The evaluation results indicate that, under the symmetric melee combat mechanics of this environment, the PvE-oriented strategy formed during curriculum learning is the de facto optimal strategy under the current reward structure. Game-theoretic training, within limited training budgets, diverges from this direction to varying degrees. This work presents an experimental pipeline covering environment design, game-theoretic training, and quantitative evaluation, and establishes baselines for non-stationarity handling and policy generalization assessment in adversarial multi-agent settings.
 
 \end{enabstract}
 
@@ -545,7 +537,7 @@ Devidze 等人\cite{Devidze2022explorationguided}进一步将探索与奖励塑�
 其中 $\mathbf{W}_{xh} \in \mathbb{R}^{d_h \times d_{\text{in}}}$ 为输入权重矩阵，将当前输入映射到隐藏空间；$\mathbf{W}_{hh} \in \mathbb{R}^{d_h \times d_h}$ 为循环权重矩阵，对历史状态进行线性变换；$\mathbf{b}_h \in \mathbb{R}^{d_h}$ 为偏置向量。两项之和经双曲正切激活函数 $\tanh(\cdot)$ 非线性变换后得到当前隐藏状态。
 \begin{figure}[htbp!]
   \centering
-  \includegraphics[width=0.8\textwidth]{imgs/gru_network.drawio.pdf}
+  \includegraphics[width=0.8\linewidth]{imgs/gru_network.drawio.pdf}
   \caption{\zihao{5} GRU 网络结构}
   \label{fig:gru_network}
 \end{figure}
@@ -917,7 +909,7 @@ $d$ 为智能体到球的距离。
 对于本文特定环境，智能体需要拾取多个奖励球，通常的奖励塑形方法都用于单目标引导，对于多目标引导，在采用线性势函数的情况下，还对比了仅对最近球计算势能和视野内所有球计算势能两种模式，即考虑是否要将多目标任务划分为多阶段的子目标。训练时间150万步，训练结果如\autoref{fig:nearest_vs_all_player_comparison}所示，最近球模式的训练效率高出 67\%，表明将多目标任务划分为多阶段子目标在本文环境中能够有效提高训练效率。推测原因是多球势能叠加在球之间的中点区域会相互抵消，形成势能平台区，削弱了引导效果，并且理论上在使用线性势函数时，该现象更明显。
 \begin{figure}[htbp]
   \centering
-  \includegraphics[width=0.6\linewidth]{imgs/nearest_vs_all_player_comparison.png}
+  \includegraphics[width=0.8\linewidth]{imgs/nearest_vs_all_player_comparison.png}
   \caption{\zihao{5} 各智能体奖励球势能计算方式与回合奖励的关系}
   \label{fig:nearest_vs_all_player_comparison}
 \end{figure}
@@ -1232,7 +1224,7 @@ GRU-MLP 在仅 17 个 trial 的搜索后最佳值仅 192.2、均值 43.4，未�
 
 第四章通过实验确立了单智能体基础训练的配置方案，使各智能体通过课程学习掌握了拾取奖励球、避障和战斗等基本技能。本章在此基础上进入全文核心问题：当已具备基础技能的多个智能体共处同一对抗环境时，何种训练机制能够产生应对多样化对手的鲁棒策略。
 
-如第\ref{sec:multiagent_theory}节所述，本文环境属于非对称多人一般和博弈——各智能体拥有不同的奖励配置，且不存在全局零和约束。对于该类型博弈，纳什均衡的求解在理论上被证明是PPAD-完全的，因此，本文不追求直接求解博弈均衡，而是以智能体0为代表，对比三种对抗训练方法：\textbf{IPPO}、\textbf{对手池博弈}和\textbf{平均策略博弈}，测试对比哪种方法能训练出泛化能力更强的策略，在面对风格各异的对手时获得更优且更稳定的表现。
+如第\ref{sec:multiagent_theory}节所述，本文环境属于非对称多人一般和博弈——各智能体拥有不同的奖励配置，且不存在全局零和约束。对于该类型博弈，纳什均衡的求解在理论上被证明是PPAD-完全的，因此，本文不追求直接求解博弈均衡，而是以智能体0为代表，对比三种对抗训练方法：\textbf{IPPO}、\textbf{对手池博弈}和\textbf{平均策略博弈}，测试对比每种方法的泛化能力，即在面对风格各异的对手时的表现如何。
 
 本章所有博弈实验采用第4章的实验结论：策略网络采用MLP架构，超参数采用第4.5.3节第一轮Optuna搜索得到的最优配置（见表~\ref{tab:hyperparams}），每个智能体都有各自的价值网络和策略网络，各训练阶段的具体步数汇总于附录表~\ref{tab:appendix_gameplay_params}。
 
@@ -1263,12 +1255,12 @@ GRU-MLP 在仅 17 个 trial 的搜索后最佳值仅 192.2、均值 43.4，未�
   重复上述过程，得到 $\pi_1^{(1)}, \pi_2^{(1)}, \pi_3^{(1)}$。
   \item \textbf{多轮迭代}：重复步骤 2-3 共 $K$ 轮，每轮各智能体独立进化 $T_k$ 步。最后选取每个智能体最近20个检查点，作为对手池。
 \end{enumerate}
-在该初始化方法下，每轮训练中被训练的智能体面对的是稳定的对手策略分布，绕过了非平稳的 MARL 问题同时让每个智能体在不同时间有效地面对了不同的敌人，期间保存的检查点的策略也就各不相同，风格各异，适合作为对手池。
+在该初始化方法下，每轮训练中被训练的智能体面对的是稳定的对手策略分布，绕过了非平稳的 MARL 问题同时让每个智能体在不同时间面对不同的敌人，期间保存的检查点的策略也就各不相同，风格各异，适合作为对手池。
 
 \subsection{待评估智能体的训练}
 \textbf{IPPO}： 从对手池初始化过程的初始策略$\pi_0^{(0)}, \pi_1^{(0)}, \pi_2^{(0)}, \pi_3^{(0)}$开始，使用IPPO训练$T_e$ 步，保存智能体0的策略$\pi_0^{Ippo}$。
 
-\textbf{对手池博弈}：对于智能体0，从对手池初始化过程的初始策略$\pi_0^{(0)}$开始，每回合从对手池中选择一个对手组合进行对抗训练，PFSP 采样对手，累计训练 $T_e$ 步，保存智能体0的策略$\pi_0^{Pool}$。
+\textbf{对手池博弈}：对手池中每个智能体都有20个检查点，用队列存储，将每个智能体同一索引处的对手视为一个对手组，对于智能体0，从对手池初始化过程的初始策略$\pi_0^{(0)}$开始，每回合从对手池中选择一个对手组合进行对抗训练，PFSP 采样对手，累计训练 $T_e$ 步，保存智能体0的策略$\pi_0^{Pool}$。
 每次选择对手时，采用PFSP（Prioritized Fictitious Self-Play）方法，从对手池中采样对手组合：
 \begin{enumerate}[label=(\arabic*)]
   \item 以概率 $\varepsilon$ 均匀随机采样，保持对各类对手策略的统计探索。
@@ -1294,12 +1286,15 @@ GRU-MLP 在仅 17 个 trial 的搜索后最佳值仅 192.2、均值 43.4，未�
 
 \begin{figure}[htbp!]
   \centering
-  \includegraphics[width=0.9\linewidth]{imgs/gameplay_training_curves.png}
+  \includegraphics[width=0.8\linewidth]{imgs/gameplay_training_curves.png}
   \caption{\zihao{5} 三种博弈训练方法的智能体0训练奖励曲线}
   \label{fig:gameplay_training_curves}
 \end{figure}
 
 \subsection{实验结果与讨论}
+
+本节将从统计比较出发，在呈现性能退化现象后，通过行为策略画像与战斗-收集权衡分析描述"如何退化"，并解释"为何退化程度不同"，最后以PvP到PvE的迁移实验提供因果层面的验证。
+
 \subsubsection{评估设置与分析方法}
 
 \textbf{评估指标与对照设计}。将智能体 0 自身的回合奖励作为评判标准。除三种博弈训练方法外，本文另设一组初始策略对照：该策略为三种方法继续训练前的智能体 0 初始策略$\pi_0^{(0)}$，
@@ -1349,17 +1344,15 @@ GRU-MLP 在仅 17 个 trial 的搜索后最佳值仅 192.2、均值 43.4，未�
   \label{fig:eval_reward}
 \end{figure}
 
-\autoref{tab:eval_overall} 显示了清晰的排名格局：初始策略对照以 598.5 的均奖励排名第一，平均策略博弈以 573.2 紧随其后，IPPO 为 534.4，对手池博弈以 328.2 垫底。三种继续训练方法的内部排名为平均策略博弈 $>$ IPPO $>$ 对手池博弈，且初始策略对照与平均策略博弈之间的差距为 25.3 点，两者的置信区间不重叠。对手池博弈依然是波动最大的方法（$\sigma=134.6$），其奖励标准差在四种策略中最高。
-
-需要指出，评估中四组策略的奖励标准差受多批次重复对战后按组取平均的设计影响——同组内各小批次的对手配置相同但对手策略网络参数存在复现差异（同一检查点在不同评估步上的状态略有不同），导致组内方差偏大。但这不影响组级别配对检验的有效性——配对检验的统计量基于组间差分而非组内方差的绝对值。
+\autoref{tab:eval_overall} 显示了排名格局：初始策略对照以 598.5 的均奖励排名第一，平均策略博弈以 573.2 紧随其后，IPPO 为 534.4，对手池博弈以 328.2 垫底。三种继续训练方法的内部排名为平均策略博弈 $>$ IPPO $>$ 对手池博弈，且初始策略对照与平均策略博弈之间的差距为 25.3 点，两者的置信区间不重叠。对手池博弈是波动最大的方法，奖励标准差为$\sigma=134.6$，在四种策略中最高。
 
 \subsubsection{统计显著性检验}
 
-\autoref{tab:eval_pairwise} 和 \autoref{fig:eval_effectsize} 给出了四种策略间的配对 t 检验和 Cohen's d 效应量。所有检验在组级别（20 个配对样本，每组内包含 50 局对战）上进行。
+\autoref{tab:eval_pairwise} 和 \autoref{fig:eval_effectsize} 给出了四种策略间的配对 t 检验和 Cohen's d 效应量。所有检验在组级别上进行，包含20 个样本组，每组内包含 50 局对战。
 
 \begin{table}[htbp]
   \centering
-  \caption{\zihao{5} 四种策略的配对统计比较（1000 局评估）。
+  \caption{\zihao{5} 四种策略的配对统计比较。
     配对 t 检验（自由度 = 19）在组级别进行。
     ** 表示 $p<0.01$}
   \label{tab:eval_pairwise}
@@ -1385,7 +1378,7 @@ GRU-MLP 在仅 17 个 trial 的搜索后最佳值仅 192.2、均值 43.4，未�
   \label{fig:eval_effectsize}
 \end{figure}
 
-统计检验结果表明：\textbf{全部六对比较均在 $p<0.01$ 水平上显著，且所有效应量均超过大效应阈值（$|d|>0.8$）}。具体而言：
+统计检验结果表明：全部六对比较均在 $p<0.01$ 水平上显著，且所有效应量均超过大效应阈值（$|d|>0.8$）。具体而言：
 
 \begin{enumerate}[label=(\arabic*)]
   \item 在三种继续训练方法内部，平均策略博弈显著优于 IPPO（$\Delta=-38.7$，$p=4.96\times10^{-6}$，$d=-1.40$）和对手池博弈（$\Delta=-245.0$，$p=2.08\times10^{-17}$，$d=-6.66$），IPPO 亦显著优于对手池博弈（$\Delta=+206.2$，$p=2.16\times10^{-20}$，$d=9.61$）。
@@ -1393,7 +1386,7 @@ GRU-MLP 在仅 17 个 trial 的搜索后最佳值仅 192.2、均值 43.4，未�
   \item 初始策略对照与平均策略博弈之间的差异达到了统计显著：$\Delta=-25.3$，95\% CI 为 [$-$36.5, $-$13.8]，$p=4.22\times10^{-4}$（$<0.01$），$d=-0.95$。
 \end{enumerate}
 
-该结果意味着：\textbf{在当前评估条件下，初始策略对照不仅在数值上最高，而且在统计上显著优于所有三种博弈训练方法}。三种继续训练方法不仅未能超越课程学习得到的初始策略，反而在不同程度上出现了性能退化。其中，平均策略博弈的退化程度最小（$\Delta=-25.3$，$d=-0.95$），IPPO 次之（$\Delta=-64.0$，$d=-2.47$），对手池博弈退化最为严重（$\Delta=-270.3$，$d=-8.03$）。博弈训练不仅未能带来增益，反而造成了可量化的性能损失。
+该结果表明在当前评估条件下，初始策略对照不仅在数值上最高，在统计上也显著优于所有三种博弈训练方法。三种继续训练方法都未能保持初始策略的性能水平，且退化程度呈显著差异：平均策略博弈退化最小（$\Delta=-25.3$，$d=-0.95$），IPPO 次之（$\Delta=-64.0$，$d=-2.47$），对手池博弈退化最为严重（$\Delta=-270.3$，$d=-8.03$）。
 
 \subsubsection{策略稳定性分析}
 
@@ -1403,7 +1396,7 @@ GRU-MLP 在仅 17 个 trial 的搜索后最佳值仅 192.2、均值 43.4，未�
 
 \begin{table}[htbp]
   \centering
-  \caption{\zihao{5} 策略稳定性比较（1000 局评估）。CI 宽度 $=$ 95\% Bootstrap CI 上下界之差；
+  \caption{\zihao{5} 策略稳定性比较。CI 宽度 $=$ 95\% Bootstrap CI 上下界之差；
     逐组 $\sigma$ $=$ 20 个对手组均奖励的标准差}
   \label{tab:eval_stability}
   \begin{tabular}{lcccc}
@@ -1419,30 +1412,31 @@ GRU-MLP 在仅 17 个 trial 的搜索后最佳值仅 192.2、均值 43.4，未�
 
 \begin{figure}[htbp]
   \centering
-  \includegraphics[width=0.85\linewidth]{imgs/eval_compare_pergroup.png}
-  \caption{\zihao{5} 四种策略在 20 组对手上的逐组均奖励对比（1000 局评估）。
-    柱子越整齐说明面对不同风格对手时表现越一致}
+  \includegraphics[width=0.8\linewidth]{imgs/eval_compare_pergroup.png}
+  \caption{\zihao{5} 四种策略在 20 组对手上的逐组均奖励对比}
   \label{fig:eval_pergroup}
 \end{figure}
 
 \autoref{tab:eval_stability} 和 \autoref{fig:eval_pergroup} 共同揭示了不同策略在稳定性上的差异：
 
 \begin{enumerate}[label=(\arabic*)]
-  \item \textbf{IPPO 在波动指标上整体最优，但平均奖励不足}。IPPO 的奖励标准差（113.4）和 CI 宽度（16.4）均为最低，说明其在四组策略中表现最为稳定——但这以牺牲平均奖励为代价（534.4，排名第三）。
+  \item \textbf{IPPO 在波动指标上整体最优，但平均奖励不足}。IPPO 的奖励标准差（113.4）和 CI 宽度（16.4）均为最低，说明其在四组策略中表现最为稳定——但平均奖励为534.4排名第三。
   \item \textbf{对手池博弈波动最大}。其奖励标准差（134.6）和 CI 宽度（17.7）在四种策略中最高，且逐组均奖励标准差较大（20.9），在对不同对手时得分剧烈波动。
   \item \textbf{平均策略博弈的逐组表现最不均匀}。其逐组均奖励标准差（21.0）为四种策略中最高，表明尽管平均奖励较高，但在不同对手组间的表现差异明显。从 \autoref{fig:eval_pergroup} 可见，平均策略博弈在某些对手组（如组 9）上表现突出，而在另一些组（如组 8）上接近 IPPO 水平。
-  \item \textbf{初始策略对照在逐组一致性上表现最好}。其逐组均奖励标准差（19.1）为四种策略中最低，说明尽管总奖励标准差较高（因对战次数多、组内方差大），但在不同对手组之间的表现最为一致——每组的奖励都维持在较高水平。
+  \item \textbf{初始策略对照在逐组一致性上表现最好}。其逐组均奖励标准差（19.1）为四种策略中最低，说明尽管总奖励标准差较高，但在不同对手组之间的表现最为一致——每组的奖励都维持在较高水平。
 \end{enumerate}
 
 综合上述分析，初始策略对照不仅在平均奖励和统计显著性上全面领先，在逐组泛化一致性上也优于三种博弈训练方法。这表明课程学习阶段形成的策略已具备跨对手风格的稳健奖励获取能力，而后续博弈训练不同程度地损害了这种能力。
 
+基于上述统计显著的退化现象，本文提出以下猜想：在该环境的奖励结构与近战博弈机制下，专注于PvE（攻击敌人、拾取资源）而不主动与其他智能体对抗，本身即构成一种强策略。博弈训练的强化学习目标迫使智能体将其他智能体的行为纳入决策考量，试图通过学习对手模式来提升对抗表现；然而这一学习过程需要重新探索"PvP-PvE-收集"三维行为空间中的最优权衡。在有限的训练时间内，策略难以恢复到初始的PvE主导模式或者探索更强策略，导致了性能退化。三种博弈训练方法的退化幅度存在显著差异（平均策略博弈 $d=-0.95$ vs IPPO $d=-2.47$ vs 对手池博弈 $d=-8.03$），这提示退化的严重程度可能与训练过程中的对手策略稳定性相关——以下章节将从行为特征和训练机制两个层面展开验证。
+
 \subsubsection{行为策略画像}
 
-为理解博弈训练导致性能退化的行为层面原因，本节从行为事件频率的角度对四种策略进行画像分析。评估中记录了每局的关键行为事件——包括攻击次数、对各类型目标造成的伤害与击杀、资源拾取、死亡和撞墙等，共计 11 个指标。\autoref{fig:behavior_events} 和 \autoref{tab:behavior_profile} 汇总了四组策略的行为特征。
+为理解博弈训练导致性能退化的行为层面原因，本节从行为事件频率的角度对四种策略进行画像分析。评估中记录了每局的关键行为事件——包括攻击次数、对各类型目标造成伤害次数与击杀次数、资源拾取、死亡和撞墙次数等，共计 10 个指标。\autoref{fig:behavior_events} 和 \autoref{tab:behavior_profile} 汇总了四组策略的行为特征。
 
 \begin{figure}[htbp]
   \centering
-  \includegraphics[width=\linewidth]{imgs/eval_compare_behavior_events.png}
+  \includegraphics[width=0.8\linewidth]{imgs/eval_compare_behavior_events.png}
   \caption{\zihao{5} 四种策略的行为事件频率对比。左侧为战斗相关事件，右侧为生存与资源相关事件。误差线为 $\pm 1\sigma$}
   \label{fig:behavior_events}
 \end{figure}
@@ -1456,9 +1450,9 @@ GRU-MLP 在仅 17 个 trial 的搜索后最佳值仅 192.2、均值 43.4，未�
     行为指标 & IPPO & 对手池博弈 & 平均策略博弈 & 初始策略对照 \\
     \midrule
     发动攻击次数           & 59.8 & 58.7 & 67.0 & \textbf{81.2} \\
-    对玩家造成伤害         & 3.3  & 1.9  & 3.0  & 2.6 \\
-    对敌人造成伤害         & 29.2 & 18.5 & 35.3 & \textbf{39.0} \\
-    受到伤害               & 14.4 & 10.8 & 17.6 & 17.2 \\
+    对玩家造成伤害次数         & 3.3  & 1.9  & 3.0  & 2.6 \\
+    对敌人造成伤害次数         & 29.2 & 18.5 & 35.3 & \textbf{39.0} \\
+    受到伤害次数               & 14.4 & 10.8 & 17.6 & 17.2 \\
     击杀敌人               & 14.9 & 9.5  & 17.9 & \textbf{20.1} \\
     击杀玩家               & 0.23 & 0.16 & 0.20 & 0.14 \\
     拾取 A 球              & 3.0  & 2.9  & 3.0  & 3.0  \\
@@ -1470,126 +1464,116 @@ GRU-MLP 在仅 17 个 trial 的搜索后最佳值仅 192.2、均值 43.4，未�
   \end{tabular}
 \end{table}
 
-行为数据揭示了四种策略之间存在鲜明的风格分化，其核心维度是"战斗投入 vs 资源收集"的权衡：
+行为数据揭示了四种策略之间存在鲜明的风格分化，主要差异是战斗投入与资源收集的权衡：
 
 \begin{enumerate}[label=(\arabic*)]
-  \item \textbf{初始策略对照（PvE 狂战士型）}。该策略以 81.2 次/局的攻击频率（四种策略中最高）和 20.1 次/局击杀敌人（最高）为特征，同时对敌人造成伤害（39.0）也远超其他策略。相应地，其拾取 B 球数量仅为 3.6 次/局（最低），撞墙次数 3.6 次/局（最低），表明该策略几乎将所有行为预算投向了与敌人的战斗，极少绕路收集奖励球。其每局死亡 1.32 次，高于 IPPO 但低于平均策略博弈，说明高频战斗带来了一定的生存风险，但不至于致命。
-  \item \textbf{平均策略博弈（均衡型）}。攻击频率降至 67.0 次/局，击杀敌人降至 17.9 次/局，同时拾取 B 球升至 12.3 次/局。相比初始策略对照，战斗投入减少了约 17\%，但资源收集提升了约 3.4 倍。这一转变使该策略在面对部分对手组时获得了可观的资源得分，但也使总奖励下降了 25.3 点——资源收集的收益未能完全弥补战斗减少的损失。
-  \item \textbf{IPPO（资源收集型）}。攻击频率进一步降至 59.8 次/局（四种策略中第三），击杀敌人降至 14.9 次/局，但拾取 B 球飙升至 21.8 次/局（最高）。该策略将行为预算大规模转向资源收集，战斗参与度最低。其平均奖励（534.4）低于初始策略对照 64 点，表明在当前环境中，过度偏重资源收集而放弃战斗并不能获得更高总分。
-  \item \textbf{对手池博弈（全面衰退型）}。该策略在所有正面指标上均处于末位或接近末位：攻击次数 58.7（最低），对敌人伤害 18.5（最低），击杀敌人 9.5（最低），击杀玩家 0.16（最低）。同时，其资源收集也未达到 IPPO 的水平（拾取 B 球 12.5 次/局，仅为 IPPO 的 57\%）。PFSP 训练使该策略陷入了"既不战斗也不收集"的中间地带——既丧失了初始策略的高效 PvE 能力，也未能学会有意义的 PvP 行为或高效收集策略。
+  \item \textbf{初始策略对照（偏好PVE）}。该策略以 81.2 次/局的攻击频率（四种策略中最高）和 20.1 次/局击杀敌人（最高）为特征，同时对敌人造成伤害次数（39.0）也远超其他策略。相应地，其拾取 B 球数量仅为 3.6 次/局（最低），撞墙次数 3.6 次/局（最低），表明该策略几乎将所有行为预算投向了与敌人的战斗，极少绕路收集奖励球。其每局死亡 1.32 次，高于 IPPO 但低于平均策略博弈，说明高频战斗带来了一定的生存风险，但不至于致命。
+  \item \textbf{平均策略博弈（均衡型）}。攻击频率降至 67.0 次/局，击杀敌人降至 17.9 次/局，同时拾取 B 球升至 12.3 次/局。相比初始策略对照，战斗投入减少了约 17\%，但资源收集提升了约 3.4 倍。这一转变使该策略在面对部分对手组时获得了可观的资源得分，但也使总奖励下降了 25.3 点，资源收集的收益未能完全弥补战斗减少的损失。
+  \item \textbf{IPPO（资源收集型）}。攻击频率进一步降至 59.8 次/局，为四种策略中第三，击杀敌人次数降至 14.9 次/局，但拾取 B 球飙升至 21.8 次/局，为最高。该策略将行为预算大规模转向资源收集，战斗参与度最低。其平均奖励（534.4）低于初始策略对照 64 点，因为过度偏重资源收集而放弃战斗不能获得更高总分。
+  \item \textbf{对手池博弈（全面衰退型）}。该策略在所有正面指标上均处于末位或接近末位：攻击次数 58.7 次/局为最低，对敌人造成伤害次数 18.5 次/局，为最低，击杀敌人次数 9.5 次/局，为最低，击杀玩家 0.16 次/局，为最低。同时，其资源收集也未达到 IPPO 的水平，拾取 B 球 12.5 次/局，仅为 IPPO 的 57\%。PFSP 训练使该策略陷入了"既不战斗也不收集"的中间地带——既丧失了初始策略的高效 PvE 能力，也未能学会有意义的 PvP 行为或高效收集策略。
+  \item \textbf{PVE是主要奖励来源}。没有经过博弈训练的初始策略延续了其在前序课程学习阶段中学到的PVE倾向，从而获得了更高的奖励；三种博弈训练方法未能让智能体将策略重心转移到PVP，反而在PVP与其他奖励获取方式间未能在有限训练时间内找到最佳权衡。
+  \item \textbf{博弈训练使得攻击性减弱}。初始策略对照的总攻击次数均高于其他三种策略，差距主要来自对敌人的攻击。因而博弈训练的退化主要归因是训练过程使策略变得"更谨慎"——减少了对所有目标的攻击行为，期望通过资源收集和躲避来获取更高奖励。
 \end{enumerate}
 
-\subsubsection{战斗-收集权衡与奖励关联分析}
+平均策略博弈的对手由20个策略网络在动作概率空间的算术平均构成，这种平均化操作产生了一个相对稳定且可预测的对手分布——无论主智能体的策略如何更新，对手的行为模式始终保持一致。在稳定的训练环境中，策略更新方向单一、梯度噪声较小，智能体得以在保持较高PvE战斗频率（对敌人伤害35.3次/局）的同时适度探索资源收集（拾取B球12.3次/局），最终退化幅度最小（$d=-0.95$）。IPPO则在四智能体同步训练的非平稳环境中学习：每个对手的策略也在持续更新，奖励函数随对手策略的变化而漂移。为了应对这种不确定性，智能体可能倾向于大幅减少高风险的战斗行为（攻击次数降至59.8次/局）、大幅增加低风险的资源收集（拾取B球21.8次/局为最高），过度偏向收集方向导致了中等程度的退化（$d=-2.47$）。对手池博弈在非平稳性之外引入了额外的优化困难：对手组合的采样分布通过EMA奖励动态变化，这导致每一局游戏的对手差异都比IPPO面临的对手差异更大，训练焦点不断在"简单"与"困难"对手之间切换。这种持续的分布漂移可能使策略优化信号高度振荡，智能体无法在任何行为方向上持续积累进步，陷入了攻击性与收集效率的双重衰退，最终退化幅度最大（$d=-8.03$）。
 
-上述行为画像引出了一个核心问题：在该环境的奖励结构下，行为策略的选择如何影响最终得分？为直观回答此问题，\autoref{fig:combat_collection} 从两个维度展示了每种策略在 20 组对手上的行为特征与得分之间的关系。
+三种方法的退化程度与其训练过程中对手分布的稳定性呈正向关联：训练环境越稳定（平均策略博弈 $>$ IPPO $>$ PFSP），策略越容易维持初始的高效PvE行为模式，退化程度也越小。
+
+\subsubsection{战斗-收集权衡与奖励关联分析}
+从智能体0的奖励配置来看，其战斗奖励权重最大，应该会倾向于战斗而非资源收集，为进一步确认其行为策略的选择如何影响最终得分，\autoref{fig:combat_collection} 从两个维度展示了每种策略在 20 组对手上的行为特征与得分之间的关系。
 
 \begin{figure}[htbp]
   \centering
-  \includegraphics[width=\linewidth]{imgs/eval_compare_combat_collection.png}
+  \includegraphics[width=0.8\linewidth]{imgs/eval_compare_combat_collection.png}
   \caption{\zihao{5} 进攻事件 vs 资源收集数量（左）以及进攻事件 vs 局内分数（右）。每个点为一种策略在一组对手上的平均表现}
   \label{fig:combat_collection}
 \end{figure}
 
-\autoref{fig:combat_collection} 的左子图清晰展示了四种策略在"进攻-收集"二维空间中的分布格局：初始策略对照聚集在右下角（高进攻、低收集），IPPO 聚集在左下角（低进攻、高收集），平均策略博弈分布在中间区域，对手池博弈散落在左侧底部。这种分布呈现出一条明显的"进攻-收集"反比关系——任何策略都面临将有限时间和行动预算分配给战斗还是收集的权衡。
-
-右子图揭示了更关键的发现：\textbf{在该环境中，进攻性与局内得分之间呈现正相关关系}。初始策略对照的点集中在右侧高分段，IPPO 的点偏向左侧低分段，对手池博弈的点则离散分布在最低分区域。这一关系与直觉相反——通常认为均衡分配战斗与收集应获得最高总分，但数据表明，纯粹的 PvE 战斗导向策略反而取得了最高得分。
-
-造成这一现象的原因在于该环境的奖励结构：击杀一个敌人获得 30 分，而拾取一个 B 球仅获得 2 分。每局 20 个敌人的击杀上限提供了 600 分的理论 PvE 上限，而 B 球的贡献最多约 40--80 分。因此，\textbf{最大化 PvE 击杀数量是获取高分的主导策略}，资源收集仅起辅助作用。初始策略对照平均每局击杀 20.1 个敌人（接近理论上限），而 IPPO 仅击杀 14.9 个——前者由此获得约 156 分的 PvE 优势，远超 IPPO 在资源收集上的补偿（约 19 分）。
+\autoref{fig:combat_collection} 的左子图展示了四种策略在"进攻-收集"二维空间中的分布格局：初始策略对照聚集在右下角表明其高进攻、低收集的行为倾向，IPPO 聚集在中部偏上，表现出均衡进攻、高收集的行为倾向，平均策略博弈分布在中间区域，在进攻和资源收集方面保持中性，对手池博弈散落在左侧底部，相比于平均策略减少了很多进攻性。同时可以发现这种分布呈现出一条明显的"进攻-收集"反比关系——任何策略都面临将有限时间和行动预算分配给战斗还是收集的权衡。右子图则进一步揭示了在该环境中，进攻性与局内得分之间呈现正相关关系。初始策略对照的点集中在右侧高分段，对手池博弈的点则分布在最低分区域。这一关系与智能体的奖励配置相符，战斗导向策略取得了最高得分。
 
 \autoref{fig:behavior_profile} 以归一化行为画像的形式直观比较了四种策略在五个维度上的相对优劣势。
-
 \begin{figure}[htbp]
   \centering
-  \includegraphics[width=0.85\linewidth]{imgs/eval_compare_behavior_profile.png}
+  \includegraphics[width=0.8\linewidth]{imgs/eval_compare_behavior_profile.png}
   \caption{\zihao{5} 四种策略的归一化行为画像。五个维度分别为进攻性（对玩家攻击/伤害/击杀）、刷野效率（对敌人伤害/击杀）、资源收集（拾球）、生存能力（反向死亡数）、稳健性（反向撞墙与受伤）。各维度跨方法 Min-Max 归一化，得分越高越优}
   \label{fig:behavior_profile}
 \end{figure}
 
-行为画像清晰展示了策略间的风格对比：初始策略对照在"进攻性"和"刷野效率"两个维度上近乎满分，但在"资源收集"维度上得分最低，形成典型的"专精战斗"画像。IPPO 的画像是其镜像反转——"资源收集"得分最高，"刷野效率"得分最低。平均策略博弈呈现相对均匀的五边形，无突出短板也无突出长板。对手池博弈则整体收缩——所有维度得分均偏低，表现为全面的策略退化。
+行为画像清晰展示了策略间的风格对比：初始策略对照在"进攻性"和"刷野效率"两个维度上近乎满分，但在"资源收集"维度上得分最低，形成典型的"专精战斗"画像。IPPO 的画像是其镜像反转——"资源收集"得分最高，"刷野效率"得分最低。平均策略博弈呈现相对均匀的五边形，无突出短板也无突出长板。对手池博弈则整体收缩，所有维度得分均偏低，表现为全面的策略退化。
+
+上述分析表明 PvE 奖励远高于 PvP，博弈训练导致攻击性下降。为进一步区分是能力限制还是理性选择，以下先分析 PvP 的收益-风险结构，再以迁移实验提供因果证据。
 
 \subsubsection{PvP 对抗的收益-风险分析}
+前文数据已表明博弈训练未能增强PvP对抗能力——三种策略的PvP指标均处于极低水平（IPPO 3.3次/局、平均策略博弈3.0次/局、初始策略对照2.6次/局、对手池博弈1.9次/局），每局击杀玩家数均接近于零（0.14-0.23次/局）。其原因可能是该环境的近战机制使PvP行为的收益-风险的近乎对冲。具体而言，当双方均仅拥有近战攻击能力时，智能体能够攻击到对手的瞬间，自身也必然处于对手的攻击范围内，主动进攻不具备先手优势，及其容易被对方反制。若对手成功反制，一次攻击的收益为+5，但若因自身血量过低反被击杀则净收益为-5，这导致在对手足够理性情况下的博弈收益偏低。相比之下，敌人的攻击模式简单、可通过走位轻松躲避，PvE提供了更为稳定且可预测的奖励来源。此外，攻击行为本身存在后摇和冷却，专注于PvE时的这段硬直时间可能被其他智能体利用而遭受攻击，这进一步促使博弈训练后的策略降低攻击频率，趋于更为谨慎的行为模式。
 
-一个值得深入探讨的问题是：博弈训练是否至少增强了智能体的 PvP 对抗能力？即，是否牺牲了 PvE 效率换取了更高的 PvP 收益？\autoref{fig:pvp_risk_pve_reward} 检验了这一假设。
+前文数据表明，PvP 行为缺失的根源在于 PvE 提供了更高密度且更稳定的奖励，且近战机制的对称性使 PvP 的期望收益偏低，本节将设计迁移实验验证这一判断：在纯博弈环境中训练一个以 PvP 为主导策略的智能体，再将其迁移至包含 PvE 得分渠道的完整环境，观察其是否自发从 PvP 转向 PvE。
+
+\textbf{实验设计}。实验分为两个阶段。第一阶段：将课程学习完成的智能体 0 加载至仅包含四个智能体（无敌人、无奖励球）的纯博弈环境中，对手由对手池中每个智能体槽位的 20 个检查点策略的行为平均构成。由于该环境中除攻击其他智能体外不存在任何其他得分渠道，智能体被迫发展 PvP 策略。如\autoref{fig:pvp_training_curve}所示，经约 500 万步训练后，该策略在纯博弈环境中达到 600 分以上的均奖励，此时该智能体已具备PvP攻击能力。
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.8\linewidth]{imgs/ch5_pvp_training_curve.png}
+  \caption{\zihao{5} 智能体0 PvP对抗训练曲线}
+  \label{fig:pvp_training_curve}
+\end{figure}
+
+\textbf{第二阶段：迁移至完整环境并增设策略冻结对照组}。将上述经 PvP 对抗训练形成的智能体迁移至包含敌人、奖励球及四智能体交互的完整环境，继续训练约 650 万步。另设一组策略冻结对照组：该组智能体保持 PvP 训练后的策略参数不变，仅与环境进行交互，不进行策略更新。两组智能体在相同的完整环境中接受同等的交互机会，唯一差异在于策略更新组持续进行策略优化，而冻结组策略参数保持固定。若策略更新组的智能体在仅存在 PvP 得分渠道时表现出高效 PvP 行为，但在引入 PvE 替代得分渠道后自发减少 PvP 投入，则可判定 PvP 行为的缺失源于环境结构，即 PvE 渠道提供了更具吸引力的奖励获取途径，而非智能体自身能力不足导致其无法执行 PvP 行为。
+
+\textbf{实验结果}。迁移实验的行为演化呈现出四个清晰的趋势，\autoref{fig:migration_pvp_to_pve_unfrozen}展示了策略更新组的训练动态，\autoref{fig:migration_pvp_to_pve_frozen_comparison}则对比了策略更新与策略冻结两种条件下的行为差异，通过对比，得出如下结论：
 
 \begin{figure}[htbp]
   \centering
-  \includegraphics[width=\linewidth]{imgs/eval_compare_pvp_risk_pve_reward.png}
-  \caption{\zihao{5} PvP 参与度（对玩家伤害与击杀）与 PvE 效率（对敌人伤害与击杀）的散点图（左），以及与局内分数的散点图（右）}
-  \label{fig:pvp_risk_pve_reward}
+  \includegraphics[width=0.8\linewidth]{imgs/migration_pvp_to_pve_unfrozen.png}
+  \caption{\zihao{5} PvP主导策略迁移至完整环境后的行为演化（策略更新组）。子图(a)显示PvE伤害次数持续上升；子图(b)显示PvP伤害次数显著下降；子图(c)表明总攻击次数提升并保持稳定的情况下，PvP伤害占比持续降低}
+  \label{fig:migration_pvp_to_pve_unfrozen}
 \end{figure}
-
-\autoref{fig:pvp_risk_pve_reward} 揭示了一个否定性的结论：\textbf{博弈训练并未成功提升智能体的 PvP 能力}。四种策略的 PvP 指标（对玩家造成伤害）均处于极低水平——IPPO 3.3 次/局、平均策略博弈 3.0 次/局、初始策略对照 2.6 次/局、对手池博弈 1.9 次/局。每局击杀玩家数更是接近于零（0.14--0.23 次/局）。这表明在该环境的近战机制下，玩家之间的有效对抗极为困难——当双方均拥有近战攻击能力时，主动进攻者并不具备明显优势，双方往往在短暂交火后各自撤退或一方被击杀后另一方同样受损。因此，三种博弈训练方法试图诱导的 PvP 行为并未在评估中实际兑现为可量化的 PvP 收益。
-
-左子图显示 PvP 参与度与 PvE 效率之间呈现微弱的负相关——但这并非因为"对抗消耗了战斗资源"，而是因为训练过程整体降低了智能体的攻击性水平（体现在对各类型目标的攻击总数上）。真正发生的不是"PvP 替代了 PvE"，而是"\textbf{训练降低了总攻击频率}"。从 \autoref{tab:behavior_profile} 可见，初始策略对照的总攻击次数（81.2）远高于平均策略博弈（67.0）和 IPPO（59.8），差距主要来自对敌人的攻击——这些攻击是 PvE 得分的主要来源。
-
-换言之，博弈训练的退化机制可概括为：训练过程使策略变得"更谨慎"——减少了对所有目标的攻击行为，期望通过资源收集和躲避来获取更高奖励。但由于该环境的奖励结构天然偏向 PvE 战斗，减少战斗直接导致总分下降。资源收集的增加无法弥补战斗减少的损失，且 PvP 对抗也未能提供额外的奖励来源。
-
-\subsubsection{因果验证：PvE 替代 PvP 的迁移实验}
-
-前文的行为画像和相关分析均属观察性证据——它们揭示了 PvE 得分远高于 PvP、训练导致攻击下降等关联模式，但未能在因果层面证明智能体在可以选择的情况下会主动放弃 PvP 而选择 PvE。为填补这一因果缺口，本节设计了一个迁移实验：首先生成一个以 PvP 为主导策略的智能体，然后将其迁移至包含 PvE 替代得分渠道的完整环境中，观察其行为是否自发地从 PvP 转向 PvE。
-
-\textbf{实验设计}。实验分为两个阶段。第一阶段：将课程学习完成的智能体 0 加载至仅包含四个智能体（无敌人、无奖励球）的纯博弈环境（S5-player-only）中，对手由对手池中每个智能体槽位的 20 个检查点策略的行为平均（action-probability averaging）构成。由于该环境中除攻击其他智能体外不存在任何其他得分渠道，智能体被迫发展 PvP 策略。经约 600 万步训练后，该策略在纯博弈环境中达到 600 分以上的均奖励，意味着每局约 20 余次对玩家目标的伤害事件——此时该智能体已具备明确且高效的 PvP 攻击能力。
-
-第二阶段：将上述以 PvP 为主导的智能体迁移至完整环境（包含敌人、奖励球和四个智能体），继续训练约 650 万步。完整环境中的奖励结构与第五章评估所用的环境完全相同：击杀敌人 30 分/次，拾取 A/B 球分别为 5 分和 2 分，PvP 相关的奖励与评估阶段一致。该设计形成了一个清晰的因果检验：如果智能体在仅有 PvP 可选时表现出高效 PvP 行为，但在加入 PvE 替代得分渠道后自发减少 PvP，则可确认为环境奖励结构而非智能体能力限制导致了 PvP 行为的缺失。
-
-\textbf{实验结果}。\autoref{fig:migration_pvp_to_pve} 展示了第二阶段迁移训练期间关键行为指标的演化轨迹。
 
 \begin{figure}[htbp]
   \centering
-  \includegraphics[width=\linewidth]{imgs/migration_pvp_to_pve.png}
-  \caption{\zihao{5} PvE 替代 PvP 迁移实验的行为演化轨迹。（左上）对玩家伤害（PvP）与对敌人伤害（PvE）趋势；（右上）PvP 击杀与 PvE 击杀趋势；（左下）拾取 B 球与局内分数；（右下）总攻击次数与 PvP 伤害占比。所有曲线均经 51 点滑动平均平滑}
-  \label{fig:migration_pvp_to_pve}
+  \includegraphics[width=0.8\linewidth]{imgs/migration_pvp_to_pve_frozen_comparison.png}
+  \caption{\zihao{5} 策略更新与策略冻结对比实验。蓝色曲线为策略更新组，橙色曲线为策略冻结组。更新组在回合奖励(a)、PvE伤害(b)和攻击次数(d)上均不断上升且最后显著优于冻结组，而PvP伤害(c)则显著降低}
+  \label{fig:migration_pvp_to_pve_frozen_comparison}
 \end{figure}
 
-迁移实验的行为演化呈现出四个清晰的趋势：
+\textbf{（1）PvE伤害持续上升，PvP伤害显著下降}。如\autoref{fig:migration_pvp_to_pve_unfrozen}(a)所示，策略更新组的对敌人伤害次数从训练初期的约25.0次/局波动上升至训练中后期的约35--40次/局，整体增幅约40\%。与此同时，\autoref{fig:migration_pvp_to_pve_unfrozen}(b)显示对其他智能体（PvP）的伤害次数从训练初期的约13.75次/局显著下降至末期的约5.4次/局，降幅达61\%。这一趋势在\autoref{fig:migration_pvp_to_pve_frozen_comparison}中通过对比实验得到了进一步验证：策略更新组的PvE伤害次数（约35次/局）显著高于冻结组（约22次/局），而PvP伤害次数（约6次/局）则显著低于冻结组（约15次/局）。此外，策略更新组的PvP击杀从初期的1.56次/局降至末期的0.59次/局，而PvE击杀从11.0次/局上升至约19--20次/局。
 
-\begin{enumerate}[label=(\arabic*)]
-  \item \textbf{PvP 伤害持续下降}。迁移开始时（训练步数约 0.02M），智能体继承了纯博弈阶段的高 PvP 能力，对玩家伤害约 13.75 次/局。随着在完整环境中的训练推进，PvP 伤害持续下降，至训练末期（6.5M 步）降至约 5.4 次/局，降幅达 61\%。PvP 击杀数也从 0.81 次/局降至 0.59 次/局。
-  \item \textbf{PvE 伤害和击杀稳步上升}。对敌人伤害从 29.2 次/局持续上升至 36.0 次/局（增幅 23\%），击杀敌人从 14.7 次/局上升至 18.5 次/局（增幅 26\%）。PvE 的提升与 PvP 的下降在时间上同步发生。
-  \item \textbf{资源收集与总分同步增长}。拾取 B 球数量从约 1.0 次/局爬升至 2.2 次/局，局内分数从约 442 分稳步上升至约 548 分。尽管 PvP 得分来源萎缩，但 PvE 和资源收集的增长不仅完全弥补了损失，还推动了总分的净增长。
-  \item \textbf{攻击预算基本稳定，但目标重新分配}。总攻击次数在整个训练过程中保持在 86--91 次/局的狭窄区间内波动，无明显上升或下降趋势。然而，PvP 伤害占总伤害的比例从迁移初期的约 28\% 持续下降至末期的约 13\%。这说明智能体没有减少攻击行为本身，而是将攻击目标从玩家重新分配至敌人。
-\end{enumerate}
+\textbf{（2）攻击预算基本稳定，但目标重新分配}。\autoref{fig:migration_pvp_to_pve_unfrozen}(c)显示，总攻击次数在上升一段时间后保持在85--95次/局的区间内波动，无明显下降趋势。然而，PvP伤害占总伤害的比例从训练初期的约35\%持续下降至末期的约14\%。\autoref{fig:migration_pvp_to_pve_frozen_comparison}(d)进一步证实，策略更新组的攻击次数（约89次/局）显著高于冻结组（约72次/局），这说明智能体非但没有减少攻击行为本身，反而在攻击频率上有所增加，只是将攻击目标从玩家重新分配至敌人。
 
-\textbf{因果推断}。该实验在因果层面证实了 §5.3.6--§5.3.7 中通过观察性分析提出的假设：智能体具有充分的 PvP 能力（纯博弈环境中可达 600+ 分），但在存在 PvE 替代得分渠道的环境中选择性地放弃了 PvP 行为。攻击预算向 PvE 目标的系统性转移——而非攻击能力的缺失——是导致 PvP 行为低下的直接原因。该结果为理解 §5.3.4 评估中博弈训练方法的集体退化提供了因果机制层面的补充证据：博弈训练试图诱导的策略方向（增加与对手的对抗性交互）与环境的奖励结构（奖励 PvE 远多于 PvP）之间存在根本性冲突；当智能体拥有足够训练时间探索环境奖励结构后，它将自然地向更高奖励密度的行为方向收敛——即优先攻击敌人而非对手智能体。
+\textbf{（3）回合奖励显著提升}。\autoref{fig:migration_pvp_to_pve_frozen_comparison}(a)显示，策略更新组的回合奖励从训练初期的约434分稳步上升至约536分（提升约23\%），而策略冻结组的回合奖励则维持在约415分的水平。这表明智能体在完整环境中的继续训练显著提升了性能——尽管PvP得分来源萎缩，但PvE伤害和击杀的增长不仅完全弥补了损失，还推动了总分的净增长。策略冻结组受限于纯博弈阶段学到的策略参数，无法根据环境变化调整行为，因此无法充分利用环境中的PvE得分机会。
+
+\textbf{（4）资源收集行为同步增长}。随着训练的推进，策略更新组拾取B球的次数从初期的约1.19次/局稳步上升至末期的约1.5--3.0次/局，策略冻结组则稳定在约1.5次/局。这表明在奖励结构的驱动下，智能体不仅将攻击目标从PvP转向PvE，同时也在逐步增强资源收集行为，形成更为多样化的得分策略。
+
+\textbf{推断}：该实验证实了前文描述性分析提出的假设：智能体可以具有充分的PvP能力，在纯博弈环境中可达600+分，但在存在PvE替代得分渠道的环境中选择性地放弃了PvP行为。攻击预算向PvE目标的系统性转移是导致PvP行为低下的直接原因。策略冻结组的对照设计为这一因果推断提供了决定性证据：当策略参数固定，无法根据环境反馈调整时，智能体的PvP伤害次数始终维持在约15次/局的较高水平，但PvE伤害次数和总奖励均显著低于策略更新组；相反，当策略参数可更新时，智能体迅速调整行为策略，将攻击目标从玩家转向敌人，以最大化累积奖励。该结果为理解\S5.3.4评估中博弈训练方法的集体退化提供了因果机制层面的补充证据：奖励结构和过于简单的博弈环境导致了主动博弈具有高风险特点，博弈训练试图增加与对手的对抗性交互，诱导PvP策略的方向与当前奖励结构和博弈环境之间存在根本性冲突；当智能体拥有足够训练时间探索环境奖励结构后，它将自然地向更高奖励密度的行为方向收敛，即优先攻击敌人而非对手智能体。
+
+综合统计层面的性能退化（\S5.3.2--\S5.3.4）、行为层面的机制分析（\S5.3.5--\S5.3.6）与因果层面的迁移实验（\S5.3.7），以下以"奖励结构驱动"为主线对所有发现进行总结。
 
 \subsubsection{实验结论}
-
 综合上述统计检验、行为分析以及迁移实验的因果验证，本章得出以下结论：
 
 \begin{enumerate}[label=(\arabic*)]
   \item \textbf{初始策略在所有指标上全面领先}。在 1000 局评估中，初始策略对照的均奖励（598.5）显著高于平均策略博弈（573.2，$p=4.22\times10^{-4}$，$d=-0.95$）、IPPO（534.4，$p=1.01\times10^{-9}$，$d=-2.47$）和对手池博弈（328.2，$p=6.21\times10^{-19}$，$d=-8.03$）。即使是 25.3 点的均差（仅占均值的 4.2\%）也达到了 $p<0.01$ 的统计显著性。
-  \item \textbf{博弈训练导致了系统性的性能退化}。三种继续训练方法在三种不同的退化程度上均未能保持初始策略的性能水平。这一退化不是随机波动，而是可重复的、统计显著的、具有大效应量的系统性现象。
-  \item \textbf{行为画像揭示了退化的机制}。训练使智能体的攻击频率下降（初始策略 81.2 $\to$ 平均策略 67.0 $\to$ IPPO 59.8 次/局），资源收集上升（B 球 3.6 $\to$ 12.3 $\to$ 21.8 次/局）。但在该环境的奖励结构下（击杀敌人 30 分 vs 拾球 2 分），PvE 战斗是得分的主要来源，资源收集的增益远不足以补偿战斗减少带来的损失。博弈训练未能诱导出有效的 PvP 行为——四种策略的 PvP 指标均处于极低水平，对玩家击杀接近于零。
-  \item \textbf{迁移实验提供了因果层面的决定性证据}。纯博弈环境训练的智能体具备充分的 PvP 能力（600+ 分），但迁移至完整环境后自发将攻击目标从玩家重新分配至敌人——PvP 伤害下降 61\%，PvE 伤害上升 23\%，攻击总次数保持稳定。这说明 PvP 行为的缺失不是能力限制，而是环境奖励结构驱动的理性选择。
-  \item \textbf{平均策略博弈是三种方法中退化最小的}，其在训练曲线后期显示的上升趋势（\autoref{fig:gameplay_training_curves}）与行为画像中保持相对均衡的战斗-收集配比表明，该方法可能最接近一个尚在形成中的有效策略——只是在 800 万步的训练后尚未真正超过初始策略。IPPO 的资源收集偏向过重，对手池博弈则陷入了全面退化。
-  \item \textbf{该环境的博弈设计存在结构性限制}。近战攻击的对称风险、无远程攻击手段、PvP 收益远低于 PvE 收益——这些因素共同导致"最优策略"是一个纯粹的 PvE 狂战士，而非一个能够灵活应对多样化对手的博弈策略。课程学习阶段恰好训练出了这样的 PvE 导向策略，而博弈训练则在不同程度上偏离了这一"意外正确"的行为模式。
+  \item \textbf{博弈训练导致系统性的性能退化}。三种继续训练方法在三种不同的退化程度上均未能保持初始策略的性能水平。这一退化不是随机波动，而是可重复的、统计显著的、具有大效应量的系统性现象。
+  \item \textbf{策略退化机制}。训练使智能体的攻击频率和攻击敌人次数下降，资源收集上升。但在该环境的奖励结构下，攻击敌人的PvE 战斗是得分的主要来源，资源收集的增益远不足以补偿战斗减少带来的损失。博弈训练未能诱导出有效的 PvP 行为——四种策略的 PvP 指标均处于极低水平，对玩家击杀接近于零。
+  \item \textbf{迁移实验提供因果层面的决定性证据}。纯博弈环境训练的智能体具备充分的 PvP 能力，但迁移至完整环境后自发将攻击目标从玩家重新分配至敌人，相比于冻结策略，进行实际训练的策略的PvP 伤害次数下降 61\%，PvE 伤害次数上升 23\%，攻击总次数在上升后保持稳定。这说明 PvP 行为的缺失不是能力限制，而是环境奖励结构驱动的理性选择。
 \end{enumerate}
 
-基于以上发现，本章的实验结论不能简单概括为"博弈训练无效"。更精确的表述是：\textbf{在当前环境的奖励结构和博弈机制下，课程学习阶段形成的 PvE 导向策略是一条强基线，三种博弈继续训练方法在 800 万步的固定训练预算内均未能超越该基线。}迁移实验进一步表明，即使智能体经过专门训练获得了强大的 PvP 对抗能力，在接触到 PvE 替代得分渠道后也会自发放弃 PvP 行为——这意味着博弈训练面临的不只是优化困难，而是与环境的奖励结构之间存在根本性方向冲突。平均策略博弈在所有博弈训练方法中表现最优且退化最小，具备进一步优化的潜力；但若要博弈训练产生实质性增益，需要在环境设计层面引入不对称对抗机制（如远程攻击、技能组合）、提高 PvP 行为的相对回报，或大幅增加训练预算以使智能体有充分时间学习复杂的对手建模与风险管理策略。
+综上，本章的实验结论不在于简单断言"博弈训练无效"。在当前环境的奖励结构和博弈机制下，课程学习阶段形成的 PvE 导向策略构成了一条强基线，三种博弈训练方法在 800 万步的预算内均未超越该基线。三者退化幅度差异明显：平均策略博弈退化最小（$d=-0.95$），训练曲线后期仍有上升趋势，行为画像也保持了相对均衡的战斗-收集配比，是三种方法中最有潜力在更长训练后追上基线的；IPPO 过度偏向资源收集（$d=-2.47$）；对手池博弈则出现了全面退化（$d=-8.03$）。迁移实验进一步表明，经专门 PvP 训练的智能体在接触到 PvE 奖励渠道后也会自发放弃 PvP 行为——这说明博弈训练面对的不只是优化困难，而是与环境的奖励结构之间存在方向性冲突。该冲突的根源在于：近战攻击的对称风险使 PvP 的单位行动收益低于 PvE，课程学习阶段形成的 PvE 导向策略本身就是当前奖励结构下的合理选择。博弈训练迫使智能体将对手行为纳入决策，在有限预算内既难以回到以 PvE 为主导的策略，也难以探索出更优的博弈策略，各方法不同程度地偏离了这一合理方向。博弈训练要在本环境中产生增益，至少需要先在环境层面引入不对称对抗机制（如远程攻击、技能组合）以提高 PvP 的相对回报，或大幅延长训练时间以使智能体能够学习对手建模与风险管理策略。
 
 % ==================== 结论 ====================
 \section*{结\quad\quad 论}
 \addcontentsline{toc}{section}{结\quad\quad 论}
 \markboth{结\quad\quad 论}{结\quad\quad 论}
 
-本文围绕智能体博弈对抗这一主题，
-从环境构建、基础训练到博弈对抗三个层面开展了研究工作。
-主要工作总结如下：
+本文围绕智能体博弈对抗这一主题，从环境构建、基础训练到博弈对抗三个层面开展了研究工作。主要工作总结如下：
 
-（1）基于 Godot 引擎设计并实现了《Tiny Swords》2D 多智能体竞技场博弈环境，
-构建了 174 维分段式观测空间与 LiDAR 射线检测系统，
-为 MARL 研究提供了可控、可扩展的实验平台。
+（1）基于 Godot 引擎设计并实现了《Tiny Swords》2D 多智能体竞技场博弈环境，构建了 174 维分段式观测空间与 LiDAR 射线检测系统，为 MARL 研究提供了可控、可扩展的实验平台。
 
 （2）基于 PBRS 理论设计了多层奖励塑形系统，
-包括奖励球线性势能引导、障碍物避障与 per-player 差异化事件奖励。
-通过大量对比实验，确定了线性势函数 + 最近球模式 + 0.5 稀疏撞墙惩罚的最优奖励配置。
+包括奖励球线性势能引导、障碍物避障与 per-player 差异化事件奖励。通过大量对比实验，确定了线性势函数 + 最近球模式 + 0.5 稀疏撞墙惩罚的最优奖励配置。
 
-（3）在课程学习框架下对比了 MLP、Segmented MLP 与 GRU-MLP 三种网络架构，
-实验表明 MLP 在固定参数战斗任务中取得最高总分，并因训练效率和实验进度原因被采用为后续多智能体实验的基础架构；探索性搜索结果同时显示 Segmented MLP 在战斗导向环境中具有进一步优化潜力。
+（3）在课程学习框架下对比了 MLP、Segmented MLP 与 GRU-MLP 三种网络架构，实验表明 MLP 在固定参数战斗任务中取得最高总分，并因训练效率和实验进度原因被采用为后续多智能体实验的基础架构；探索性搜索结果同时显示 Segmented MLP 在战斗导向环境中具有进一步优化潜力。
 
 （4）构建了轮换冻结迭代博弈训练框架并初始化对手池，
-对比了 IPPO、对手池博弈和平均策略博弈三种继续训练方法，并引入 1000 局评估、11 维行为事件追踪和 PvE 替代 PvP 迁移实验，从奖励统计、行为画像与因果机制三个层面对策略进行了量化分析。
-实验发现，三种博弈训练方法均未能超越课程学习得到的初始策略，且迁移实验在因果层面证实了 PvP 行为的缺失源于环境奖励结构的驱动，而非智能体能力的不足。
+对比了 IPPO、对手池博弈和平均策略博弈三种继续训练方法，并引入 1000 局评估、11 维行为事件追踪和 PvE 替代 PvP 迁移实验，从奖励统计、行为画像与因果机制三个层面对策略进行了量化分析。实验发现，三种博弈训练方法均未能超越课程学习得到的初始策略，且迁移实验在因果层面证实了 PvP 行为的缺失源于环境奖励结构的驱动，而非智能体能力的不足。
 
 基于上述工作，本文形成以下主要结论：
 
@@ -1599,7 +1583,7 @@ GRU-MLP 在仅 17 个 trial 的搜索后最佳值仅 192.2、均值 43.4，未�
 
 （3）在多智能体博弈训练上，本文的核心发现是：在 1000 局评估中，初始策略对照（未经过博弈训练的课程学习产物）以 598.5 的均奖励排名第一，显著优于所有三种继续训练方法——平均策略博弈（573.2，$p=4.22\times10^{-4}$，$d=-0.95$）、IPPO（534.4，$p=1.01\times10^{-9}$，$d=-2.47$）和对手池博弈（328.2，$p=6.21\times10^{-19}$，$d=-8.03$）。
 
-（4）行为策略画像分析揭示了博弈训练导致性能退化的机制。训练过程系统性地降低了智能体的攻击频率（初始策略 81.2 次/局 $\to$ 平均策略 67.0 $\to$ IPPO 59.8），同时提升了资源收集行为（B 球拾取 3.6 $\to$ 12.3 $\to$ 21.8 次/局）。但在本文环境的奖励结构下，击杀敌人（30 分/次）是得分的主要来源，拾取资源（2 分/次）仅起辅助作用。博弈训练使策略在"战斗-收集"权衡中过度偏向收集，而 PvP 对抗的预期增益并未在评估中兑现。迁移实验进一步提供了因果层面的决定性证据：纯博弈环境训练的智能体具备充分的 PvP 能力（600+ 分），但在迁移至包含敌人的完整环境后，自发将攻击目标从玩家重新分配至敌人——PvP 伤害下降 61\%，攻击总次数保持不变——证实了 PvP 行为的缺失是环境奖励结构驱动的理性选择，而非能力限制。
+（4）行为策略画像分析揭示了博弈训练导致性能退化的机制。训练过程系统性地降低了智能体的攻击频率和对敌人的攻击次数，同时提升了资源收集行为。但在本文环境的奖励结构下，击杀敌人是得分的主要来源，拾取资源仅起辅助作用。博弈训练使策略需要在"PvP-PvE-收集"权衡中进行新的学习，而实际上原本的以PvE为主导的策略就已经是足够理想的策略，与其他智能体的交互会让策略呈现退化，智能体需要更多时间来找回一开始的PvE主导策略或者挖掘更好的策略。迁移实验进一步提供了因果层面的决定性证据：纯博弈环境训练的智能体具备充分的 PvP 能力，但在迁移至包含敌人的完整环境后，自发将攻击目标从玩家重新分配至敌人，证实了 PvP 行为的缺失是环境奖励结构驱动的理性选择，而非能力限制。
 
 （5）在三种继续训练方法中，平均策略博弈的退化程度最小（$\Delta=-25.3$，$d=-0.95$），且训练曲线后期仍有上升趋势，是未来最有希望超越初始策略的方法。而对手池博弈（PFSP）在多人混战环境中的高波动性与策略循环不稳定问题，使其在当前实验条件下成为最不推荐的方法。
 
@@ -1609,13 +1593,11 @@ GRU-MLP 在仅 17 个 trial 的搜索后最佳值仅 192.2、均值 43.4，未�
 
 （1）\textbf{增加博弈训练预算}：平均策略博弈和 IPPO 在 800 万步处仍未收敛，后续可通过延长训练至曲线进入平台期，进一步验证博弈训练是否能在更长时间尺度上超过初始策略基线。
 
-（2）\textbf{增强环境的博弈性设计}：当前环境的奖励结构（PvE 击杀 30 分 $\gg$ PvP 击杀 0--0.23 次/局）和近战机制（攻防对称）导致最优策略是纯粹的 PvE 狂战士，博弈训练在本质上与最优策略方向背离。未来应引入远程攻击、技能差异化、不对称对抗收益等机制，使 PvP 对抗具有可观的战略价值，从而创造出博弈训练真正需要的策略空间。
+（2）\textbf{增强环境的博弈性设计}：当前环境的奖励结构和攻防对称的近战机制导致最优策略是纯粹的 PvE 狂战士，博弈训练在本质上与最优策略方向背离。未来应引入远程攻击、技能差异化、不对称对抗收益等机制，使 PvP 对抗具有可观的战略价值，从而创造出博弈训练真正需要的策略空间。
 
-（3）\textbf{改进对手池博弈训练方法}：本文实现的 PFSP 在多人混战中表现极差，可能的改进方向包括：降低温度参数以增强对困难对手的聚焦、引入策略多样性正则化、或改用基于 ELO 分级的对手选择机制。
+（3）\textbf{改进对手池博弈训练方法}：本文实现的 PFSP 在多人混战中表现欠佳，一方面，该方法在非对称环境中由于没有自博弈阶段可能本就不太适用，另一方面，AlphaStar 的联盟训练方法因其工程复杂度及时间预算未能在本课题中实现，对手池容量有限且缺少完整的多类智能体分层结构，导致实际效果不理想。未来需要更多实验验证该方法在非对称博弈场景的性能。
 
-（4）\textbf{实现完整的联盟训练}：AlphaStar 的联盟训练方法因其工程复杂度及时间预算未能在本课题中实现，后续可考虑实现完整的三联赛体系，并在此基础上重新评估各博弈训练方法的相对优劣。
-
-（5）\textbf{探索更适配评估指标}：本文以回合累计奖励为唯一评估指标，但博弈训练的价值可能体现在其他维度（如对抗不同风格对手时的策略适应性、面对未知策略时的泛化鲁棒性）。未来可引入胜率矩阵、策略多样性指数和 Nash 间隙等博弈论指标，从多个维度评估博弈训练的实际效果。
+（4）\textbf{探索更适配评估指标}：本文以回合累计奖励为唯一评估指标，但博弈训练的价值可能体现在其他维度（如对抗不同风格对手时的策略适应性、面对未知策略时的泛化鲁棒性）。未来可引入胜率矩阵、策略多样性指数和 Nash 间隙等博弈论指标，从多个维度评估博弈训练的实际效果。
 
 % ----------------------------------------------------------
 % 参考文献
