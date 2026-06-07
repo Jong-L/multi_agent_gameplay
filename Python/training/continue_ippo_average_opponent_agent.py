@@ -94,8 +94,8 @@ class ContinueAverageOpponentAgentArgs(IppoPoolArgs):
     save_model_path: Optional[str] = "saved_models\\curriculum\\s5_average_opponent_agent0_enemy_ball_frozen_interaction"
     pool_checkpoint_dir: Optional[str] = "saved_models/ippo_average_opponent_frozen_checkpoints"
     pool_final_timesteps: int = 2000_0000
-    run_name: Optional[str] = "average_opponent_with_enemy_frozen_agent0"
-    freeze_main_agent: bool = True
+    run_name: Optional[str] = "test_average_opponent_with_enemy_frozen_agent0"
+    freeze_main_agent: bool = False
     """Run the loaded main policy without PPO parameter updates."""
     save_frozen_snapshots: bool = False
     """If true, also save unchanged frozen-policy snapshots for provenance."""

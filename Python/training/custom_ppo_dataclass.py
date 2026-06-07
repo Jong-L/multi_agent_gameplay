@@ -17,17 +17,17 @@ class NetworkType(str, Enum):
 class PPOArgs:
     """Single-agent PPO training config."""
     # Environment
-    env_path: Optional[str] = "godot-game\\optuna-env\\game.exe"
+    env_path: Optional[str] = "curriculum_envs\\s3-enemy-and-ball\\build0\\game.exe"
     """游戏环境路径（Godot 可执行文件）"""
     config_path: str = "godot-game/configs/game_config.tres"
     """游戏配置文件路径（.tres）"""
     n_parallel: int = 16
     """并行环境（智能体）数量"""
-    seed: int = 1
+    seed: int = 0
     """随机种子"""
-    show_window: bool =False
+    show_window: bool = False
     """是否显示游戏窗口"""
-    speedup: int = 16
+    speedup: int = 30
     """游戏物理加速倍数"""
     port_offset: int = 0
     """Godot 通信端口偏移量。基础端口 11008，实际端口 = 11008 + port_offset"""
@@ -35,12 +35,12 @@ class PPOArgs:
     # Logging/checkpointing
     exp_name: str = "custom_ppo"
     """实验名称（用于 TensorBoard / WandB 显示）"""
-    run_name: Optional[str] = None
+    run_name: Optional[str] = "combat"
     """训练日志名称。None 则自动生成 {exp_name}__{seed}__{timestamp}；显式指定则直接使用。
     多进程并行训练时建议设置如 mlp_s1_agent0 以便 TensorBoard 区分。"""
     experiment_dir: str = "logs/cleanrl_ppo"
     """实验日志根目录"""
-    save_model_path: Optional[str] = "saved_models/mlp_p1_s1"
+    save_model_path: Optional[str] = "saved_models/combat_enemy"
     """最终模型保存路径（.pt），设为 None 则不保存最终模型"""
     save_checkpoint: bool = True
     """是否在训练中周期性保存中断点"""
@@ -49,7 +49,7 @@ class PPOArgs:
     """从中断点恢复训练的路径（设为 None 不恢复）"""
     load_model_path: Optional[str] = None
     """加载已有模型权重但不恢复优化器/计数器"""
-    save_every_n_episodes: int = 10
+    save_every_n_episodes: int = 50
     """每 N 个 episode 保存一次中断点"""
     max_checkpoints: int = 3
     """最多保留多少个中断点文件，超出则删除最旧的"""
@@ -61,7 +61,7 @@ class PPOArgs:
     """WandB 用户 / 团队名"""
 
     # PPO hyperparameters
-    total_timesteps: int = 1_000_000
+    total_timesteps: int = 8_000_000
     """训练总时间步数,多环境并行时加速消耗"""
     learning_rate: float = 0.0007221131969041414
     """学习率"""
@@ -73,14 +73,14 @@ class PPOArgs:
     """GAE 的 lambda 参数"""
     num_minibatches: int = 4
     """将 rollout 数据分成多少个小批量"""
-    update_epochs: int = 5
+    update_epochs: int = 8
     """每个 rollout 的更新轮数"""
     recurrent_seq_len: int = 128
     """循环网络（GRU）的序列截断长度"""
     clip_coef: float = 0.2
     """PPO 裁剪系数 epsilon"""
     # ent_coef: float = 0.005
-    ent_coef: float = 0.01
+    ent_coef: float = 0.02
     """策略熵损失系数"""
     vf_coef: float = 0.5
     """价值函数损失系数"""
@@ -135,11 +135,8 @@ class PPOArgs:
     """ENEMY 段 MLP 隐藏层宽度"""
     map_hidden: int = 64
     """MAP 段 MLP 隐藏层宽度"""
-    seg_trunk_hiddens: tuple = (196, 64)
+    seg_trunk_hiddens: tuple = (256, 128, 64)
     """SEGMENTED_MLP 躯干层宽度（各段输出拼接后 -> 躯干 -> 融合特征）"""
-
-    gru_trunk_hiddens: tuple = (128, 64)
-    """GRU_MLP 躯干层宽度（GRU 输出 + BALL 特征 融合后 -> 躯干 -> 融合特征）"""
 
     # MLP
     mlp_hiddens: tuple = (256,256,128)
@@ -152,6 +149,8 @@ class PPOArgs:
     """GRU 层数（gru_mlp 用，>=1）"""
     gru_input_layernorm: bool = True
     """GRU 输入前是否加 LayerNorm"""
+    gru_trunk_hiddens: tuple = (128, 64)
+    """GRU_MLP 躯干层宽度（GRU 输出 + BALL 特征 融合后 -> 躯干 -> 融合特征）"""
 
     # Runtime-derived values
     num_envs: int = 0

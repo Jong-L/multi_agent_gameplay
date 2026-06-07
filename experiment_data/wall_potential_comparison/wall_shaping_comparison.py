@@ -258,7 +258,7 @@ def plot_total_wall_count_comparison(stats, save_path=None, smooth_window=5):
     """所有智能体平均撞墙次数对比（1 图）。"""
     return _plot_total(stats, 'wall_count', '所有智能体平均撞墙次数',
                        '撞墙次数对比 —— 避墙策略', '回合均次',
-                       save_path, smooth_window, loc='upper left')
+                       save_path, smooth_window, loc='lower right')
 
 
 # ── 辅助函数 ────────────────────────────────────────

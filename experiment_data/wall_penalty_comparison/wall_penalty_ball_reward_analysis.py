@@ -313,7 +313,7 @@ def plot_total_wall_count(stats, save_path=None, smooth_window=5):
     style_axes(ax, xlabel='训练回合', ylabel='所有智能体平均撞墙次数',
                title='所有智能体平均撞墙次数对比 —— 惩罚力度',
                legend_kwargs={'title': '惩罚力度'})
-    add_stats_box(ax, stats_text, loc='upper left')
+    add_stats_box(ax, stats_text, loc='lower right')
 
     plt.tight_layout()
     if save_path:

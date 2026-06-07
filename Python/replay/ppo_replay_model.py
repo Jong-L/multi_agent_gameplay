@@ -36,10 +36,10 @@ from custom_ppo_dataclass import NetworkType
 class ReplayConfig:
     """PPO 模型回放配置 — 直接修改默认值即可。"""
 
-    model_path: str = "saved_models\ippo_bootstrap_agent0.pt"
+    model_path: str = "saved_models/combat_enemy.pt"
     """要加载的模型文件路径 (.pt)。"""
 
-    env_path: Optional[str] = "godot-game\\build0\\game.exe"
+    env_path: Optional[str] = "curriculum_envs\\s3-enemy-and-ball\\build0\\game.exe"
     """Godot 可执行文件路径 (None 连接编辑器)。"""
 
     config_path: str = "godot-game\\configs\\game_config.tres"
@@ -51,11 +51,11 @@ class ReplayConfig:
     show_window: bool = True
     """显示游戏窗口。"""
 
-    deterministic: bool = False
+    deterministic: bool = True
     """确定性推理 (argmax 而非采样)。"""
 
     cuda: bool = False
-    """回放使用 GPU (默认 CPU)。"""
+    """回放使用 GPU """
 
     max_episodes: int = 0
     """最大回放 episode 数 (0=无限, 按 Ctrl+C 停止)。"""
